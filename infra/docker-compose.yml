@@ -1,0 +1,17 @@
+# Hạ tầng chạy local cho demo: SQL Server + MQTT Broker
+version: "3.8"
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ../services/database-network/mqtt-broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
+  sql-server:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "YourStrong@Passw0rd"
+    ports:
+      - "1433:1433"
