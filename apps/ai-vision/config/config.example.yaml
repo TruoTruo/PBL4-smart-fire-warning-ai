@@ -1,0 +1,3 @@
+model_path: "models/best.onnx"
+confidence_threshold: 0.7
+camera_source: 0
