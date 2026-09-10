@@ -1,0 +1,38 @@
+# ============================================================
+# docker-compose.yml
+# Hạ tầng chạy local/demo: MySQL + MQTT Broker
+# Chạy: docker compose up -d
+# ============================================================
+
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    container_name: smartfire-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ../services/database-network/mqtt-broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+
+  mysql-db:
+    image: mysql:8.0
+    container_name: smartfire-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "YourStrong@Passw0rd"
+      MYSQL_DATABASE: "SmartFireDB"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # Tự động chạy schema + seed khi container khởi tạo lần đầu
+      - ../services/database-network/sql/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+      - ../services/database-network/sql/seed.sql:/docker-entrypoint-initdb.d/2_seed.sql
+      - ../services/database-network/sql/stored_procedures.sql:/docker-entrypoint-initdb.d/3_stored_procedures.sql
+
+volumes:
+  mysql-data:
+  mosquitto-data:
+  mosquitto-log:
