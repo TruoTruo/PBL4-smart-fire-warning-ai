@@ -1,0 +1,63 @@
+// Paste toàn bộ nội dung này vào https://dbdiagram.io (New Diagram)
+// Kéo thả để sắp xếp lại vị trí bảng, sửa cột trực tiếp trên web,
+// xuất lại SQL bằng nút "Export" > MySQL khi chỉnh xong.
+
+Table Users {
+  UserId int [pk, increment]
+  Username varchar(50) [not null, unique]
+  PasswordHash varchar(255) [not null]
+  FullName varchar(100) [not null]
+  PhoneNumber varchar(15)
+  Email varchar(100)
+  Role varchar(20) [not null, default: 'User', note: 'Admin | User']
+  CreatedAt datetime [not null, default: `now()`]
+}
+
+Table Zones {
+  ZoneId int [pk, increment]
+  ZoneName varchar(100) [not null]
+  Description varchar(255)
+  ManagerUserId int [ref: > Users.UserId]
+}
+
+Table Devices {
+  DeviceId varchar(20) [pk, note: 'vd: PI-01']
+  DeviceName varchar(100) [not null]
+  ZoneId int [not null, ref: > Zones.ZoneId]
+  DeviceType varchar(50) [not null, default: 'Raspberry Pi 5']
+  Status varchar(20) [not null, default: 'Active', note: 'Active | Inactive | Maintenance']
+  IpAddress varchar(15)
+  InstallDate date [not null]
+}
+
+Table EnvironmentLogs {
+  LogId bigint [pk, increment]
+  DeviceId varchar(20) [not null, ref: > Devices.DeviceId]
+  Temperature decimal(5,2) [note: 'độ C, từ DHT11']
+  Humidity decimal(5,2) [note: '%, từ DHT11']
+  GasPpm decimal(6,2) [note: 'ppm, từ MQ-2']
+  AiResult boolean [not null, default: false, note: 'YOLOv8 phát hiện lửa/khói']
+  ConfidenceScore decimal(5,2)
+  RecordedAt datetime [not null, default: `now()`]
+
+  Indexes {
+    (DeviceId, RecordedAt) [name: 'IX_EnvironmentLogs_Device_Time']
+  }
+}
+
+Table AlertHistory {
+  AlertId bigint [pk, increment]
+  DeviceId varchar(20) [not null, ref: > Devices.DeviceId]
+  LogId bigint [ref: > EnvironmentLogs.LogId, note: 'log gốc kích hoạt cảnh báo']
+  AlertType varchar(50) [not null, note: 'Fire | Smoke | HighTemperature | HighGas']
+  Severity varchar(20) [not null, default: 'Medium', note: 'Low | Medium | High']
+  AlertTime datetime [not null, default: `now()`]
+  SmsSent boolean [not null, default: false]
+  Acknowledged boolean [not null, default: false]
+  AcknowledgedByUserId int [ref: > Users.UserId]
+  AcknowledgedAt datetime
+
+  Indexes {
+    (DeviceId, AlertTime) [name: 'IX_AlertHistory_Device_Time']
+  }
+}
