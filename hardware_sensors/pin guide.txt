@@ -1,0 +1,27 @@
+Mạch Level Converter TXS0108E (Bắt buộc cắm trước):
+
+Chân VA cắm vào 3.3V (Pi 5), chân VB cắm vào 5V (Pi 5).
+
+Chân GND cắm vào GND (Pi 5).
+
+Chân OE (Output Enable) nối vào 3.3V để bật mạch.
+
+Cảm biến MQ-2 (Đo khói/Gas):
+
+VCC -> 5V (Pi 5), GND -> GND.
+
+D0 (Tín hiệu số) -> Cắm vào B1 (bên 5V của Level Converter).
+
+Từ A1 (bên 3.3V của Level Converter) -> Cắm vào chân GPIO 27 trên Pi 5.
+
+Cảm biến DHT11 (Đo nhiệt độ, độ ẩm):
+
+VCC -> 3.3V (Pi 5), GND -> GND.
+
+DATA -> Cắm thẳng vào GPIO 17 (vì con này dùng 3.3V an toàn).
+
+Còi Active Buzzer (Loại Active Low vừa chốt):
+
+VCC -> 3.3V (Pi 5), GND -> GND.
+
+I/O -> Cắm thẳng vào GPIO 22.
