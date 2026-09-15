@@ -27,8 +27,8 @@ lgpio.gpio_claim_output(h, BUZZER_PIN)
 dht_device = adafruit_dht.DHT11(board.D17)
 
 # 3. Cảm biến khói MQ-2 (Chân 13 - GPIO 27): Chờ mai hàn xong mới dùng
-# MQ2_PIN = 27
-# lgpio.gpio_claim_input(h, MQ2_PIN)
+MQ2_PIN = 27
+lgpio.gpio_claim_input(h, MQ2_PIN)
 
 print("Hệ thống chuẩn bị chạy. Đang khởi động cảm biến...")
 time.sleep(2)
@@ -41,15 +41,16 @@ try:
             humidity = dht_device.humidity
             
             # Khởi tạo biến khói giả định cho hôm nay
-            smoke_detected = 0 
+            smoke_detected = 0
             
-            # NGÀY MAI HÀN XONG, BỎ COMMENT 2 DÒNG DƯỚI ĐỂ ĐỌC KHÓI THẬT:
-            # mq2_state = lgpio.gpio_read(h, MQ2_PIN)
-            # smoke_detected = 1 if mq2_state == 0 else 0 # (0 thường là có khói do mạch kéo xuống mức thấp)
+            
+            mq2_state = lgpio.gpio_read(h, MQ2_PIN)
+            smoke_detected = 1 if mq2_state == 0 else 0
+            print("Gia tri THỰC TẾ của MQ-2:", mq2_state)
 
             # --- LOGIC CẢNH BÁO ---
             # Nếu nhiệt độ trên 45 độ C hoặc có khói -> Bật còi
-            if temperature > 20 or smoke_detected == 1:
+            if temperature > 50 or smoke_detected == 1:
                 lgpio.gpio_write(h, BUZZER_PIN, 0) # Bật còi hú
                 print("⚠️ CẢNH BÁO CHÁY! CÒI ĐANG HÚ!")
             else:
