@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="dark" lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>FireGuard IoT - Phân tích AI & Rủi ro</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/tailwind-config.js"></script>
+</head>
+<body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.25)] border-r border-surface-container-highest/40">
+    <div class="flex flex-col">
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-surface-container-lowest border-b border-surface-container-high/50">
+        <div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container shadow-md">
+          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+        </div>
+        <div class="flex flex-col leading-none">
+          <span class="font-title-md text-[16px] font-bold tracking-tight text-on-surface">FireGuard IoT</span>
+          <span class="font-label-code text-[11px] text-tertiary mt-1 tracking-wider uppercase font-semibold">PBL System Monitor</span>
+        </div>
+      </div>
+
+      <div class="px-space-md py-space-sm">
+        <div class="px-space-sm py-1.5 bg-surface-container rounded-lg flex items-center justify-between border border-surface-container-high">
+          <span class="font-label-code text-[11px] text-on-surface-variant uppercase tracking-wider">Mạng cảm biến</span>
+          <span class="font-label-code text-[11px] text-secondary font-semibold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-secondary inline-block animate-pulse"></span>
+            CH-01 • ONLINE
+          </span>
+        </div>
+      </div>
+
+      <nav class="flex flex-col gap-1 px-space-md py-1 overflow-y-auto max-h-[calc(100vh-220px)]" id="sidebarNav">
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-2 pb-1 font-bold">
+          Giám sát & Vận hành
+        </span>
+
+        <a href="dashboard.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
+          <span class="font-title-sm text-[13px] font-medium">Tổng quan</span>
+        </a>
+
+        <a href="device-monitor.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">layers</span>
+          <span class="font-title-sm text-[13px] font-medium flex-1">Giám sát Thiết bị & Mặt bằng</span>
+        </a>
+
+        <a href="alert-center.html" class="flex items-center justify-between px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <div class="flex items-center gap-space-sm">
+            <span class="material-symbols-outlined text-[20px] text-primary">crisis_alert</span>
+            <span class="font-title-sm text-[13px] font-medium">Trung tâm Cảnh báo</span>
+          </div>
+          <span id="navAlertBadge" class="font-label-code text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-container text-on-primary-container animate-pulse">
+            03 MỚI
+          </span>
+        </a>
+
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
+          Phân tích & Báo cáo
+        </span>
+
+        <a href="ai-analytics.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all bg-primary-container text-on-primary-container shadow-sm font-semibold text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">psychology</span>
+          <span class="font-title-sm text-[13px]">Phân tích AI & Rủi ro</span>
+        </a>
+
+        <a href="history-reports.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">history_toggle_off</span>
+          <span class="font-title-sm text-[13px] font-medium">Lịch sử & Báo cáo PCCC</span>
+        </a>
+
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
+          Hệ thống & Cấu hình
+        </span>
+
+        <a href="user-mgmt.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">manage_accounts</span>
+          <span class="font-title-sm text-[13px] font-medium">Quản lý Người dùng & Quyền</span>
+        </a>
+
+        <a href="settings.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">tune</span>
+          <span class="font-title-sm text-[13px] font-medium">Cài đặt Ngưỡng & MQTT</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="p-space-md m-space-md bg-surface-container-low rounded-xl border border-surface-container-high/80">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+          </span>
+          <span class="font-label-code text-[11px] font-semibold text-on-surface">MQTT Broker</span>
+        </div>
+        <span class="font-label-code text-[11px] text-tertiary bg-surface-container px-1.5 py-0.5 rounded">WSS 24ms</span>
+      </div>
+      <p class="font-label-code text-[11px] text-on-surface-variant leading-tight truncate">test.mosquitto.org:1883</p>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+  <div class="pl-72 flex flex-col min-h-screen">
+    <header class="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl border-b border-surface-container-high/60 z-40 flex items-center justify-between px-4 lg:px-6">
+      <div class="flex items-center gap-2 lg:gap-3 flex-1 min-w-0 mr-3">
+        <div class="flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
+          <span class="font-label-code text-[11px] text-on-surface-variant uppercase">Hệ thống:</span>
+          <span class="font-label-code text-[11px] font-bold text-tertiary flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-tertiary inline-block"></span> BÌNH THƯỜNG
+          </span>
+        </div>
+        <div class="relative shrink-0">
+          <select id="zoneFilterSelect" onchange="onZoneFilterChange(this.value)" class="bg-surface-container-high text-on-surface text-[12.5px] font-medium rounded-lg pl-2.5 pr-7 py-1.5 border border-surface-container-highest outline-none focus:border-tertiary transition-colors cursor-pointer appearance-none max-w-[170px] sm:max-w-none truncate">
+            <option value="all">Tất cả Zone (Toàn khu)</option>
+            <option value="block-a">Block A - CNC</option>
+            <option value="block-b">Block B - Kho Hóa chất</option>
+          </select>
+          <span class="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] pointer-events-none">expand_more</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 lg:gap-3 shrink-0">
+        <div class="hidden xl:flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
+          <span class="material-symbols-outlined text-tertiary text-[16px]">schedule</span>
+          <span id="headerLiveClock" class="font-label-code text-[11.5px] text-on-surface font-semibold whitespace-nowrap">14:28:45 • 24/05/2025</span>
+        </div>
+        <button id="btnHeaderMuteAlarm" onclick="toggleEmergencyAlarm()" type="button" class="flex items-center gap-1.5 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-title-sm text-[12px] font-semibold h-8.5 px-3 rounded-lg transition-all shadow-sm shrink-0 whitespace-nowrap leading-none">
+          <span class="material-symbols-outlined text-[17px]">volume_off</span>
+          <span>Tắt chuông khẩn cấp</span>
+        </button>
+        <a href="alert-center.html" class="relative cursor-pointer shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-highest flex items-center justify-center text-on-surface transition-colors border border-surface-container-high">
+            <span class="material-symbols-outlined text-[18px]">notifications</span>
+          </div>
+          <span class="absolute -top-1 -right-1 w-4 h-4 bg-primary-container text-on-primary-container text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="w-full pt-20 bg-background flex-1 px-4 lg:px-6 pb-8">
+      <section class="flex flex-col w-full gap-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-tertiary text-[24px]">psychology</span>
+              <h1 class="font-headline-sm text-[20px] font-bold text-on-surface">Phân tích Rủi ro & Dự báo AI</h1>
+              <span class="font-label-code text-[11px] bg-tertiary-container/30 text-tertiary px-2 py-0.5 rounded font-bold">MODEL v2.1</span>
+            </div>
+            <p class="font-body-sm text-[13px] text-on-surface-variant mt-1">
+              Mô hình học máy dự báo sớm nguy cơ bùng phát dựa trên chuỗi thời gian nhiệt độ, độ ẩm và nồng độ khí
+            </p>
+          </div>
+          <button onclick="exportReportAction('AI-PDF')" class="flex items-center gap-1.5 bg-tertiary-container text-on-tertiary-container px-3 py-1.5 rounded-lg font-title-sm text-[12px] font-bold shadow">
+            <span class="material-symbols-outlined text-[16px]">download</span> Tải báo cáo phân tích AI
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+            <span class="font-label-code text-[11px] text-on-surface-variant uppercase font-bold">Risk Score Tổng Hợp</span>
+            <div class="my-2 flex items-baseline gap-1">
+              <span class="font-metric-display text-[32px] text-secondary font-bold">42</span>
+              <span class="text-[14px] text-on-surface-variant">/ 100</span>
+            </div>
+            <span class="text-[12px] text-secondary font-semibold">Mức cảnh giác trung bình (Mùa nắng nóng)</span>
+          </div>
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+            <span class="font-label-code text-[11px] text-on-surface-variant uppercase font-bold">Dự báo sự cố 24h tới</span>
+            <div class="my-2 flex items-baseline gap-1">
+              <span class="font-metric-display text-[32px] text-tertiary font-bold">12%</span>
+              <span class="text-[14px] text-on-surface-variant">Xác suất</span>
+            </div>
+            <span class="text-[12px] text-tertiary font-semibold">Thấp • Các trạm thông gió hoạt động tốt</span>
+          </div>
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+            <span class="font-label-code text-[11px] text-on-surface-variant uppercase font-bold">Độ chính xác mô hình</span>
+            <div class="my-2 flex items-baseline gap-1">
+              <span class="font-metric-display text-[32px] text-on-surface font-bold">94.2%</span>
+              <span class="text-[14px] text-on-surface-variant">F1-Score</span>
+            </div>
+            <span class="text-[12px] text-on-surface-variant font-semibold">Dataset 14,200 mẫu telemetry PBL</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md">
+          <div class="xl:col-span-8 bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+            <h3 class="font-title-md text-[16px] font-bold text-on-surface mb-2">Chỉ số Nguy cơ Cháy nổ 30 ngày qua</h3>
+            <div class="w-full h-64 bg-surface-container-lowest rounded-lg p-2 relative flex items-center justify-center">
+              <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 500 180">
+                <line x1="0" y1="60" x2="500" y2="60" stroke="#ff5451" stroke-dasharray="3 3"></line>
+                <text x="10" y="55" fill="#ff5451" font-family="JetBrains Mono" font-size="10">Ngưỡng Báo Động (&gt;70)</text>
+                <line x1="0" y1="120" x2="500" y2="120" stroke="#ee9800" stroke-dasharray="3 3"></line>
+                <text x="10" y="115" fill="#ee9800" font-family="JetBrains Mono" font-size="10">Ngưỡng Cảnh Giác (&gt;35)</text>
+                <path d="M 10 150 Q 80 140, 150 135 T 250 110 T 350 90 T 420 50 L 490 85" fill="none" stroke="#4cd7f6" stroke-width="2.5"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="xl:col-span-4 bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+            <h3 class="font-title-md text-[16px] font-bold text-on-surface mb-2">Top Vùng Rủi Ro</h3>
+            <div class="space-y-3 font-label-code text-[12px]">
+              <div>
+                <div class="flex justify-between text-on-surface mb-1">
+                  <span>1. Kho Hóa chất Block B</span>
+                  <span class="text-primary font-bold">78/100</span>
+                </div>
+                <div class="w-full bg-surface-container-highest rounded-full h-2">
+                  <div class="bg-primary h-2 rounded-full" style="width: 78%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-on-surface mb-1">
+                  <span>2. Bồn Dầu Bôi Trơn T-1</span>
+                  <span class="text-secondary font-bold">54/100</span>
+                </div>
+                <div class="w-full bg-surface-container-highest rounded-full h-2">
+                  <div class="bg-secondary h-2 rounded-full" style="width: 54%"></div>
+                </div>
+              </div>
+              <div>
+                <div class="flex justify-between text-on-surface mb-1">
+                  <span>3. Trạm Biến Áp Phụ Tải</span>
+                  <span class="text-tertiary font-bold">32/100</span>
+                </div>
+                <div class="w-full bg-surface-container-highest rounded-full h-2">
+                  <div class="bg-tertiary h-2 rounded-full" style="width: 32%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html class="dark" lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>FireGuard IoT - Giám sát Thiết bị & Mặt bằng</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/tailwind-config.js"></script>
+</head>
+<body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.25)] border-r border-surface-container-highest/40">
+    <div class="flex flex-col">
+      <!-- App Brand Logo -->
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-surface-container-lowest border-b border-surface-container-high/50">
+        <div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container shadow-md">
+          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+        </div>
+        <div class="flex flex-col leading-none">
+          <span class="font-title-md text-[16px] font-bold tracking-tight text-on-surface">FireGuard IoT</span>
+          <span class="font-label-code text-[11px] text-tertiary mt-1 tracking-wider uppercase font-semibold">PBL System Monitor</span>
+        </div>
+      </div>
+
+      <!-- Network Status Badge -->
+      <div class="px-space-md py-space-sm">
+        <div class="px-space-sm py-1.5 bg-surface-container rounded-lg flex items-center justify-between border border-surface-container-high">
+          <span class="font-label-code text-[11px] text-on-surface-variant uppercase tracking-wider">Mạng cảm biến</span>
+          <span class="font-label-code text-[11px] text-secondary font-semibold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-secondary inline-block animate-pulse"></span>
+            CH-01 • ONLINE
+          </span>
+        </div>
+      </div>
+
+      <!-- Nav Links Categorized -->
+      <nav class="flex flex-col gap-1 px-space-md py-1 overflow-y-auto max-h-[calc(100vh-220px)]" id="sidebarNav">
+        <!-- GROUP 1: GIÁM SÁT & VẬN HÀNH -->
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-2 pb-1 font-bold">
+          Giám sát & Vận hành
+        </span>
+
+        <a href="dashboard.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
+          <span class="font-title-sm text-[13px] font-medium">Tổng quan</span>
+        </a>
+
+        <a href="device-monitor.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all bg-primary-container text-on-primary-container shadow-sm font-semibold text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">layers</span>
+          <span class="font-title-sm text-[13px] flex-1">Giám sát Thiết bị & Mặt bằng</span>
+        </a>
+
+        <a href="alert-center.html" class="flex items-center justify-between px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <div class="flex items-center gap-space-sm">
+            <span class="material-symbols-outlined text-[20px] text-primary">crisis_alert</span>
+            <span class="font-title-sm text-[13px] font-medium">Trung tâm Cảnh báo</span>
+          </div>
+          <span id="navAlertBadge" class="font-label-code text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-container text-on-primary-container animate-pulse">
+            03 MỚI
+          </span>
+        </a>
+
+        <!-- GROUP 2: PHÂN TÍCH & BÁO CÁO -->
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
+          Phân tích & Báo cáo
+        </span>
+
+        <a href="ai-analytics.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">psychology</span>
+          <span class="font-title-sm text-[13px] font-medium">Phân tích AI & Rủi ro</span>
+        </a>
+
+        <a href="history-reports.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">history_toggle_off</span>
+          <span class="font-title-sm text-[13px] font-medium">Lịch sử & Báo cáo PCCC</span>
+        </a>
+
+        <!-- GROUP 3: HỆ THỐNG & CẤU HÌNH -->
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
+          Hệ thống & Cấu hình
+        </span>
+
+        <a href="user-mgmt.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">manage_accounts</span>
+          <span class="font-title-sm text-[13px] font-medium">Quản lý Người dùng & Quyền</span>
+        </a>
+
+        <a href="settings.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">tune</span>
+          <span class="font-title-sm text-[13px] font-medium">Cài đặt Ngưỡng & MQTT</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- MQTT Broker Status Footer Widget -->
+    <div class="p-space-md m-space-md bg-surface-container-low rounded-xl border border-surface-container-high/80">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+          </span>
+          <span class="font-label-code text-[11px] font-semibold text-on-surface">MQTT Broker</span>
+        </div>
+        <span class="font-label-code text-[11px] text-tertiary bg-surface-container px-1.5 py-0.5 rounded">WSS 24ms</span>
+      </div>
+      <p class="font-label-code text-[11px] text-on-surface-variant leading-tight truncate">test.mosquitto.org:1883</p>
+      <div class="mt-2 pt-2 border-t border-surface-container-highest flex flex-col gap-0.5 text-[10px] font-label-code">
+        <span class="text-on-surface-variant/70 uppercase">Subscribed topic:</span>
+        <span class="text-secondary truncate">pbl4/sensors/fire_warning</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+  <div class="pl-72 flex flex-col min-h-screen">
+    
+    <!-- ==================== HEADER BAR ==================== -->
+    <header class="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl border-b border-surface-container-high/60 z-40 flex items-center justify-between px-4 lg:px-6">
+      <div class="flex items-center gap-2 lg:gap-3 flex-1 min-w-0 mr-3">
+        <!-- System Health Pill -->
+        <div class="flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
+          <span class="font-label-code text-[11px] text-on-surface-variant uppercase">Hệ thống:</span>
+          <span class="font-label-code text-[11px] font-bold text-tertiary flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-tertiary inline-block"></span> BÌNH THƯỜNG
+          </span>
+        </div>
+
+        <!-- Zone Selector Dropdown -->
+        <div class="relative shrink-0">
+          <select id="zoneFilterSelect" onchange="onZoneFilterChange(this.value)" class="bg-surface-container-high text-on-surface text-[12.5px] font-medium rounded-lg pl-2.5 pr-7 py-1.5 border border-surface-container-highest outline-none focus:border-tertiary transition-colors cursor-pointer appearance-none max-w-[170px] sm:max-w-none truncate">
+            <option value="all">Tất cả Zone (Toàn khu)</option>
+            <option value="block-a">Block A - Phân xưởng Chế tạo (CNC)</option>
+            <option value="block-b">Block B - Kho Hóa chất &amp; Dung môi</option>
+            <option value="block-c">Block C - Khu Đúc &amp; Xử lý nhiệt</option>
+            <option value="block-d">Block D - Khu Rót Dầu Thủy Lực</option>
+          </select>
+          <span class="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] pointer-events-none">expand_more</span>
+        </div>
+
+        <!-- Global Search -->
+        <div class="hidden md:block relative w-36 lg:w-48 xl:w-60 shrink min-w-0">
+          <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">search</span>
+          <input id="globalSearchInput" oninput="onGlobalSearch(this.value)" class="w-full bg-surface-container-high text-on-surface placeholder:text-outline text-body-sm font-body-sm rounded-lg pl-7 pr-2.5 py-1.5 outline-none border border-transparent focus:border-secondary transition-colors text-[12px]" placeholder="Tìm Node, IP..." type="text">
+        </div>
+      </div>
+
+      <!-- Right Actions: Clock, Mute Alarm, User Profile -->
+      <div class="flex items-center gap-2 lg:gap-3 shrink-0">
+        <!-- Live Clock -->
+        <div class="hidden xl:flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
+          <span class="material-symbols-outlined text-tertiary text-[16px]">schedule</span>
+          <span id="headerLiveClock" class="font-label-code text-[11.5px] text-on-surface font-semibold whitespace-nowrap">14:28:45 • 24/05/2025</span>
+        </div>
+
+        <!-- Mute Alarm Emergency Button -->
+        <button id="btnHeaderMuteAlarm" onclick="toggleEmergencyAlarm()" type="button" class="flex items-center gap-1.5 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-title-sm text-[12px] font-semibold h-8.5 px-3 rounded-lg transition-all shadow-sm shrink-0 whitespace-nowrap leading-none">
+          <span class="material-symbols-outlined text-[17px]">volume_off</span>
+          <span>Tắt chuông khẩn cấp</span>
+        </button>
+
+        <!-- Notification Bell -->
+        <a href="alert-center.html" class="relative cursor-pointer shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-highest flex items-center justify-center text-on-surface transition-colors border border-surface-container-high">
+            <span class="material-symbols-outlined text-[18px]">notifications</span>
+          </div>
+          <span class="absolute -top-1 -right-1 w-4 h-4 bg-primary-container text-on-primary-container text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
+        </a>
+
+        <!-- User Profile Pill -->
+        <div class="flex items-center gap-2 pl-2 border-l border-surface-container-high shrink-0">
+          <div class="hidden lg:flex flex-col text-right leading-tight">
+            <span class="font-title-sm text-[12.5px] text-on-surface font-semibold whitespace-nowrap">Nguyễn Văn An</span>
+            <span class="font-label-code text-[10.5px] text-secondary whitespace-nowrap">Ca trực SOC • Admin</span>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-on-primary text-[12px] shrink-0">
+            NA
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================== MAIN CONTENT: GIÁM SÁT THIẾT BỊ ==================== -->
+    <main class="w-full pt-20 bg-background flex-1 px-4 lg:px-6 pb-8">
+      <section class="flex flex-col w-full gap-5">
+        <!-- Header Bar for Devices & Floorplan -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <span class="material-symbols-outlined text-tertiary text-[24px]">layers</span>
+              <h1 class="font-headline-sm text-[20px] font-bold text-on-surface">Quản lý Khu vực & Thiết bị IoT</h1>
+              <span class="font-label-code text-[11px] font-bold bg-tertiary-container/30 text-tertiary px-2 py-0.5 rounded border border-tertiary/40">
+                PBL4 CAD-ENGINE
+              </span>
+            </div>
+            <p class="font-body-sm text-[13px] text-on-surface-variant mt-1">
+              Giám sát 32 trạm cảm biến phân tán trên 4 khu vực nhà xưởng thời gian thực
+            </p>
+          </div>
+
+          <!-- Controls: Area selector, Search, Add device button -->
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="relative">
+              <select id="floorBlockSelector" onchange="switchFloorBlock(this.value)" class="bg-surface-container-high text-on-surface text-[13px] font-medium rounded-lg pl-3 pr-8 py-1.5 border border-surface-container-highest outline-none focus:border-tertiary cursor-pointer appearance-none">
+                <option value="block-a">Block A - Phân xưởng Chế tạo (CNC)</option>
+                <option value="block-b">Block B - Kho Hóa chất &amp; Dung môi</option>
+                <option value="block-c">Block C - Khu Đúc &amp; Xử lý nhiệt</option>
+                <option value="block-d">Block D - Khu Rót Dầu Thủy Lực</option>
+              </select>
+              <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">expand_more</span>
+            </div>
+
+            <button onclick="refreshDeviceNodes()" class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-highest flex items-center justify-center text-on-surface border border-surface-container-high transition-colors" title="Làm mới trạng thái">
+              <span class="material-symbols-outlined text-[18px]">sync</span>
+            </button>
+
+            <button onclick="openAddDeviceModal()" class="flex items-center gap-1.5 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-title-sm text-[12px] font-semibold px-3 py-1.5 rounded-lg shadow transition-all shrink-0 whitespace-nowrap">
+              <span class="material-symbols-outlined text-[16px]">add_circle</span> Thêm thiết bị
+            </button>
+
+            <button onclick="showToast('Chức năng thêm khu vực bản đồ CAD', 'info')" class="flex items-center gap-1.5 bg-surface-container hover:bg-surface-container-highest text-on-surface font-title-sm text-[12px] px-3 py-1.5 rounded-lg border border-surface-container-high transition-all shrink-0 whitespace-nowrap">
+              <span class="material-symbols-outlined text-[16px]">add_location_alt</span> Thêm khu vực
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Stat Counters Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-md">
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high flex items-center justify-between">
+            <div>
+              <span class="font-label-code text-[11px] text-on-surface-variant uppercase font-bold">Tổng Node Cảm biến</span>
+              <div class="flex items-baseline gap-1 mt-1">
+                <span class="font-metric-display text-[26px] font-bold text-on-surface">32</span>
+                <span class="font-label-code text-[11px] text-on-surface-variant">nodes</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center text-tertiary">
+              <span class="material-symbols-outlined text-[24px]">memory</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high flex items-center justify-between">
+            <div>
+              <span class="font-label-code text-[11px] text-on-surface-variant uppercase font-bold">Đang trực tuyến</span>
+              <div class="flex items-baseline gap-1 mt-1">
+                <span class="font-metric-display text-[26px] font-bold text-tertiary">30</span>
+                <span class="font-label-code text-[11px] text-on-surface-variant">/ 32 (93.7%)</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
+              <span class="material-symbols-outlined text-[24px]">wifi</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high flex items-center justify-between">
+            <div>
+              <span class="font-label-code text-[11px] text-on-surface-variant uppercase font-bold">Mất kết nối</span>
+              <div class="flex items-baseline gap-1 mt-1">
+                <span class="font-metric-display text-[26px] font-bold text-secondary">02</span>
+                <span class="font-label-code text-[11px] text-secondary-fixed-dim">cần kiểm tra</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
+              <span class="material-symbols-outlined text-[24px]">wifi_off</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high flex items-center justify-between">
+            <div>
+              <span class="font-label-code text-[11px] text-on-surface-variant uppercase font-bold">Cảnh báo nhiệt cao</span>
+              <div class="flex items-baseline gap-1 mt-1">
+                <span class="font-metric-display text-[26px] font-bold text-primary">01</span>
+                <span class="font-label-code text-[11px] text-on-surface-variant">Zone Bồn dầu</span>
+              </div>
+            </div>
+            <div class="w-10 h-10 rounded-lg bg-error-container/40 flex items-center justify-center text-primary">
+              <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Workspace: 60% Interactive Floorplan CAD | 40% Node Inspector -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-space-md">
+          
+          <!-- LEFT 60%: CAD FLOOR PLAN -->
+          <div class="xl:col-span-7 bg-surface-container-low rounded-xl p-space-md border border-surface-container-high flex flex-col justify-between">
+            <div>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-surface-container-highest">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-secondary inline-block"></span>
+                    <h2 class="font-title-md text-[16px] font-bold text-on-surface" id="floorPlanTitle">Mặt bằng Tầng 1 - Block A</h2>
+                    <span class="font-label-code text-[10px] bg-surface-container-highest text-tertiary px-1.5 py-0.5 rounded font-semibold">
+                      SCALE 1:200
+                    </span>
+                  </div>
+                  <div class="font-label-code text-[11px] text-on-surface-variant mt-0.5">
+                    CAD REF: DWG-BLKA-2025-FL1 • Tọa độ IoT Grid X: 140 Y: 92
+                  </div>
+                </div>
+
+                <!-- Layer View Mode Tabs & Map Controls -->
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center bg-surface-container rounded-lg p-0.5 text-[11px] font-label-code border border-surface-container-highest">
+                    <button id="btnLayerSensors" onclick="setFloorLayer('sensors')" class="px-2.5 py-1 rounded bg-surface-container-highest text-on-surface font-semibold flex items-center gap-1 transition-all" type="button">
+                      <span class="material-symbols-outlined text-[14px]">sensors</span> Cảm biến
+                    </button>
+                    <button id="btnLayerHeatmap" onclick="setFloorLayer('heatmap')" class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface flex items-center gap-1 transition-all" type="button">
+                      <span class="material-symbols-outlined text-[14px]">local_fire_department</span> Heatmap
+                    </button>
+                    <button id="btnLayerEscape" onclick="setFloorLayer('escape')" class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface flex items-center gap-1 transition-all" type="button">
+                      <span class="material-symbols-outlined text-[14px]">emergency</span> Thoát hiểm
+                    </button>
+                  </div>
+
+                  <div class="flex items-center bg-surface-container rounded-lg p-0.5 border border-surface-container-highest">
+                    <button onclick="zoomMap(1.15)" class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface" title="Phóng to">
+                      <span class="material-symbols-outlined text-[16px]">zoom_in</span>
+                    </button>
+                    <button onclick="zoomMap(0.85)" class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface" title="Thu nhỏ">
+                      <span class="material-symbols-outlined text-[16px]">zoom_out</span>
+                    </button>
+                    <button onclick="resetMapZoom()" class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface" title="Về mặc định">
+                      <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Blueprint Canvas -->
+              <div class="relative w-full h-[400px] mt-3 rounded-lg overflow-hidden cad-grid bg-surface-container-lowest border border-surface-container-highest flex items-center justify-center">
+                
+                <svg id="cadFloorSvg" class="w-full h-full transition-transform duration-300" viewBox="0 0 800 480">
+                  <defs>
+                    <!-- Heatmap radial gradients -->
+                    <radialGradient id="heatHot" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="#ff5451" stop-opacity="0.8"></stop>
+                      <stop offset="60%" stop-color="#ee9800" stop-opacity="0.3"></stop>
+                      <stop offset="100%" stop-color="#ee9800" stop-opacity="0"></stop>
+                    </radialGradient>
+                    <radialGradient id="heatWarm" cx="50%" cy="50%" r="50%">
+                      <stop offset="0%" stop-color="#ee9800" stop-opacity="0.6"></stop>
+                      <stop offset="100%" stop-color="#ee9800" stop-opacity="0"></stop>
+                    </radialGradient>
+                  </defs>
+
+                  <!-- Factory Walls & Rooms Blueprint -->
+                  <g id="wallsGroup" stroke="#31353f" stroke-width="2" fill="none">
+                    <!-- Outer perimeter -->
+                    <rect x="40" y="30" width="720" height="420" rx="4" stroke="#4cd7f6" stroke-width="2" opacity="0.4"></rect>
+                    
+                    <!-- Rooms / Zones partitions -->
+                    <line x1="40" y1="240" x2="520" y2="240"></line>
+                    <line x1="520" y1="30" x2="520" y2="450"></line>
+                    <line x1="260" y1="30" x2="260" y2="240"></line>
+                    <line x1="260" y1="350" x2="520" y2="350"></line>
+                    <line x1="520" y1="180" x2="760" y2="180"></line>
+
+                    <!-- Machinery CAD blocks -->
+                    <rect x="70" y="60" width="140" height="130" stroke="#5b403e" stroke-dasharray="3 3" fill="#181b25" fill-opacity="0.4"></rect>
+                    <rect x="290" y="60" width="190" height="140" stroke="#5b403e" stroke-dasharray="3 3" fill="#181b25" fill-opacity="0.4"></rect>
+                    <rect x="80" y="270" width="140" height="140" stroke="#5b403e" stroke-dasharray="3 3" fill="#181b25" fill-opacity="0.4"></rect>
+                    <rect x="300" y="270" width="180" height="60" stroke="#5b403e" stroke-dasharray="3 3" fill="#181b25" fill-opacity="0.4"></rect>
+                    <rect x="550" y="60" width="180" height="90" stroke="#5b403e" stroke-dasharray="3 3" fill="#181b25" fill-opacity="0.4"></rect>
+                  </g>
+
+                  <!-- Zone Text Labels -->
+                  <g font-family="JetBrains Mono" font-size="11" fill="#dfe2ef" opacity="0.6">
+                    <text x="80" y="80">ZONE A-1: PHÂN XƯỞNG CNC</text>
+                    <text x="300" y="80">ZONE A-2: BỒN DẦU BÔI TRƠN T-1</text>
+                    <text x="80" y="295">ZONE A-3: KHO LINH KIỆN ĐIỆN TỬ</text>
+                    <text x="300" y="295">ZONE A-4: TRẠM BIẾN ÁP PHỤ TẢI</text>
+                    <text x="560" y="80">ZONE A-5: PHÒNG ĐIỀU HÀNH SOC</text>
+                    <text x="560" y="220">ZONE A-6: KHO HÓA CHẤT PHỤ TRỢ</text>
+                  </g>
+
+                  <!-- Dynamic Heatmap Layer (Hidden by default) -->
+                  <g id="heatmapLayer" class="hidden">
+                    <circle cx="390" cy="130" r="140" fill="url(#heatHot)"></circle>
+                    <circle cx="160" cy="340" r="80" fill="url(#heatWarm)"></circle>
+                    <circle cx="650" cy="300" r="100" fill="url(#heatWarm)"></circle>
+                  </g>
+
+                  <!-- Dynamic Escape Route Layer (Hidden by default) -->
+                  <g id="escapeLayer" class="hidden" stroke="#4cd7f6" stroke-width="3" stroke-dasharray="6 4" fill="none">
+                    <path d="M 140 180 L 140 240 L 40 240"></path>
+                    <path d="M 390 190 L 390 240 L 520 240 L 520 450"></path>
+                    <path d="M 640 260 L 640 450"></path>
+                    <text x="25" y="235" fill="#4cd7f6" font-family="JetBrains Mono" font-size="10" font-weight="bold">LỐI THOÁT 01</text>
+                    <text x="530" y="445" fill="#4cd7f6" font-family="JetBrains Mono" font-size="10" font-weight="bold">LỐI THOÁT 02</text>
+                  </g>
+
+                  <!-- Interactive IoT Sensor Nodes Layer -->
+                  <g id="sensorNodesLayer">
+                    <!-- Node T-104 (CRITICAL / WARNING - Zone Bồn Dầu) -->
+                    <g class="cursor-pointer" onclick="selectNodeOnMap('T-104')">
+                      <circle cx="390" cy="130" r="22" fill="#ee9800" opacity="0.25" class="animate-ping"></circle>
+                      <circle cx="390" cy="130" r="13" fill="#181b25" stroke="#ee9800" stroke-width="2.5"></circle>
+                      <circle cx="390" cy="130" r="5" fill="#ee9800"></circle>
+                      <rect x="350" y="148" width="80" height="18" rx="3" fill="#1c1f29" stroke="#ee9800" stroke-width="1"></rect>
+                      <text x="358" y="161" fill="#ee9800" font-family="JetBrains Mono" font-size="9" font-weight="bold">#T-104 (48.5°)</text>
+                    </g>
+
+                    <!-- Node MQ-02 (Smoke - Workshop) -->
+                    <g class="cursor-pointer" onclick="selectNodeOnMap('MQ-02')">
+                      <circle cx="140" cy="120" r="12" fill="#181b25" stroke="#4cd7f6" stroke-width="2"></circle>
+                      <circle cx="140" cy="120" r="4.5" fill="#4cd7f6"></circle>
+                      <text x="110" y="146" fill="#4cd7f6" font-family="JetBrains Mono" font-size="9">#MQ-02 (185ppm)</text>
+                    </g>
+
+                    <!-- Node FL-01 (Flame AI Cam) -->
+                    <g class="cursor-pointer" onclick="selectNodeOnMap('FL-01')">
+                      <rect x="195" y="200" width="22" height="18" rx="3" fill="#181b25" stroke="#ffb95f" stroke-width="2"></rect>
+                      <circle cx="206" cy="209" r="3.5" fill="#ffb95f"></circle>
+                      <text x="180" y="232" fill="#ffb95f" font-family="JetBrains Mono" font-size="9">#CAM-01 (Vision)</text>
+                    </g>
+
+                    <!-- Node T-105 (Normal) -->
+                    <g class="cursor-pointer" onclick="selectNodeOnMap('T-105')">
+                      <circle cx="150" cy="340" r="11" fill="#181b25" stroke="#4cd7f6" stroke-width="2"></circle>
+                      <circle cx="150" cy="340" r="4" fill="#4cd7f6"></circle>
+                      <text x="125" y="365" fill="#dfe2ef" font-family="JetBrains Mono" font-size="9">#T-105 (30.1°)</text>
+                    </g>
+
+                    <!-- Node MQ-03 (Offline / Mất tín hiệu) -->
+                    <g class="cursor-pointer" onclick="selectNodeOnMap('MQ-03')">
+                      <circle cx="380" cy="300" r="11" fill="#181b25" stroke="#ab8986" stroke-dasharray="2 2" stroke-width="2"></circle>
+                      <circle cx="380" cy="300" r="3.5" fill="#ab8986"></circle>
+                      <text x="350" y="325" fill="#ab8986" font-family="JetBrains Mono" font-size="9">#MQ-03 (OFFLINE)</text>
+                    </g>
+
+                    <!-- Actuator: Van Solenoid Gas -->
+                    <g class="cursor-pointer" onclick="selectActuator('VALVE-01')">
+                      <polygon points="490,120 510,135 510,105" fill="#ee9800"></polygon>
+                      <polygon points="530,120 510,135 510,105" fill="#ee9800"></polygon>
+                      <circle cx="510" cy="120" r="3" fill="#0f131c"></circle>
+                      <text x="470" y="150" fill="#ee9800" font-family="JetBrains Mono" font-size="9">Van Gas V-01</text>
+                    </g>
+
+                    <!-- Sprinkler Head 1 -->
+                    <g class="cursor-pointer" onclick="selectActuator('SPK-01')">
+                      <circle cx="640" cy="120" r="8" fill="#181b25" stroke="#4cd7f6" stroke-width="1.5"></circle>
+                      <line x1="640" y1="112" x2="640" y2="128" stroke="#4cd7f6" stroke-width="1.5"></line>
+                      <line x1="632" y1="120" x2="648" y2="120" stroke="#4cd7f6" stroke-width="1.5"></line>
+                      <text x="615" y="142" fill="#4cd7f6" font-family="JetBrains Mono" font-size="9">Sprinkler S-01</text>
+                    </g>
+                  </g>
+                </svg>
+
+                <!-- Floating map helper note -->
+                <div class="absolute bottom-2 left-3 text-[10px] font-label-code text-on-surface-variant/80 bg-surface-container/70 backdrop-blur px-2 py-0.5 rounded">
+                  * Nhấp chuột vào từng Node cảm biến trên bản đồ để xem chi tiết
+                </div>
+              </div>
+            </div>
+
+            <!-- Floorplan Legend Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-surface-container-highest mt-3 text-[11px] font-label-code text-on-surface-variant">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-tertiary"></span> Bình thường
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-secondary"></span> Cảnh báo nhiệt
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-sm bg-primary"></span> AI Camera Vision
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-outline"></span> Mất tín hiệu
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-secondary text-[14px]">valve</span> Van Solenoid Gas
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-tertiary text-[14px]">shower</span> Vòi Sprinkler
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT 40%: NODE DETAIL INSPECTOR & DEVICE TABLE -->
+          <div class="xl:col-span-5 flex flex-col gap-space-md">
+            
+            <!-- Node Inspector Card (Active Node) -->
+            <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high shadow-md">
+              <div class="flex items-start justify-between pb-3 border-b border-surface-container-highest">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center text-secondary">
+                    <span class="material-symbols-outlined text-[24px]">developer_board</span>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <h3 id="inspectNodeTitle" class="font-title-md text-[17px] font-bold text-on-surface">Node #T-104</h3>
+                      <span id="inspectNodeBadge" class="font-label-code text-[10px] font-bold px-2 py-0.5 rounded bg-secondary-container/40 text-secondary border border-secondary/40">
+                        CẢNH BÁO NHIỆT
+                      </span>
+                    </div>
+                    <div id="inspectNodeHardware" class="font-label-code text-[11px] text-on-surface-variant">
+                      ESP32-WROOM-32D Dual-Core MCU
+                    </div>
+                  </div>
+                </div>
+
+                <button onclick="calibrateCurrentNode()" class="text-tertiary hover:text-white font-label-code text-[11px] flex items-center gap-1 bg-surface-container px-2 py-1 rounded border border-surface-container-high transition-colors">
+                  <span class="material-symbols-outlined text-[14px]">tune</span> Hiệu chuẩn
+                </button>
+              </div>
+
+              <!-- Technical Specifications Grid -->
+              <div class="grid grid-cols-2 gap-space-sm my-space-md font-label-code text-[12px]">
+                <div class="bg-surface-container p-2.5 rounded-lg border border-surface-container-high">
+                  <span class="text-on-surface-variant/70 text-[10px] uppercase">Địa chỉ IP</span>
+                  <div id="inspectNodeIp" class="text-on-surface font-semibold mt-0.5">192.168.1.104</div>
+                </div>
+                <div class="bg-surface-container p-2.5 rounded-lg border border-surface-container-high">
+                  <span class="text-on-surface-variant/70 text-[10px] uppercase">Địa chỉ MAC</span>
+                  <div id="inspectNodeMac" class="text-on-surface font-semibold mt-0.5">cc:50:e3:12:04:21</div>
+                </div>
+                <div class="bg-surface-container p-2.5 rounded-lg border border-surface-container-high">
+                  <span class="text-on-surface-variant/70 text-[10px] uppercase">Firmware</span>
+                  <div id="inspectNodeFirmware" class="text-tertiary font-semibold mt-0.5">v2.4.1-pbl_prod</div>
+                </div>
+                <div class="bg-surface-container p-2.5 rounded-lg border border-surface-container-high">
+                  <span class="text-on-surface-variant/70 text-[10px] uppercase">WiFi RSSI / Ping</span>
+                  <div id="inspectNodeRssi" class="text-on-surface font-semibold mt-0.5">-68 dBm (3s trước)</div>
+                </div>
+                <div class="bg-surface-container p-2.5 rounded-lg border border-surface-container-high">
+                  <span class="text-on-surface-variant/70 text-[10px] uppercase">Pin dự phòng (LiPo)</span>
+                  <div id="inspectNodeBattery" class="text-secondary font-semibold mt-0.5">94% (4.12V - ổn định)</div>
+                </div>
+                <div class="bg-surface-container p-2.5 rounded-lg border border-surface-container-high">
+                  <span class="text-on-surface-variant/70 text-[10px] uppercase">Vị trí lắp đặt</span>
+                  <div id="inspectNodeLocation" class="text-on-surface font-semibold mt-0.5 truncate">Vách Bồn Dầu T-1</div>
+                </div>
+              </div>
+
+              <!-- Live Sparkline History -->
+              <div class="bg-surface-container p-space-sm rounded-lg border border-surface-container-high">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="font-label-code text-[10px] text-on-surface-variant uppercase">Diễn biến nhiệt độ (60 giây vừa qua)</span>
+                  <span id="inspectNodeMetricVal" class="font-label-code text-[12px] font-bold text-secondary">48.5°C ↑ +3.5°C</span>
+                </div>
+                <div class="w-full h-14 relative">
+                  <svg class="w-full h-full" preserveAspectRatio="none" viewBox="0 0 300 60">
+                    <path d="M 0 45 Q 60 48, 120 40 T 200 32 T 260 20 L 300 12" fill="none" stroke="#ee9800" stroke-width="2.5"></path>
+                    <circle cx="300" cy="12" r="3.5" fill="#ee9800"></circle>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="grid grid-cols-2 gap-2 mt-space-md">
+                <button onclick="rebootNodeAction()" class="flex items-center justify-center gap-1.5 py-2 px-3 bg-surface-container hover:bg-surface-container-highest text-on-surface font-title-sm text-[12px] rounded-lg border border-surface-container-high transition-colors" type="button">
+                  <span class="material-symbols-outlined text-[16px]">restart_alt</span> Khởi động lại Node
+                </button>
+                <button onclick="triggerNodeAlarmTest()" class="flex items-center justify-center gap-1.5 py-2 px-3 bg-error-container/30 hover:bg-error-container/60 text-primary font-title-sm text-[12px] rounded-lg border border-error-container/50 font-semibold transition-colors" type="button">
+                  <span class="material-symbols-outlined text-[16px]">notifications_active</span> Kích hoạt Test Còi
+                </button>
+              </div>
+            </div>
+
+            <!-- Mini Devices Table (Screenshot 2 bottom right) -->
+            <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high shadow-md">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-title-md text-[14px] font-bold text-on-surface">Danh sách Thiết bị IoT</h3>
+                  <span class="font-label-code text-[10px] bg-surface-container px-2 py-0.5 rounded text-on-surface-variant">5 hiển thị</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button onclick="showToast('Đã lọc theo trạng thái cảnh báo', 'info')" class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[16px]">filter_list</span></button>
+                  <button onclick="exportReportAction('CSV')" class="w-7 h-7 flex items-center justify-center text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined text-[16px]">download</span></button>
+                </div>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left font-label-code text-[11px]">
+                  <thead>
+                    <tr class="text-on-surface-variant border-b border-surface-container-highest">
+                      <th class="py-1.5 px-2 font-semibold">MÃ NODE</th>
+                      <th class="py-1.5 px-2 font-semibold">CẢM BIẾN</th>
+                      <th class="py-1.5 px-2 font-semibold">VỊ TRÍ</th>
+                      <th class="py-1.5 px-2 font-semibold">DỮ LIỆU</th>
+                      <th class="py-1.5 px-2 font-semibold">TRẠNG THÁI</th>
+                      <th class="py-1.5 px-2 text-right">TÁC VỤ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="deviceTableBody" class="divide-y divide-surface-container-highest/60">
+                    <tr onclick="selectNodeOnMap('T-104')" class="hover:bg-surface-container cursor-pointer transition-colors bg-secondary-container/10">
+                      <td class="py-2 px-2 text-secondary font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-secondary"></span> T-104
+                      </td>
+                      <td class="py-2 px-2 text-on-surface">DS18B20 Nhiệt</td>
+                      <td class="py-2 px-2 text-on-surface-variant truncate max-w-[90px]">Bồn Dầu T-1</td>
+                      <td class="py-2 px-2 text-secondary font-bold">48.5 °C</td>
+                      <td class="py-2 px-2"><span class="px-1.5 py-0.5 rounded bg-secondary-container/40 text-secondary text-[10px]">Cảnh báo</span></td>
+                      <td class="py-2 px-2 text-right"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">settings</span></td>
+                    </tr>
+                    <tr onclick="selectNodeOnMap('MQ-02')" class="hover:bg-surface-container cursor-pointer transition-colors">
+                      <td class="py-2 px-2 text-tertiary font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-tertiary"></span> MQ-02
+                      </td>
+                      <td class="py-2 px-2 text-on-surface">MQ-2 Khói/Gas</td>
+                      <td class="py-2 px-2 text-on-surface-variant truncate max-w-[90px]">Xưởng CNC</td>
+                      <td class="py-2 px-2 text-tertiary font-bold">185 ppm</td>
+                      <td class="py-2 px-2"><span class="px-1.5 py-0.5 rounded bg-tertiary-container/30 text-tertiary text-[10px]">Online</span></td>
+                      <td class="py-2 px-2 text-right"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">settings</span></td>
+                    </tr>
+                    <tr onclick="selectNodeOnMap('FL-01')" class="hover:bg-surface-container cursor-pointer transition-colors">
+                      <td class="py-2 px-2 text-on-surface font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-primary"></span> FL-01
+                      </td>
+                      <td class="py-2 px-2 text-on-surface">AI Cam Vision</td>
+                      <td class="py-2 px-2 text-on-surface-variant truncate max-w-[90px]">Trạm Hàn xì</td>
+                      <td class="py-2 px-2 text-on-surface font-bold">Tin cậy 92%</td>
+                      <td class="py-2 px-2"><span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface text-[10px]">Giám sát</span></td>
+                      <td class="py-2 px-2 text-right"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">settings</span></td>
+                    </tr>
+                    <tr onclick="selectNodeOnMap('T-105')" class="hover:bg-surface-container cursor-pointer transition-colors">
+                      <td class="py-2 px-2 text-tertiary font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-tertiary"></span> T-105
+                      </td>
+                      <td class="py-2 px-2 text-on-surface">DS18B20 Nhiệt</td>
+                      <td class="py-2 px-2 text-on-surface-variant truncate max-w-[90px]">Kho điện tử</td>
+                      <td class="py-2 px-2 text-on-surface font-bold">30.1 °C</td>
+                      <td class="py-2 px-2"><span class="px-1.5 py-0.5 rounded bg-tertiary-container/30 text-tertiary text-[10px]">Online</span></td>
+                      <td class="py-2 px-2 text-right"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">settings</span></td>
+                    </tr>
+                    <tr onclick="selectNodeOnMap('MQ-03')" class="hover:bg-surface-container cursor-pointer transition-colors">
+                      <td class="py-2 px-2 text-outline font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-outline"></span> MQ-03
+                      </td>
+                      <td class="py-2 px-2 text-on-surface">MQ-2 Khói</td>
+                      <td class="py-2 px-2 text-on-surface-variant truncate max-w-[90px]">Trạm biến áp</td>
+                      <td class="py-2 px-2 text-outline">N/A</td>
+                      <td class="py-2 px-2"><span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-outline text-[10px]">Offline</span></td>
+                      <td class="py-2 px-2 text-right"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">settings</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Emergency Modal -->
+  <div id="modalEmergencyShutdown" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface-container-low border-2 border-primary-container rounded-2xl max-w-md w-full p-6 shadow-2xl laser-glow">
+      <div class="w-12 h-12 rounded-xl bg-error-container text-primary flex items-center justify-center mx-auto mb-4 animate-bounce">
+        <span class="material-symbols-outlined text-[32px]">warning</span>
+      </div>
+      <h3 class="font-headline-sm text-[18px] font-bold text-center text-on-surface">
+        XÁC NHẬN CƠ CHẾ AN TOÀN KHẨN CẤP
+      </h3>
+      <p class="font-body-sm text-[13px] text-on-surface-variant text-center mt-2">
+        Bạn chuẩn bị gửi lệnh <strong class="text-primary font-bold">CẮT TOÀN BỘ NGUỒN ĐIỆN</strong> và <strong class="text-secondary font-bold">KHÓA VAN SOLENOID GAS</strong> cho toàn nhà xưởng qua giao thức MQTT.
+      </p>
+      <div class="flex items-center gap-3 mt-4">
+        <button onclick="toggleEmergencyModal(false)" class="flex-1 py-2 rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface font-title-sm text-[13px] font-medium transition-colors" type="button">
+          Hủy bỏ
+        </button>
+        <button onclick="executeEmergencyShutdown()" class="flex-1 py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary-container font-title-sm text-[13px] font-bold shadow-lg transition-colors" type="button">
+          XÁC NHẬN NGẮT NGAY
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+

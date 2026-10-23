@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html class="dark" lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>FireGuard IoT - Cài đặt Ngưỡng & MQTT</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/tailwind-config.js"></script>
+</head>
+<body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.25)] border-r border-surface-container-highest/40">
+    <div class="flex flex-col">
+      <div class="h-16 px-space-md flex items-center gap-space-sm bg-surface-container-lowest border-b border-surface-container-high/50">
+        <div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container shadow-md">
+          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+        </div>
+        <div class="flex flex-col leading-none">
+          <span class="font-title-md text-[16px] font-bold tracking-tight text-on-surface">FireGuard IoT</span>
+          <span class="font-label-code text-[11px] text-tertiary mt-1 tracking-wider uppercase font-semibold">PBL System Monitor</span>
+        </div>
+      </div>
+
+      <div class="px-space-md py-space-sm">
+        <div class="px-space-sm py-1.5 bg-surface-container rounded-lg flex items-center justify-between border border-surface-container-high">
+          <span class="font-label-code text-[11px] text-on-surface-variant uppercase tracking-wider">Mạng cảm biến</span>
+          <span class="font-label-code text-[11px] text-secondary font-semibold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-secondary inline-block animate-pulse"></span>
+            CH-01 • ONLINE
+          </span>
+        </div>
+      </div>
+
+      <nav class="flex flex-col gap-1 px-space-md py-1 overflow-y-auto max-h-[calc(100vh-220px)]" id="sidebarNav">
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-2 pb-1 font-bold">
+          Giám sát & Vận hành
+        </span>
+
+        <a href="dashboard.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">grid_view</span>
+          <span class="font-title-sm text-[13px] font-medium">Tổng quan</span>
+        </a>
+
+        <a href="device-monitor.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">layers</span>
+          <span class="font-title-sm text-[13px] font-medium flex-1">Giám sát Thiết bị & Mặt bằng</span>
+        </a>
+
+        <a href="alert-center.html" class="flex items-center justify-between px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <div class="flex items-center gap-space-sm">
+            <span class="material-symbols-outlined text-[20px] text-primary">crisis_alert</span>
+            <span class="font-title-sm text-[13px] font-medium">Trung tâm Cảnh báo</span>
+          </div>
+          <span id="navAlertBadge" class="font-label-code text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-container text-on-primary-container animate-pulse">
+            03 MỚI
+          </span>
+        </a>
+
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
+          Phân tích & Báo cáo
+        </span>
+
+        <a href="ai-analytics.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">psychology</span>
+          <span class="font-title-sm text-[13px] font-medium">Phân tích AI & Rủi ro</span>
+        </a>
+
+        <a href="history-reports.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">history_toggle_off</span>
+          <span class="font-title-sm text-[13px] font-medium">Lịch sử & Báo cáo PCCC</span>
+        </a>
+
+        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
+          Hệ thống & Cấu hình
+        </span>
+
+        <a href="user-mgmt.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">manage_accounts</span>
+          <span class="font-title-sm text-[13px] font-medium">Quản lý Người dùng & Quyền</span>
+        </a>
+
+        <a href="settings.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all bg-primary-container text-on-primary-container shadow-sm font-semibold text-left w-full">
+          <span class="material-symbols-outlined text-[20px]">tune</span>
+          <span class="font-title-sm text-[13px]">Cài đặt Ngưỡng & MQTT</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="p-space-md m-space-md bg-surface-container-low rounded-xl border border-surface-container-high/80">
+      <div class="flex items-center justify-between mb-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
+          </span>
+          <span class="font-label-code text-[11px] font-semibold text-on-surface">MQTT Broker</span>
+        </div>
+        <span class="font-label-code text-[11px] text-tertiary bg-surface-container px-1.5 py-0.5 rounded">WSS 24ms</span>
+      </div>
+      <p class="font-label-code text-[11px] text-on-surface-variant leading-tight truncate">test.mosquitto.org:1883</p>
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
+  <div class="pl-72 flex flex-col min-h-screen">
+    <header class="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl border-b border-surface-container-high/60 z-40 flex items-center justify-between px-4 lg:px-6">
+      <div class="flex items-center gap-2 lg:gap-3 flex-1 min-w-0 mr-3">
+        <div class="flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
+          <span class="font-label-code text-[11px] text-on-surface-variant uppercase">Hệ thống:</span>
+          <span class="font-label-code text-[11px] font-bold text-tertiary flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-tertiary inline-block"></span> BÌNH THƯỜNG
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 lg:gap-3 shrink-0">
+        <div class="hidden xl:flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
+          <span class="material-symbols-outlined text-tertiary text-[16px]">schedule</span>
+          <span id="headerLiveClock" class="font-label-code text-[11.5px] text-on-surface font-semibold whitespace-nowrap">14:28:45 • 24/05/2025</span>
+        </div>
+        <button id="btnHeaderMuteAlarm" onclick="toggleEmergencyAlarm()" type="button" class="flex items-center gap-1.5 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-title-sm text-[12px] font-semibold h-8.5 px-3 rounded-lg transition-all shadow-sm shrink-0 whitespace-nowrap leading-none">
+          <span class="material-symbols-outlined text-[17px]">volume_off</span>
+          <span>Tắt chuông khẩn cấp</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="w-full pt-20 bg-background flex-1 px-4 lg:px-6 pb-8">
+      <section class="flex flex-col w-full gap-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-low p-space-md rounded-xl border border-surface-container-high">
+          <div>
+            <h1 class="font-headline-sm text-[20px] font-bold text-on-surface">Cài đặt Ngưỡng Kích hoạt & Kết nối MQTT</h1>
+            <p class="font-body-sm text-[13px] text-on-surface-variant mt-0.5">
+              Thiết lập tham số cảnh báo tự động cấp 1..4 và cấu hình giao thức truyền tin thời gian thực
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="showToast('Đã khôi phục thông số mặc định của hệ thống!', 'info')" class="px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-[12px] font-semibold border border-surface-container-highest transition-all">
+              Khôi phục mặc định
+            </button>
+            <button onclick="showToast('Đã lưu cấu hình ngưỡng và cập nhật tới các Node cảm biến!', 'success')" class="flex items-center gap-1.5 bg-primary-container text-on-primary-container px-3.5 py-1.5 rounded-lg text-[12px] font-bold shadow hover:bg-primary hover:text-on-primary transition-all">
+              <span class="material-symbols-outlined text-[16px]">save</span> Lưu cấu hình
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <!-- Card 1: Cấu hình Ngưỡng Cảm biến -->
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high shadow-md flex flex-col gap-4">
+            <div class="flex items-center justify-between border-b border-surface-container-highest/60 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary text-[22px]">thermostat</span>
+                <h2 class="font-title-md text-[15px] font-bold text-on-surface">Ngưỡng Báo động & Kích hoạt Tự động</h2>
+              </div>
+              <span class="font-label-code text-[11px] text-tertiary bg-tertiary-container/20 px-2 py-0.5 rounded">AUTO-TRIGGER</span>
+            </div>
+
+            <!-- Temperature Slider -->
+            <div class="flex flex-col gap-1.5">
+              <div class="flex justify-between items-center text-[12px]">
+                <span class="font-semibold text-on-surface">Ngưỡng Nhiệt độ Khẩn cấp (Cấp 1 - Critical):</span>
+                <span id="tempValue" class="font-label-code font-bold text-primary text-[14px]">58.0°C</span>
+              </div>
+              <input type="range" min="40" max="90" step="0.5" value="58" class="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer" oninput="document.getElementById('tempValue').textContent = this.value + '°C'">
+              <span class="text-[11px] text-on-surface-variant">Khi nhiệt độ vượt mức này, còi báo động tòa nhà và van điện từ ngắt gas sẽ tự động đóng.</span>
+            </div>
+
+            <!-- Temperature Rate of Rise -->
+            <div class="flex flex-col gap-1.5 pt-2 border-t border-surface-container-highest/40">
+              <div class="flex justify-between items-center text-[12px]">
+                <span class="font-semibold text-on-surface">Tốc độ gia nhiệt bất thường (Rate-of-Rise):</span>
+                <span id="rorValue" class="font-label-code font-bold text-secondary text-[14px]">+5.0°C / phút</span>
+              </div>
+              <input type="range" min="1" max="15" step="0.5" value="5.0" class="w-full accent-secondary h-1.5 bg-surface-container rounded-lg cursor-pointer" oninput="document.getElementById('rorValue').textContent = '+' + this.value + '°C / phút'">
+              <span class="text-[11px] text-on-surface-variant">Phát hiện đám cháy tăng trưởng nhanh ngay cả khi nhiệt độ nền chưa đạt ngưỡng tuyệt đối.</span>
+            </div>
+
+            <!-- Smoke / Gas MQ-04 -->
+            <div class="flex flex-col gap-1.5 pt-2 border-t border-surface-container-highest/40">
+              <div class="flex justify-between items-center text-[12px]">
+                <span class="font-semibold text-on-surface">Ngưỡng Nồng độ Khói / Gas LPG (MQ-04):</span>
+                <span id="smokeValue" class="font-label-code font-bold text-primary text-[14px]">500 ppm</span>
+              </div>
+              <input type="range" min="100" max="1200" step="20" value="500" class="w-full accent-primary h-1.5 bg-surface-container rounded-lg cursor-pointer" oninput="document.getElementById('smokeValue').textContent = this.value + ' ppm'">
+              <span class="text-[11px] text-on-surface-variant">Khói vượt quá 500 ppm kết hợp nhiệt độ cao sẽ kích hoạt SOP Cấp 1 ngay lập tức.</span>
+            </div>
+
+            <!-- Humidity Warning -->
+            <div class="flex flex-col gap-1.5 pt-2 border-t border-surface-container-highest/40">
+              <div class="flex justify-between items-center text-[12px]">
+                <span class="font-semibold text-on-surface">Cảnh báo Độ ẩm Thấp (Nguy cơ tĩnh điện):</span>
+                <span id="humValue" class="font-label-code font-bold text-tertiary text-[14px]">35% RH</span>
+              </div>
+              <input type="range" min="20" max="50" step="1" value="35" class="w-full accent-tertiary h-1.5 bg-surface-container rounded-lg cursor-pointer" oninput="document.getElementById('humValue').textContent = this.value + '% RH'">
+              <span class="text-[11px] text-on-surface-variant">Khi độ ẩm thấp kéo dài, tăng tần suất quét node tại các kho lưu hóa chất và xưởng gỗ.</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Cấu hình MQTT Broker & Truyền tin -->
+          <div class="bg-surface-container-low p-space-md rounded-xl border border-surface-container-high shadow-md flex flex-col gap-4">
+            <div class="flex items-center justify-between border-b border-surface-container-highest/60 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-tertiary text-[22px]">hub</span>
+                <h2 class="font-title-md text-[15px] font-bold text-on-surface">Thông số Kết nối MQTT Broker</h2>
+              </div>
+              <span class="font-label-code text-[11px] text-secondary bg-secondary-container/20 px-2 py-0.5 rounded">LIVE LINK</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-2 flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-on-surface-variant uppercase">MQTT Broker Host / IP</label>
+                <input type="text" value="test.mosquitto.org" class="bg-surface-container border border-surface-container-highest rounded-lg px-3 py-1.5 text-[12.5px] font-label-code text-on-surface focus:outline-none focus:border-tertiary">
+              </div>
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-semibold text-on-surface-variant uppercase">Port WSS / TCP</label>
+                <input type="text" value="1883" class="bg-surface-container border border-surface-container-highest rounded-lg px-3 py-1.5 text-[12.5px] font-label-code text-on-surface focus:outline-none focus:border-tertiary">
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-[11px] font-semibold text-on-surface-variant uppercase">Client ID</label>
+              <input type="text" value="FireGuard_SOC_Workstation_01" class="bg-surface-container border border-surface-container-highest rounded-lg px-3 py-1.5 text-[12.5px] font-label-code text-on-surface focus:outline-none focus:border-tertiary">
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-[11px] font-semibold text-on-surface-variant uppercase">Subscribed Topic (Telemetry & Alert)</label>
+              <input type="text" value="pbl4/sensors/fire_warning/#" class="bg-surface-container border border-surface-container-highest rounded-lg px-3 py-1.5 text-[12.5px] font-label-code text-on-surface focus:outline-none focus:border-tertiary">
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-[11px] font-semibold text-on-surface-variant uppercase">Actuator Publish Topic (Relay & Siren)</label>
+              <input type="text" value="pbl4/actuators/control" class="bg-surface-container border border-surface-container-highest rounded-lg px-3 py-1.5 text-[12.5px] font-label-code text-on-surface focus:outline-none focus:border-tertiary">
+            </div>
+
+            <div class="pt-2 flex items-center justify-between border-t border-surface-container-highest/40">
+              <div class="flex items-center gap-2">
+                <input id="chkAutoReconnect" type="checkbox" checked class="accent-tertiary rounded">
+                <label for="chkAutoReconnect" class="text-[12px] text-on-surface cursor-pointer">Tự động kết nối lại khi mất mạng (Auto-reconnect)</label>
+              </div>
+              <button onclick="showToast('Đang ping MQTT Broker test.mosquitto.org:1883... Độ trễ: 22ms. Kết nối thành công!', 'success')" class="px-3 py-1 bg-surface-container hover:bg-surface-container-high text-tertiary rounded-lg text-[11px] font-bold border border-tertiary/40">
+                Ping Broker
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
