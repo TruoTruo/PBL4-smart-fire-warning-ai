@@ -3,652 +3,481 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>FireGuard IoT - Tổng quan Dashboard</title>
+  <title>FireGuard IoT — Giám sát CSDL SmartFireDB</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/tailwind-config.js"></script>
 </head>
-<body class="bg-background font-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary-container">
+<body class="bg-[#0f131c] text-[#dfe2ef] font-sans antialiased min-h-screen p-4 lg:p-6 flex flex-col gap-5">
 
-  <!-- ==================== SIDEBAR ==================== -->
-  <aside class="fixed left-0 top-0 h-full w-72 bg-surface-container-lowest z-50 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.25)] border-r border-surface-container-highest/40">
-    <div class="flex flex-col">
-      <!-- App Brand Logo -->
-      <div class="h-16 px-space-md flex items-center gap-space-sm bg-surface-container-lowest border-b border-surface-container-high/50">
-        <div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container shadow-md">
-          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+  <!-- ==================== HEADER ==================== -->
+  <header class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-lg bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold shadow-md">
+        <span class="material-symbols-outlined text-[26px]">local_fire_department</span>
+      </div>
+      <div>
+        <h1 class="text-[18px] font-bold text-white tracking-tight flex items-center gap-2">
+          FireGuard IoT — Hệ Thống Giám Sát Cảnh Báo Cháy
+          <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30">PBL4 SOC</span>
+        </h1>
+        <div class="text-[12px] text-[#e4beba] flex items-center gap-2 mt-0.5 font-mono">
+          <span id="dbStatusBadge" class="flex items-center gap-1.5 text-[#4cd7f6]">
+            <span class="w-2 h-2 rounded-full bg-[#4cd7f6] animate-pulse"></span>
+            CSDL: SmartFireDB (MySQL localhost:3306)
+          </span>
+          <span>•</span>
+          <span id="headerLiveClock">--:--:--</span>
         </div>
+      </div>
+    </div>
+
+    <!-- Right Header Actions & Active User -->
+    <div class="flex items-center gap-3 w-full md:w-auto justify-end flex-wrap">
+      <!-- Active User Chip (từ bảng Users) -->
+      <div id="headerUserChip" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] border border-[#31353f] font-mono text-[12px]">
+        <div class="w-6 h-6 rounded-full bg-[#ff5451] text-[#5c0008] flex items-center justify-center font-bold text-[10px]" id="headerUserAvatar">U</div>
         <div class="flex flex-col leading-none">
-          <span class="font-title-md text-[16px] font-bold tracking-tight text-on-surface">FireGuard IoT</span>
-          <span class="font-label-code text-[11px] text-tertiary mt-1 tracking-wider uppercase font-semibold">PBL System Monitor</span>
+          <span id="headerUserName" class="font-bold text-white">Đang tải user...</span>
+          <span id="headerUserRole" class="text-[10px] text-[#4cd7f6]">--</span>
         </div>
       </div>
 
-      <!-- Network Status Badge -->
-      <div class="px-space-md py-space-sm">
-        <div class="px-space-sm py-1.5 bg-surface-container rounded-lg flex items-center justify-between border border-surface-container-high">
-          <span class="font-label-code text-[11px] text-on-surface-variant uppercase tracking-wider">Mạng cảm biến</span>
-          <span class="font-label-code text-[11px] text-secondary font-semibold flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-secondary inline-block animate-pulse"></span>
-            CH-01 • ONLINE
-          </span>
-        </div>
-      </div>
-
-      <!-- Nav Links Categorized -->
-      <nav class="flex flex-col gap-1 px-space-md py-1 overflow-y-auto max-h-[calc(100vh-220px)]" id="sidebarNav">
-        <!-- GROUP 1: GIÁM SÁT & VẬN HÀNH -->
-        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-2 pb-1 font-bold">
-          Giám sát & Vận hành
-        </span>
-
-        <a href="dashboard.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all bg-primary-container text-on-primary-container shadow-sm font-semibold text-left w-full">
-          <span class="material-symbols-outlined text-[20px]">grid_view</span>
-          <span class="font-title-sm text-[13px]">Tổng quan</span>
-        </a>
-
-        <a href="device-monitor.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
-          <span class="material-symbols-outlined text-[20px]">layers</span>
-          <span class="font-title-sm text-[13px] font-medium flex-1">Giám sát Thiết bị & Mặt bằng</span>
-        </a>
-
-        <a href="alert-center.html" class="flex items-center justify-between px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
-          <div class="flex items-center gap-space-sm">
-            <span class="material-symbols-outlined text-[20px] text-primary">crisis_alert</span>
-            <span class="font-title-sm text-[13px] font-medium">Trung tâm Cảnh báo</span>
-          </div>
-          <span id="navAlertBadge" class="font-label-code text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-container text-on-primary-container animate-pulse">
-            03 MỚI
-          </span>
-        </a>
-
-        <!-- GROUP 2: PHÂN TÍCH & BÁO CÁO -->
-        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
-          Phân tích & Báo cáo
-        </span>
-
-        <a href="ai-analytics.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
-          <span class="material-symbols-outlined text-[20px]">psychology</span>
-          <span class="font-title-sm text-[13px] font-medium">Phân tích AI & Rủi ro</span>
-        </a>
-
-        <a href="history-reports.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
-          <span class="material-symbols-outlined text-[20px]">history_toggle_off</span>
-          <span class="font-title-sm text-[13px] font-medium">Lịch sử & Báo cáo PCCC</span>
-        </a>
-
-        <!-- GROUP 3: HỆ THỐNG & CẤU HÌNH -->
-        <span class="font-label-code text-[10px] text-on-surface-variant/70 uppercase tracking-widest px-2 pt-3 pb-1 font-bold">
-          Hệ thống & Cấu hình
-        </span>
-
-        <a href="user-mgmt.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
-          <span class="material-symbols-outlined text-[20px]">manage_accounts</span>
-          <span class="font-title-sm text-[13px] font-medium">Quản lý Người dùng & Quyền</span>
-        </a>
-
-        <a href="settings.html" class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg transition-all text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface text-left w-full">
-          <span class="material-symbols-outlined text-[20px]">tune</span>
-          <span class="font-title-sm text-[13px] font-medium">Cài đặt Ngưỡng & MQTT</span>
-        </a>
-      </nav>
-    </div>
-
-    <!-- MQTT Broker Status Footer Widget -->
-    <div class="p-space-md m-space-md bg-surface-container-low rounded-xl border border-surface-container-high/80">
-      <div class="flex items-center justify-between mb-1.5">
-        <div class="flex items-center gap-1.5">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span>
-          </span>
-          <span class="font-label-code text-[11px] font-semibold text-on-surface">MQTT Broker</span>
-        </div>
-        <span class="font-label-code text-[11px] text-tertiary bg-surface-container px-1.5 py-0.5 rounded">WSS 24ms</span>
-      </div>
-      <p class="font-label-code text-[11px] text-on-surface-variant leading-tight truncate">test.mosquitto.org:1883</p>
-      <div class="mt-2 pt-2 border-t border-surface-container-highest flex flex-col gap-0.5 text-[10px] font-label-code">
-        <span class="text-on-surface-variant/70 uppercase">Subscribed topic:</span>
-        <span class="text-secondary truncate">pbl4/sensors/fire_warning</span>
+      <button onclick="refreshData()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all">
+        <span class="material-symbols-outlined text-[16px]">refresh</span>
+        <span>Làm mới CSDL</span>
+      </button>
+      <div id="systemSafetyBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/40 text-[12px] font-mono font-bold">
+        <span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span>
+        <span>HỆ THỐNG: BÌNH THƯỜNG</span>
       </div>
     </div>
-  </aside>
+  </header>
 
-  <!-- ==================== MAIN CONTENT WRAPPER ==================== -->
-  <div class="pl-72 flex flex-col min-h-screen">
-    
-    <!-- ==================== HEADER BAR ==================== -->
-    <header class="fixed top-0 left-72 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl border-b border-surface-container-high/60 z-40 flex items-center justify-between px-4 lg:px-6">
-      <div class="flex items-center gap-2 lg:gap-3 flex-1 min-w-0 mr-3">
-        <!-- System Health Pill -->
-        <div class="flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
-          <span class="font-label-code text-[11px] text-on-surface-variant uppercase">Hệ thống:</span>
-          <span class="font-label-code text-[11px] font-bold text-tertiary flex items-center gap-1">
-            <span class="w-2 h-2 rounded-full bg-tertiary inline-block"></span> BÌNH THƯỜNG
-          </span>
-        </div>
-
-        <!-- Zone Selector Dropdown -->
-        <div class="relative shrink-0">
-          <select id="zoneFilterSelect" onchange="onZoneFilterChange(this.value)" class="bg-surface-container-high text-on-surface text-[12.5px] font-medium rounded-lg pl-2.5 pr-7 py-1.5 border border-surface-container-highest outline-none focus:border-tertiary transition-colors cursor-pointer appearance-none max-w-[170px] sm:max-w-none truncate">
-            <option value="all">Tất cả Zone (Toàn khu)</option>
-            <option value="block-a">Block A - Phân xưởng Chế tạo (CNC)</option>
-            <option value="block-b">Block B - Kho Hóa chất &amp; Dung môi</option>
-            <option value="block-c">Block C - Khu Đúc &amp; Xử lý nhiệt</option>
-            <option value="block-d">Block D - Khu Rót Dầu Thủy Lực</option>
-          </select>
-          <span class="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] pointer-events-none">expand_more</span>
-        </div>
-
-        <!-- Global Search -->
-        <div class="hidden md:block relative w-36 lg:w-48 xl:w-60 shrink min-w-0">
-          <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px]">search</span>
-          <input id="globalSearchInput" oninput="onGlobalSearch(this.value)" class="w-full bg-surface-container-high text-on-surface placeholder:text-outline text-body-sm font-body-sm rounded-lg pl-7 pr-2.5 py-1.5 outline-none border border-transparent focus:border-secondary transition-colors text-[12px]" placeholder="Tìm Node, IP..." type="text">
-        </div>
+  <!-- ==================== KPI COUNTERS ==================== -->
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+    <!-- KPI 1 -->
+    <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
+      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">sensors</span> Thiết bị trực tuyến
+      </span>
+      <div class="flex items-baseline gap-1.5 mt-2">
+        <span id="kpiActiveDevices" class="text-[26px] font-bold font-mono text-[#4cd7f6] leading-none">--</span>
+        <span id="kpiTotalDevices" class="text-[12px] font-mono text-[#e4beba]">/ -- Thiết bị</span>
       </div>
+      <span class="text-[11px] text-[#e4beba] mt-1 font-mono">Bảng Devices (MySQL)</span>
+    </div>
 
-      <!-- Right Actions: Clock, Mute Alarm, User Profile -->
-      <div class="flex items-center gap-2 lg:gap-3 shrink-0">
-        <!-- Live Clock -->
-        <div class="hidden xl:flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded-lg border border-surface-container-high shrink-0">
-          <span class="material-symbols-outlined text-tertiary text-[16px]">schedule</span>
-          <span id="headerLiveClock" class="font-label-code text-[11.5px] text-on-surface font-semibold whitespace-nowrap">14:28:45 • 24/05/2025</span>
-        </div>
-
-        <!-- Mute Alarm Emergency Button -->
-        <button id="btnHeaderMuteAlarm" onclick="toggleEmergencyAlarm()" type="button" class="flex items-center gap-1.5 bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-title-sm text-[12px] font-semibold h-8.5 px-3 rounded-lg transition-all shadow-sm shrink-0 whitespace-nowrap leading-none">
-          <span class="material-symbols-outlined text-[17px]">volume_off</span>
-          <span>Tắt chuông khẩn cấp</span>
-        </button>
-
-        <!-- Notification Bell -->
-        <a href="alert-center.html" class="relative cursor-pointer shrink-0">
-          <div class="w-8 h-8 rounded-lg bg-surface-container hover:bg-surface-container-highest flex items-center justify-center text-on-surface transition-colors border border-surface-container-high">
-            <span class="material-symbols-outlined text-[18px]">notifications</span>
-          </div>
-          <span class="absolute -top-1 -right-1 w-4 h-4 bg-primary-container text-on-primary-container text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
-        </a>
-
-        <!-- User Profile Pill -->
-        <div class="flex items-center gap-2 pl-2 border-l border-surface-container-high shrink-0">
-          <div class="hidden lg:flex flex-col text-right leading-tight">
-            <span class="font-title-sm text-[12.5px] text-on-surface font-semibold whitespace-nowrap">Nguyễn Văn An</span>
-            <span class="font-label-code text-[10.5px] text-secondary whitespace-nowrap">Ca trực SOC • Admin</span>
-          </div>
-          <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center font-bold text-on-primary text-[12px] shrink-0">
-            NA
-          </div>
-        </div>
+    <!-- KPI 2 -->
+    <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
+      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[15px] text-[#ff5451]">crisis_alert</span> Sự cố chưa xử lý
+      </span>
+      <div class="flex items-baseline gap-1.5 mt-2">
+        <span id="kpiPendingAlerts" class="text-[26px] font-bold font-mono text-[#ff5451] leading-none">--</span>
+        <span class="text-[12px] font-mono text-[#e4beba]">Cần can thiệp</span>
       </div>
-    </header>
+      <span class="text-[11px] text-[#e4beba] mt-1 font-mono">Bảng AlertHistory (MySQL)</span>
+    </div>
 
-    <!-- ==================== MAIN CONTENT ==================== -->
-    <main class="w-full pt-20 bg-background flex-1 px-4 lg:px-6 pb-8">
-      <section class="flex flex-col w-full gap-5">
-        <!-- Telemetry Status Banner -->
-        <div class="relative overflow-hidden rounded-xl bg-surface-container-low p-4 shadow-xl border border-surface-container-high/60">
-          <div class="absolute -right-16 -top-16 w-64 h-64 rounded-full bg-secondary/5 blur-3xl pointer-events-none"></div>
-          <div class="absolute -left-20 -bottom-20 w-72 h-72 rounded-full bg-tertiary/5 blur-3xl pointer-events-none"></div>
-          <div class="relative z-10 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3">
-            <div class="flex flex-wrap items-center gap-2.5">
-              <div class="flex items-center gap-2.5 bg-surface-container-highest/60 px-3 py-1.5 rounded-lg border border-surface-container-high shrink-0">
-                <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary"></span>
-                </span>
-                <div class="flex flex-col">
-                  <span class="font-label-code text-[10px] uppercase tracking-wider text-on-surface-variant leading-none">Tình trạng hệ thống</span>
-                  <span class="font-title-sm text-[13px] text-on-surface font-semibold flex items-center gap-1 mt-0.5 whitespace-nowrap">
-                    BÌNH THƯỜNG <span class="text-on-surface-variant font-normal text-[11px]">• GIÁM SÁT 24/7</span>
+    <!-- KPI 3 -->
+    <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
+      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[15px] text-[#ffb95f]">monitoring</span> Bản ghi môi trường
+      </span>
+      <div class="flex items-baseline gap-1.5 mt-2">
+        <span id="kpiTotalLogs" class="text-[26px] font-bold font-mono text-[#ffb95f] leading-none">--</span>
+        <span class="text-[12px] font-mono text-[#e4beba]">Lượt đo</span>
+      </div>
+      <span class="text-[11px] text-[#e4beba] mt-1 font-mono">Bảng EnvironmentLogs (MySQL)</span>
+    </div>
+
+    <!-- KPI 4 -->
+    <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
+      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">manage_accounts</span> Cán bộ quản lý
+      </span>
+      <div class="flex items-baseline gap-1.5 mt-2">
+        <span id="kpiTotalUsers" class="text-[26px] font-bold font-mono text-[#4cd7f6] leading-none">--</span>
+        <span class="text-[12px] font-mono text-[#e4beba]">Người dùng</span>
+      </div>
+      <span class="text-[11px] text-[#e4beba] mt-1 font-mono">Bảng Users (MySQL)</span>
+    </div>
+  </section>
+
+  <!-- ==================== SECTION 1: CÁC TRẠM CẢM BIẾN (DEVICES) ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">developer_board</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Danh Sách Trạm Giám Sát (Bảng Devices & Zones)</h2>
+      </div>
+      <span class="text-[11px] font-mono text-[#e4beba]">Tự động cập nhật số đo mới nhất của từng thiết bị</span>
+    </div>
+
+    <div id="devicesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      <div class="col-span-full py-8 text-center text-[#e4beba] font-mono text-[13px] flex flex-col items-center justify-center gap-2">
+        <div class="w-6 h-6 border-2 border-[#4cd7f6] border-t-transparent rounded-full animate-spin"></div>
+        <span>Đang truy vấn bảng Devices từ CSDL SmartFireDB...</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SECTION 2: BẢNG CẢNH BÁO SỰ CỐ (ALERTHISTORY) ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#ff5451] text-[20px]">warning</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Lịch Sử Cảnh Báo Khẩn Cấp (Bảng AlertHistory)</h2>
+      </div>
+      <span class="text-[11px] font-mono text-[#e4beba]">Chỉ ghi khi AI xác nhận hoặc cảm biến vượt ngưỡng an toàn</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left font-mono text-[12px]">
+        <thead>
+          <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
+            <th class="py-2.5 px-3">MÃ #ID</th>
+            <th class="py-2.5 px-3">THIẾT BỊ</th>
+            <th class="py-2.5 px-3">KHU VỰC (ZONE)</th>
+            <th class="py-2.5 px-3">LOẠI CẢNH BÁO</th>
+            <th class="py-2.5 px-3">MỨC ĐỘ</th>
+            <th class="py-2.5 px-3">THỜI GIAN</th>
+            <th class="py-2.5 px-3">SMS</th>
+            <th class="py-2.5 px-3">TRẠNG THÁI</th>
+            <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
+          </tr>
+        </thead>
+        <tbody id="alertsTableBody" class="divide-y divide-[#262a34]">
+          <tr>
+            <td colspan="9" class="py-6 text-center text-[#e4beba]">Đang nạp dữ liệu từ AlertHistory...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== SECTION 3: CÁN BỘ & NGƯỜI DÙNG (USERS) ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">group</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Cán Bộ Trực Ban & Người Nhận SMS Cảnh Báo (Bảng Users)</h2>
+      </div>
+      <span class="text-[11px] font-mono text-[#e4beba]">Cấu hình quyền Admin / User và số điện thoại nhận SMS Gateway</span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left font-mono text-[12px]">
+        <thead>
+          <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
+            <th class="py-2.5 px-3">USER ID</th>
+            <th class="py-2.5 px-3">HỌ VÀ TÊN</th>
+            <th class="py-2.5 px-3">TÊN ĐĂNG NHẬP</th>
+            <th class="py-2.5 px-3">VAI TRÒ (ROLE)</th>
+            <th class="py-2.5 px-3">SỐ ĐIỆN THOẠI (NHẬN SMS)</th>
+            <th class="py-2.5 px-3">EMAIL LIÊN HỆ</th>
+            <th class="py-2.5 px-3 text-right">NGÀY ĐĂNG KÝ</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody" class="divide-y divide-[#262a34]">
+          <tr>
+            <td colspan="7" class="py-6 text-center text-[#e4beba]">Đang nạp dữ liệu từ bảng Users...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== SECTION 4: NHẬT KÝ ĐO MÔI TRƯỜNG (ENVIRONMENTLOGS) ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#ffb95f] text-[20px]">table_chart</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Dữ Liệu Đo Môi Trường Gần Nhất (Bảng EnvironmentLogs)</h2>
+      </div>
+      <span class="text-[11px] font-mono text-[#e4beba]">20 lượt ghi gần nhất từ cảm biến DHT11, MQ-2 và AI</span>
+    </div>
+
+    <div class="overflow-x-auto max-h-80">
+      <table class="w-full text-left font-mono text-[12px]">
+        <thead class="sticky top-0 bg-[#1c1f29] border-b border-[#31353f] z-10">
+          <tr class="text-[#e4beba]">
+            <th class="py-2.5 px-3">LOG ID</th>
+            <th class="py-2.5 px-3">THIẾT BỊ</th>
+            <th class="py-2.5 px-3">NHIỆT ĐỘ</th>
+            <th class="py-2.5 px-3">ĐỘ ẨM</th>
+            <th class="py-2.5 px-3">KHÓI / GAS</th>
+            <th class="py-2.5 px-3">KẾT QUẢ AI</th>
+            <th class="py-2.5 px-3">ĐỘ TIN CẬY</th>
+            <th class="py-2.5 px-3">THỜI GIAN GHI</th>
+          </tr>
+        </thead>
+        <tbody id="logsTableBody" class="divide-y divide-[#262a34]">
+          <tr>
+            <td colspan="8" class="py-6 text-center text-[#e4beba]">Đang nạp dữ liệu từ EnvironmentLogs...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Toast notification -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    // Live clock
+    setInterval(() => {
+      const now = new Date();
+      document.getElementById('headerLiveClock').textContent = now.toLocaleTimeString('vi-VN') + ' • ' + now.toLocaleDateString('vi-VN');
+    }, 1000);
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const colors = {
+        info: 'bg-[#181b25] border-[#4cd7f6] text-[#dfe2ef]',
+        success: 'bg-[#181b25] border-[#4cd7f6] text-[#4cd7f6]',
+        error: 'bg-[#93000a] border-[#ff5451] text-[#ffdad6]'
+      };
+      toast.className = `p-3 rounded-lg border shadow-xl text-[12px] font-mono flex items-center gap-2 pointer-events-auto transition-all duration-300 ${colors[type] || colors.info}`;
+      toast.innerHTML = `<span class="material-symbols-outlined text-[16px]">${type === 'error' ? 'error' : 'check_circle'}</span> ${message}`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.remove(); }, 3500);
+    }
+
+    function refreshData() {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ action: 'refreshDatabase' });
+        showToast('Đang yêu cầu đồng bộ lại từ MySQL...', 'info');
+      } else {
+        location.reload();
+      }
+    }
+
+    function acknowledgeAlert(alertId) {
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ action: 'acknowledgeAlert', alertId: alertId });
+        showToast(`Đã gửi lệnh xác nhận xử lý sự cố #${alertId}`, 'success');
+      } else {
+        alert('Cần chạy trên ứng dụng Desktop để tương tác trực tiếp với CSDL.');
+      }
+    }
+
+    // ========================================================
+    // C# GỌI HÀM NÀY ĐỂ ĐỒNG BỘ 100% DỮ LIỆU TỪ CSDL VÀO GIAO DIỆN
+    // ========================================================
+    window.renderRealDatabaseData = function(data) {
+      if (!data) return;
+
+      // 1. Cập nhật trạng thái CSDL & KPIs
+      const dbBadge = document.getElementById('dbStatusBadge');
+      if (dbBadge) {
+        if (data.isConnected) {
+          dbBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#4cd7f6] animate-pulse"></span> CSDL: ${data.kpis.databaseName} (${data.kpis.serverHost}) • ONLINE`;
+          dbBadge.className = 'flex items-center gap-1.5 text-[#4cd7f6]';
+        } else {
+          dbBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#ff5451]"></span> CSDL: Mất kết nối tới MySQL localhost:3306`;
+          dbBadge.className = 'flex items-center gap-1.5 text-[#ff5451]';
+        }
+      }
+
+      document.getElementById('kpiActiveDevices').textContent = String(data.kpis.activeDevices).padStart(2, '0');
+      document.getElementById('kpiTotalDevices').textContent = `/ ${String(data.kpis.totalDevices).padStart(2, '0')} Thiết bị`;
+      document.getElementById('kpiPendingAlerts').textContent = String(data.kpis.pendingAlerts).padStart(2, '0');
+      document.getElementById('kpiTotalLogs').textContent = data.kpis.totalLogs;
+      document.getElementById('kpiTotalUsers').textContent = String(data.kpis.totalUsers).padStart(2, '0');
+
+      // 2. Render Cán bộ / Người dùng từ bảng Users
+      const usersBody = document.getElementById('usersTableBody');
+      if (usersBody && data.users) {
+        if (data.users.length === 0) {
+          usersBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[#e4beba]">Chưa có người dùng nào trong bảng Users.</td></tr>';
+        } else {
+          usersBody.innerHTML = '';
+          data.users.forEach((u, idx) => {
+            const isAdmin = u.role === 'Admin';
+            const roleBadge = isAdmin
+              ? '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] border border-[#ff5451]/30">ADMIN</span>'
+              : '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] font-bold text-[10px] border border-[#4cd7f6]/30">USER / SUPERVISOR</span>';
+
+            const createdStr = new Date(u.createdAt).toLocaleDateString('vi-VN');
+
+            // Cập nhật người dùng đầu tiên lên Header
+            if (idx === 0) {
+              const avatar = document.getElementById('headerUserAvatar');
+              if (avatar) avatar.textContent = u.fullName.split(' ').pop().charAt(0).toUpperCase();
+              const nameEl = document.getElementById('headerUserName');
+              if (nameEl) nameEl.textContent = u.fullName;
+              const roleEl = document.getElementById('headerUserRole');
+              if (roleEl) roleEl.textContent = `${u.role.toUpperCase()} (SOC)`;
+            }
+
+            const tr = `
+              <tr class="hover:bg-[#1c1f29] transition-colors">
+                <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${u.userId}</td>
+                <td class="py-2.5 px-3 font-bold text-white flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[10px] text-[#4cd7f6] font-bold">
+                    ${u.fullName.split(' ').pop().charAt(0).toUpperCase()}
+                  </div>
+                  ${u.fullName}
+                </td>
+                <td class="py-2.5 px-3 text-[#e4beba]">${u.username}</td>
+                <td class="py-2.5 px-3">${roleBadge}</td>
+                <td class="py-2.5 px-3 text-[#ffb95f] font-bold flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[15px]">sms</span>
+                  ${u.phoneNumber || 'Chưa cài đặt'}
+                </td>
+                <td class="py-2.5 px-3 text-[#e4beba]">${u.email || 'N/A'}</td>
+                <td class="py-2.5 px-3 text-right text-[#e4beba]">${createdStr}</td>
+              </tr>
+            `;
+            usersBody.insertAdjacentHTML('beforeend', tr);
+          });
+        }
+      }
+
+      // Trạng thái an toàn hệ thống
+      const safetyBadge = document.getElementById('systemSafetyBadge');
+      if (safetyBadge) {
+        if (data.kpis.pendingAlerts > 0) {
+          safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#93000a] text-[#ffdad6] border border-[#ff5451] text-[12px] font-mono font-bold animate-pulse';
+          safetyBadge.innerHTML = `<span class="material-symbols-outlined text-[16px]">warning</span> BÁO ĐỘNG: CÓ ${data.kpis.pendingAlerts} SỰ CỐ CẦN XỬ LÝ!`;
+        } else {
+          safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/40 text-[12px] font-mono font-bold';
+          safetyBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> HỆ THỐNG: AN TOÀN`;
+        }
+      }
+
+      // 3. Render danh sách thiết bị thật từ bảng Devices
+      const devContainer = document.getElementById('devicesContainer');
+      if (devContainer) {
+        if (!data.devices || data.devices.length === 0) {
+          devContainer.innerHTML = '<div class="col-span-full py-6 text-center text-[#e4beba] font-mono">Bảng Devices trong CSDL hiện chưa có thiết bị nào.</div>';
+        } else {
+          devContainer.innerHTML = '';
+          data.devices.forEach(d => {
+            const isDanger = d.temperature > 40 || d.gasPpm > 500 || d.aiResult;
+            const cardBorder = isDanger ? 'border-[#ff5451] bg-[#ff5451]/5 shadow-[0_0_15px_rgba(255,84,81,0.2)]' : 'border-[#262a34] bg-[#181b25]';
+            const statusBadge = d.status === 'Active' 
+              ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#009eb9]/30 text-[#4cd7f6]">ACTIVE</span>'
+              : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#31353f] text-[#e4beba]">OFFLINE</span>';
+
+            const html = `
+              <div class="rounded-xl border ${cardBorder} p-3.5 flex flex-col justify-between transition-all">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <span class="text-[11px] font-mono font-bold text-[#4cd7f6]">${d.deviceId}</span>
+                    <h3 class="text-[14px] font-bold text-white mt-0.5">${d.deviceName}</h3>
+                    <span class="text-[11px] text-[#e4beba] font-mono">${d.zoneName} • ${d.deviceType}</span>
+                  </div>
+                  ${statusBadge}
+                </div>
+
+                <!-- Thông số realtime -->
+                <div class="grid grid-cols-3 gap-2 my-3 p-2 rounded-lg bg-[#1c1f29] border border-[#262a34] text-center font-mono">
+                  <div>
+                    <div class="text-[10px] text-[#e4beba]">Nhiệt độ</div>
+                    <div class="text-[15px] font-bold ${d.temperature > 40 ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${d.temperature.toFixed(1)}°C</div>
+                  </div>
+                  <div>
+                    <div class="text-[10px] text-[#e4beba]">Độ ẩm</div>
+                    <div class="text-[15px] font-bold text-[#4cd7f6]">${d.humidity.toFixed(1)}%</div>
+                  </div>
+                  <div>
+                    <div class="text-[10px] text-[#e4beba]">Khói/Gas</div>
+                    <div class="text-[15px] font-bold ${d.gasPpm > 500 ? 'text-[#ff5451]' : 'text-white'}">${Math.round(d.gasPpm)} ppm</div>
+                  </div>
+                </div>
+
+                <!-- Footer trạm -->
+                <div class="flex items-center justify-between text-[11px] font-mono text-[#e4beba] pt-1 border-t border-[#262a34]">
+                  <span>IP: ${d.ipAddress || 'DHCP'}</span>
+                  <span class="${d.aiResult ? 'text-[#ff5451] font-bold' : 'text-[#4cd7f6]'}">
+                    ${d.aiResult ? `🔥 AI: Có Cháy (${d.confidenceScore || 0}%)` : 'AI: An toàn'}
                   </span>
                 </div>
               </div>
-              <div class="hidden sm:flex items-center gap-1.5 bg-surface-container px-2.5 py-1.5 rounded-lg border border-surface-container-high shrink-0">
-                <span class="material-symbols-outlined text-secondary text-[18px]">local_fire_department</span>
-                <span class="font-body-sm text-[12px] text-on-surface whitespace-nowrap">Vùng trọng điểm: <strong class="text-secondary font-medium">Xưởng Gia Công A - Block C2</strong></span>
-              </div>
-              <div class="hidden md:flex items-center gap-1.5 bg-surface-container px-2.5 py-1.5 rounded-lg border border-surface-container-high shrink-0">
-                <span class="material-symbols-outlined text-tertiary text-[17px]">verified_user</span>
-                <span class="font-label-code text-[11px] text-tertiary whitespace-nowrap">Mức An Toàn: Cấp 1 (Ổn Định)</span>
-              </div>
-            </div>
+            `;
+            devContainer.insertAdjacentHTML('beforeend', html);
+          });
+        }
+      }
 
-            <!-- Quick KPI Counters HUD -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full xl:w-auto shrink-0">
-              <div class="bg-surface-container px-3 py-1.5 rounded-lg flex flex-col justify-center border border-surface-container-high min-w-[110px] sm:min-w-[125px]">
-                <span class="font-label-code text-[10.5px] text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
-                  <span class="material-symbols-outlined text-tertiary text-[14px]">sensors</span> Cảm biến
-                </span>
-                <div class="flex items-baseline gap-1 mt-0.5 whitespace-nowrap">
-                  <span id="kpiSensorsOnline" class="font-metric-value text-[19px] text-tertiary font-bold leading-none">32</span>
-                  <span class="font-label-code text-[10.5px] text-on-surface-variant">/ 32 On</span>
-                </div>
-              </div>
-              <div class="bg-surface-container px-3 py-1.5 rounded-lg flex flex-col justify-center border border-surface-container-high min-w-[110px] sm:min-w-[125px]">
-                <span class="font-label-code text-[10.5px] text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
-                  <span class="material-symbols-outlined text-primary text-[14px]">whatshot</span> Đám cháy
-                </span>
-                <div class="flex items-baseline gap-1.5 mt-0.5 whitespace-nowrap">
-                  <span id="kpiFiresDetected" class="font-metric-value text-[19px] text-on-surface font-bold leading-none">00</span>
-                  <span class="font-label-code text-[10.5px] text-on-surface-variant">Phát hiện</span>
-                </div>
-              </div>
-              <div class="bg-surface-container px-3 py-1.5 rounded-lg flex flex-col justify-center border border-surface-container-high min-w-[110px] sm:min-w-[125px]">
-                <span class="font-label-code text-[10.5px] text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
-                  <span class="material-symbols-outlined text-secondary text-[14px]">thermostat</span> Cảnh báo nhiệt
-                </span>
-                <div class="flex items-baseline gap-1.5 mt-0.5 whitespace-nowrap">
-                  <span id="kpiHeatWarnings" class="font-metric-value text-[19px] text-secondary font-bold leading-none">01</span>
-                  <span class="font-label-code text-[10.5px] text-secondary-fixed-dim">Điểm cao</span>
-                </div>
-              </div>
-              <div class="bg-surface-container px-3 py-1.5 rounded-lg flex flex-col justify-center border border-surface-container-high min-w-[110px] sm:min-w-[125px]">
-                <span class="font-label-code text-[10.5px] text-on-surface-variant flex items-center gap-1 whitespace-nowrap">
-                  <span class="material-symbols-outlined text-tertiary text-[14px]">speed</span> Phản hồi
-                </span>
-                <div class="flex items-baseline gap-1 mt-0.5 whitespace-nowrap">
-                  <span id="kpiResponseTime" class="font-metric-value text-[19px] text-on-surface font-bold leading-none">120</span>
-                  <span class="font-label-code text-[10.5px] text-tertiary">ms</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      // 4. Render danh sách cảnh báo thật từ bảng AlertHistory
+      const alertsBody = document.getElementById('alertsTableBody');
+      if (alertsBody) {
+        if (!data.alerts || data.alerts.length === 0) {
+          alertsBody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-[#4cd7f6]">Không có cảnh báo cháy nào trong CSDL AlertHistory.</td></tr>';
+        } else {
+          alertsBody.innerHTML = '';
+          data.alerts.forEach(a => {
+            const isHigh = a.severity === 'High';
+            const sevBadge = isHigh 
+              ? '<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">HIGH</span>'
+              : '<span class="px-2 py-0.5 rounded bg-[#ee9800]/20 text-[#ffb95f] font-bold text-[10px]">MEDIUM</span>';
 
-        <!-- 4 Metric Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-space-md">
-          <!-- Card 1: Nhiệt độ -->
-          <div class="group relative rounded-xl bg-surface-container-low p-space-md shadow-md hover:bg-surface-container transition-all border border-surface-container-high flex flex-col justify-between">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="font-label-code text-[11px] text-secondary tracking-wider uppercase">Node #T-104 • Xưởng A</span>
-                <h3 class="font-title-md text-[15px] text-on-surface mt-1 font-semibold">Nhiệt độ môi trường</h3>
-              </div>
-              <div class="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
-                <span class="material-symbols-outlined text-[24px]">thermostat</span>
-              </div>
-            </div>
-            <div class="my-space-md flex items-baseline gap-1">
-              <span id="dashTempDisplay" class="font-metric-display text-[32px] text-secondary tracking-tight font-bold">34.8</span>
-              <span class="font-headline-sm text-[16px] text-on-surface-variant font-medium">°C</span>
-            </div>
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[12px] text-on-surface-variant">
-                <span>Ngưỡng nguy hiểm</span>
-                <span class="font-label-code text-error font-semibold">&gt; 55.0 °C</span>
-              </div>
-              <div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
-                <div id="dashTempBar" class="bg-secondary h-full rounded-full transition-all duration-500" style="width: 63%"></div>
-              </div>
-              <div class="flex items-center gap-1 pt-1 text-[12px] text-on-surface-variant">
-                <span class="material-symbols-outlined text-secondary text-[16px]">trending_up</span>
-                <p class="truncate">Tăng nhẹ <span class="text-secondary font-medium">+1.2°C</span> so với 10p trước</p>
-              </div>
-            </div>
-          </div>
+            const statusBadge = a.acknowledged
+              ? '<span class="px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] font-bold text-[10px]">ĐÃ XÁC NHẬN</span>'
+              : '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] animate-pulse">CHƯA XỬ LÝ</span>';
 
-          <!-- Card 2: Độ ẩm -->
-          <div class="group relative rounded-xl bg-surface-container-low p-space-md shadow-md hover:bg-surface-container transition-all border border-surface-container-high flex flex-col justify-between">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="font-label-code text-[11px] text-tertiary tracking-wider uppercase">Node #H-202 • Xưởng A</span>
-                <h3 class="font-title-md text-[15px] text-on-surface mt-1 font-semibold">Độ ẩm không khí</h3>
-              </div>
-              <div class="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
-                <span class="material-symbols-outlined text-[24px]">humidity_percentage</span>
-              </div>
-            </div>
-            <div class="my-space-md flex items-baseline gap-1">
-              <span id="dashHumidityDisplay" class="font-metric-display text-[32px] text-tertiary tracking-tight font-bold">48.5</span>
-              <span class="font-headline-sm text-[16px] text-on-surface-variant font-medium">% RH</span>
-            </div>
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[12px] text-on-surface-variant">
-                <span>Tiêu chuẩn khuyến nghị</span>
-                <span class="font-label-code text-tertiary font-semibold">40% - 65% RH</span>
-              </div>
-              <div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
-                <div id="dashHumidityBar" class="bg-tertiary h-full rounded-full transition-all duration-500" style="width: 48.5%"></div>
-              </div>
-              <div class="flex items-center gap-1 pt-1 text-[12px] text-on-surface-variant">
-                <span class="material-symbols-outlined text-tertiary text-[16px]">check_circle</span>
-                <p class="truncate">Khô ráo, nguy cơ bắt lửa trung bình</p>
-              </div>
-            </div>
-          </div>
+            const actionBtn = a.acknowledged
+              ? '<span class="text-[11px] text-[#e4beba]">Đã đóng</span>'
+              : `<button onclick="acknowledgeAlert(${a.alertId})" class="px-2.5 py-1 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold rounded text-[11px] transition-all">Xác nhận đã xử lý</button>`;
 
-          <!-- Card 3: Khói & Gas -->
-          <div class="group relative rounded-xl bg-surface-container-low p-space-md shadow-md hover:bg-surface-container transition-all border border-surface-container-high flex flex-col justify-between overflow-hidden">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="font-label-code text-[11px] text-primary tracking-wider uppercase">Node #MQ-02 • Trạm Hút</span>
-                <h3 class="font-title-md text-[15px] text-on-surface mt-1 font-semibold">Khói & Khí Gas MQ-2</h3>
-              </div>
-              <div class="w-10 h-10 rounded-lg bg-error-container flex items-center justify-center text-primary shadow-sm">
-                <span class="material-symbols-outlined text-[24px]">detector_smoke</span>
-              </div>
-            </div>
-            <div class="my-space-md flex items-baseline gap-1">
-              <span id="dashSmokeDisplay" class="font-metric-display text-[32px] text-primary tracking-tight font-bold">185</span>
-              <span class="font-headline-sm text-[16px] text-on-surface-variant font-medium">ppm</span>
-              <span class="ml-auto inline-flex items-center px-2 py-0.5 rounded text-[11px] font-label-code font-bold bg-error-container text-on-error-container">
-                Theo dõi sát
-              </span>
-            </div>
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[12px] text-on-surface-variant">
-                <span>Ngưỡng &gt; 300 cảnh báo</span>
-                <span class="font-label-code text-primary font-semibold">&gt; 600 Báo Động</span>
-              </div>
-              <div class="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
-                <div id="dashSmokeBar" class="bg-primary h-full rounded-full transition-all duration-500" style="width: 31%"></div>
-              </div>
-              <div class="flex items-center gap-1 pt-1 text-[12px] text-on-surface-variant">
-                <span class="material-symbols-outlined text-primary text-[16px]">air</span>
-                <p class="truncate">MQ-2 Sensor ổn định • Khí lưu thông tốt</p>
-              </div>
-            </div>
-          </div>
+            const timeStr = new Date(a.alertTime).toLocaleString('vi-VN');
 
-          <!-- Card 4: Chỉ số nguy cơ AI -->
-          <div class="group relative rounded-xl bg-surface-container-low p-space-md shadow-md hover:bg-surface-container transition-all border border-surface-container-high flex flex-col justify-between">
-            <div class="flex items-start justify-between">
-              <div>
-                <span class="font-label-code text-[11px] text-tertiary tracking-wider uppercase">Thuật toán AI PBL</span>
-                <h3 class="font-title-md text-[15px] text-on-surface mt-1 font-semibold">Chỉ số nguy cơ cháy nổ</h3>
-              </div>
-              <div class="w-10 h-10 rounded-lg bg-surface-container-highest flex items-center justify-center text-on-surface">
-                <span class="material-symbols-outlined text-[24px]">shield_with_heart</span>
-              </div>
-            </div>
-            <div class="my-space-md flex items-baseline gap-1">
-              <span class="font-metric-display text-[32px] text-on-surface tracking-tight font-bold">18</span>
-              <span class="font-headline-sm text-[16px] text-on-surface-variant font-medium">/ 100</span>
-              <span class="ml-2 font-label-code text-[12px] text-tertiary uppercase font-bold">Mức Thấp</span>
-            </div>
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-[12px] text-on-surface-variant">
-                <span>Thang đo rủi ro</span>
-                <span class="font-label-code text-on-surface-variant">An toàn (0 - 35)</span>
-              </div>
-              <div class="relative w-full h-2 rounded-full overflow-hidden flex bg-surface-container-highest">
-                <div class="h-full bg-tertiary w-1/3"></div>
-                <div class="h-full bg-secondary w-1/3"></div>
-                <div class="h-full bg-primary w-1/3"></div>
-                <div class="absolute top-0 bottom-0 w-1 bg-surface-bright shadow-[0_0_8px_rgba(255,255,255,1)]" style="left: 18%;"></div>
-              </div>
-              <div class="flex items-center justify-between pt-1 text-[11px] font-label-code text-on-surface-variant">
-                <span class="text-tertiary">An toàn</span>
-                <span class="text-secondary">Nguy cơ</span>
-                <span class="text-primary">Báo động</span>
-              </div>
-            </div>
-          </div>
-        </div>
+            const tr = `
+              <tr class="hover:bg-[#1c1f29] transition-colors">
+                <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${a.alertId}</td>
+                <td class="py-2.5 px-3 font-bold text-white">${a.deviceId} <span class="text-[11px] text-[#e4beba] font-normal">(${a.deviceName})</span></td>
+                <td class="py-2.5 px-3">${a.zoneName}</td>
+                <td class="py-2.5 px-3 font-bold ${isHigh ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${a.alertType}</td>
+                <td class="py-2.5 px-3">${sevBadge}</td>
+                <td class="py-2.5 px-3 text-[#e4beba]">${timeStr}</td>
+                <td class="py-2.5 px-3">${a.smsSent ? '<span class="text-[#4cd7f6]">✓ Đã gửi</span>' : '<span class="text-[#e4beba]">Chưa gửi</span>'}</td>
+                <td class="py-2.5 px-3">${statusBadge}</td>
+                <td class="py-2.5 px-3 text-right">${actionBtn}</td>
+              </tr>
+            `;
+            alertsBody.insertAdjacentHTML('beforeend', tr);
+          });
+        }
+      }
 
-        <!-- Telemetry Multi-Curve Chart Section -->
-        <div class="rounded-xl bg-surface-container-low p-space-lg shadow-lg flex flex-col gap-space-md border border-surface-container-high">
-          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-tertiary text-[22px]">show_chart</span>
-                <h2 class="font-headline-sm text-[18px] text-on-surface font-semibold">
-                  Biểu đồ biến thiên Nhiệt độ, Độ ẩm & Nồng độ khói
-                </h2>
-              </div>
-              <p class="font-body-sm text-[13px] text-on-surface-variant mt-0.5">
-                Dòng đo Telemetry thời gian thực truyền liên tục từ các trạm cảm biến phân tán (MQTT/WebSocket)
-              </p>
-            </div>
+      // 5. Render 20 lượt ghi đo từ EnvironmentLogs
+      const logsBody = document.getElementById('logsTableBody');
+      if (logsBody) {
+        if (!data.logs || data.logs.length === 0) {
+          logsBody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-[#e4beba]">Chưa có dữ liệu nào trong bảng EnvironmentLogs.</td></tr>';
+        } else {
+          logsBody.innerHTML = '';
+          data.logs.forEach(l => {
+            const aiBadge = l.aiResult 
+              ? `<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">CÓ CHÁY</span>`
+              : `<span class="px-2 py-0.5 rounded bg-[#1c1f29] text-[#4cd7f6] text-[10px]">AN TOÀN</span>`;
 
-            <!-- Time Filter & Legend -->
-            <div class="flex flex-wrap items-center gap-space-md">
-              <div class="flex items-center gap-space-md text-[13px]">
-                <div class="flex items-center gap-1.5">
-                  <span class="w-3 h-1.5 rounded-sm bg-primary inline-block"></span>
-                  <span class="text-on-surface-variant">Khói (ppm)</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="w-3 h-1.5 rounded-sm bg-secondary inline-block"></span>
-                  <span class="text-on-surface-variant">Nhiệt độ (°C)</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="w-3 h-1.5 rounded-sm bg-tertiary inline-block"></span>
-                  <span class="text-on-surface-variant">Độ ẩm (%)</span>
-                </div>
-              </div>
-              <div class="flex items-center bg-surface-container rounded-lg p-0.5 text-[12px] font-label-code border border-surface-container-highest">
-                <button class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface transition-colors" type="button">1 giờ</button>
-                <button class="px-2.5 py-1 rounded bg-surface-container-highest text-on-surface font-semibold shadow-sm" type="button">6 giờ</button>
-                <button class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface transition-colors" type="button">24 giờ</button>
-                <button class="px-2.5 py-1 rounded text-tertiary flex items-center gap-1 hover:text-on-surface transition-colors" type="button">
-                  <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span> Live 5s
-                </button>
-              </div>
-            </div>
-          </div>
+            const timeStr = new Date(l.recordedAt).toLocaleString('vi-VN');
 
-          <!-- Scalable SVG Chart Canvas -->
-          <div class="relative w-full overflow-hidden bg-surface-container-lowest/80 rounded-xl p-space-md border border-surface-container-highest/60">
-            <div class="flex justify-between items-center pb-2">
-              <span class="font-label-code text-[11px] text-on-surface-variant">Đơn vị: Khói (ppm) | Nhiệt (°C) | Ẩm (%RH)</span>
-              <span class="font-label-code text-[11px] text-secondary font-semibold">Đỉnh nhiệt độ ca: 36.2 °C lúc 15:18</span>
-            </div>
-            <div class="w-full h-72 relative">
-              <svg class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 1000 280">
-                <defs>
-                  <linearGradient id="smokeGrad" x1="0%" x2="0%" y1="0%" y2="100%">
-                    <stop offset="0%" stop-color="#ff5451" stop-opacity="0.35"></stop>
-                    <stop offset="100%" stop-color="#ff5451" stop-opacity="0.0"></stop>
-                  </linearGradient>
-                  <linearGradient id="tempGrad" x1="0%" x2="0%" y1="0%" y2="100%">
-                    <stop offset="0%" stop-color="#ee9800" stop-opacity="0.25"></stop>
-                    <stop offset="100%" stop-color="#ee9800" stop-opacity="0.0"></stop>
-                  </linearGradient>
-                </defs>
-                <line stroke="#31353f" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="1000" y1="40" y2="40"></line>
-                <line stroke="#31353f" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="1000" y1="100" y2="100"></line>
-                <line stroke="#31353f" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="1000" y1="160" y2="160"></line>
-                <line stroke="#31353f" stroke-width="1" x1="0" x2="1000" y1="220" y2="220"></line>
-
-                <text fill="#ab8986" font-family="JetBrains Mono" font-size="11" x="10" y="36">250 ppm / 60°C</text>
-                <text fill="#ab8986" font-family="JetBrains Mono" font-size="11" x="10" y="96">180 ppm / 45°C</text>
-                <text fill="#ab8986" font-family="JetBrains Mono" font-size="11" x="10" y="156">100 ppm / 30°C</text>
-                <text fill="#ab8986" font-family="JetBrains Mono" font-size="11" x="10" y="216">0 ppm / 15°C</text>
-
-                <!-- Curves -->
-                <path d="M 50 220 Q 150 200, 250 190 T 450 180 T 650 160 T 820 110 T 920 135 L 980 145 L 980 220 Z" fill="url(#smokeGrad)"></path>
-                <path d="M 50 220 Q 150 200, 250 190 T 450 180 T 650 160 T 820 110 T 920 135 L 980 145" fill="none" stroke="#ff5451" stroke-linecap="round" stroke-width="2.5"></path>
-                <path d="M 50 170 Q 180 165, 320 155 T 550 140 T 750 130 T 850 120 L 980 130" fill="none" stroke="#ee9800" stroke-linecap="round" stroke-width="2.5"></path>
-                <path d="M 50 110 Q 200 120, 360 125 T 600 145 T 800 150 L 980 155" fill="none" stroke="#4cd7f6" stroke-dasharray="3 3" stroke-linecap="round" stroke-width="2.2"></path>
-
-                <!-- Peak Alert marker -->
-                <circle cx="820" cy="110" fill="#ff5451" r="5" stroke="#0f131c" stroke-width="2"></circle>
-                <circle class="animate-ping" cx="820" cy="110" fill="#ff5451" opacity="0.4" r="10"></circle>
-                <line opacity="0.6" stroke="#ff5451" stroke-dasharray="2 2" stroke-width="1" x1="820" x2="820" y1="40" y2="220"></line>
-              </svg>
-
-              <!-- Floating Tooltip Card -->
-              <div class="absolute left-[72%] top-[12%] transform -translate-x-1/2 bg-surface-container-highest/95 backdrop-blur-md p-space-sm rounded-lg shadow-xl pointer-events-none z-20 min-w-[170px] border border-surface-container-high">
-                <div class="flex items-center justify-between pb-1 text-on-surface font-label-code text-[11px]">
-                  <span class="text-tertiary">Mốc 15:20:00</span>
-                  <span class="text-primary font-bold">Cảnh báo điểm</span>
-                </div>
-                <div class="space-y-0.5 text-[12px]">
-                  <div class="flex justify-between items-center text-on-surface">
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-primary"></span> Khói:</span>
-                    <span class="font-label-code text-primary font-bold">210 ppm</span>
-                  </div>
-                  <div class="flex justify-between items-center text-on-surface">
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-secondary"></span> Nhiệt độ:</span>
-                    <span class="font-label-code text-secondary font-bold">35.6 °C</span>
-                  </div>
-                  <div class="flex justify-between items-center text-on-surface">
-                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-tertiary"></span> Độ ẩm:</span>
-                    <span class="font-label-code text-tertiary font-bold">47.0 %</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- X Axis markers -->
-            <div class="flex justify-between items-center pt-2 font-label-code text-[11px] text-on-surface-variant px-4">
-              <span>14:00</span>
-              <span>14:15</span>
-              <span>14:30</span>
-              <span>14:45</span>
-              <span>15:00</span>
-              <span class="text-secondary font-semibold">15:15 (Tăng nhiệt)</span>
-              <span class="text-primary font-semibold">15:20 (Khói đỉnh)</span>
-              <span>15:30 (Hiện tại)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent Logs & Emergency Actions Row -->
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-space-lg">
-          <!-- Recent Event Log (2 Cols) -->
-          <div class="xl:col-span-2 rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between border border-surface-container-high">
-            <div>
-              <div class="flex items-center justify-between mb-space-md">
-                <div class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-secondary text-[20px]">notification_important</span>
-                  <h3 class="font-title-md text-[16px] text-on-surface font-semibold">Nhật ký sự kiện & Cảnh báo gần đây</h3>
-                </div>
-                <span class="font-label-code text-[11px] text-on-surface-variant bg-surface-container px-2.5 py-0.5 rounded border border-surface-container-high">
-                  Cập nhật tự động (WSS)
-                </span>
-              </div>
-              <div class="flex flex-col gap-2">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors gap-2">
-                  <div class="flex items-center gap-2.5">
-                    <span class="font-label-code text-[11px] text-primary bg-error-container/40 px-2 py-0.5 rounded font-bold">15:28:42</span>
-                    <div>
-                      <div class="font-body-md text-[13px] text-on-surface font-medium">Cảm biến MQ-2 Khu B: Khói đạt <span class="text-primary font-bold">210 ppm</span></div>
-                      <div class="text-[12px] text-on-surface-variant">Kịch bản tự động: Đã kích hoạt hệ thống hút khói và quạt thông gió.</div>
-                    </div>
-                  </div>
-                  <span class="font-label-code text-[11px] text-primary bg-error-container/30 px-2 py-0.5 rounded self-end sm:self-center">Đã xử lý</span>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors gap-2">
-                  <div class="flex items-center gap-2.5">
-                    <span class="font-label-code text-[11px] text-tertiary bg-surface-container-highest px-2 py-0.5 rounded font-bold">15:15:10</span>
-                    <div>
-                      <div class="font-body-md text-[13px] text-on-surface font-medium">Kiểm tra tín hiệu định kỳ ESP32 Node 04</div>
-                      <div class="text-[12px] text-on-surface-variant">Ping 24ms • Trực tuyến ổn định • Pin dự phòng 98%</div>
-                    </div>
-                  </div>
-                  <span class="font-label-code text-[11px] text-tertiary bg-tertiary-container/20 px-2 py-0.5 rounded self-end sm:self-center">Nominal</span>
-                </div>
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between p-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors gap-2">
-                  <div class="flex items-center gap-2.5">
-                    <span class="font-label-code text-[11px] text-secondary bg-secondary-container/30 px-2 py-0.5 rounded font-bold">14:50:00</span>
-                    <div>
-                      <div class="font-body-md text-[13px] text-on-surface font-medium">Nhiệt độ phòng máy chủ tăng lên <span class="text-secondary font-bold">38.5 °C</span></div>
-                      <div class="text-[12px] text-on-surface-variant">Hệ thống điều hòa phụ trợ HVAC-02 đã tự động đóng relay kích hoạt.</div>
-                    </div>
-                  </div>
-                  <span class="font-label-code text-[11px] text-secondary bg-secondary-container/20 px-2 py-0.5 rounded self-end sm:self-center">Cảnh báo nhiệt</span>
-                </div>
-              </div>
-            </div>
-            <div class="mt-space-md pt-2 flex items-center justify-between border-t border-surface-container-highest">
-              <span class="text-[12px] text-on-surface-variant">Hiển thị 3 sự kiện gần nhất trong ca</span>
-              <a href="history-reports.html" class="text-tertiary hover:underline font-label-code text-[12px] flex items-center gap-1">
-                Xem toàn bộ lịch sử <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
-              </a>
-            </div>
-          </div>
-
-          <!-- Quick Controls -->
-          <div class="rounded-xl bg-surface-container-low p-space-md shadow-md flex flex-col justify-between border border-surface-container-high">
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <span class="material-symbols-outlined text-primary text-[20px]">bolt</span>
-                <h3 class="font-title-md text-[16px] text-on-surface font-semibold">Tác vụ khẩn cấp & Điều hành</h3>
-              </div>
-              <p class="text-[12px] text-on-surface-variant mb-space-md">
-                Chỉ huy trực tiếp thiết bị ngoại vi, van ngắt gas và hệ thống loa còi báo động.
-              </p>
-              <div class="flex flex-col gap-2">
-                <button onclick="testSirenAction()" class="w-full flex items-center justify-between p-3 bg-surface-container hover:bg-surface-container-highest rounded-lg transition-all group border border-surface-container-high" type="button">
-                  <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-secondary-container/40 text-secondary flex items-center justify-center">
-                      <span class="material-symbols-outlined text-[18px]">volume_up</span>
-                    </div>
-                    <div class="text-left">
-                      <div class="font-title-sm text-[13px] text-on-surface group-hover:text-secondary font-medium">Kiểm tra chuông báo</div>
-                      <div class="text-[11px] text-on-surface-variant">Kích hoạt còi âm lượng thử nghiệm 3s</div>
-                    </div>
-                  </div>
-                  <span class="material-symbols-outlined text-on-surface-variant text-[18px]">chevron_right</span>
-                </button>
-                <button onclick="exportReportAction('PDF')" class="w-full flex items-center justify-between p-3 bg-surface-container hover:bg-surface-container-highest rounded-lg transition-all group border border-surface-container-high" type="button">
-                  <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-tertiary-container/30 text-tertiary flex items-center justify-center">
-                      <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-                    </div>
-                    <div class="text-left">
-                      <div class="font-title-sm text-[13px] text-on-surface group-hover:text-tertiary font-medium">Xuất báo cáo ca trực</div>
-                      <div class="text-[11px] text-on-surface-variant">Định dạng Excel / PDF có chữ ký số</div>
-                    </div>
-                  </div>
-                  <span class="material-symbols-outlined text-on-surface-variant text-[18px]">download</span>
-                </button>
-                <div class="p-3 rounded-lg bg-error-container/20 border border-error-container/40 flex flex-col gap-1.5">
-                  <div class="flex items-center gap-1.5 text-primary text-[11px] font-label-code font-bold uppercase">
-                    <span class="material-symbols-outlined text-[16px]">warning</span> Cơ chế an toàn khẩn cấp
-                  </div>
-                  <button onclick="triggerEmergencyShutdownModal()" class="w-full bg-primary-container hover:bg-primary text-on-primary-container hover:text-on-primary font-title-sm text-[13px] py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 shadow-md font-semibold transition-all" type="button">
-                    <span class="material-symbols-outlined text-[18px]">power_settings_new</span> Ngắt nguồn điện & Khóa Van Gas
-                  </button>
-                  <span class="text-[10px] text-on-surface-variant text-center">Yêu cầu xác thực khóa bảo vệ hai lớp</span>
-                </div>
-              </div>
-            </div>
-            <div class="mt-3 pt-2 bg-surface-container p-2.5 rounded-lg flex items-center justify-between border border-surface-container-high text-[11px] font-label-code">
-              <span class="text-on-surface flex items-center gap-1"><span class="material-symbols-outlined text-tertiary text-[16px]">hub</span> MQTT Broker-PBL01</span>
-              <span class="text-secondary font-semibold">QoS 1 • Sync</span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- Emergency Modal -->
-  <div id="modalEmergencyShutdown" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-surface-container-low border-2 border-primary-container rounded-2xl max-w-md w-full p-6 shadow-2xl laser-glow">
-      <div class="w-12 h-12 rounded-xl bg-error-container text-primary flex items-center justify-center mx-auto mb-4 animate-bounce">
-        <span class="material-symbols-outlined text-[32px]">warning</span>
-      </div>
-      <h3 class="font-headline-sm text-[18px] font-bold text-center text-on-surface">
-        XÁC NHẬN CƠ CHẾ AN TOÀN KHẨN CẤP
-      </h3>
-      <p class="font-body-sm text-[13px] text-on-surface-variant text-center mt-2">
-        Bạn chuẩn bị gửi lệnh <strong class="text-primary font-bold">CẮT TOÀN BỘ NGUỒN ĐIỆN</strong> và <strong class="text-secondary font-bold">KHÓA VAN SOLENOID GAS</strong> cho toàn nhà xưởng qua giao thức MQTT.
-      </p>
-      <div class="bg-surface-container p-3 rounded-lg my-4 text-[11px] font-label-code text-on-surface-variant space-y-1">
-        <div>• Actuator: Solenoid Valve #V-01, #V-02 -&gt; CLOSE</div>
-        <div>• Relay: Main Breaker Contactor -&gt; TRIP</div>
-        <div>• Topic: pbl4/actuators/emergency_cut</div>
-      </div>
-      <div class="flex items-center gap-3">
-        <button onclick="toggleEmergencyModal(false)" class="flex-1 py-2 rounded-lg bg-surface-container hover:bg-surface-container-highest text-on-surface font-title-sm text-[13px] font-medium transition-colors" type="button">
-          Hủy bỏ
-        </button>
-        <button onclick="executeEmergencyShutdown()" class="flex-1 py-2 rounded-lg bg-primary-container hover:bg-primary text-on-primary-container font-title-sm text-[13px] font-bold shadow-lg transition-colors" type="button">
-          XÁC NHẬN NGẮT NGAY
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Container -->
-  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
-  <!-- Scripts -->
-  <script src="js/data.js"></script>
-  <script src="js/app.js"></script>
+            const tr = `
+              <tr class="hover:bg-[#1c1f29] transition-colors">
+                <td class="py-2 px-3 text-[#e4beba]">#${l.logId}</td>
+                <td class="py-2 px-3 font-bold text-white">${l.deviceId} <span class="text-[10.5px] text-[#e4beba]">(${l.deviceName})</span></td>
+                <td class="py-2 px-3 ${l.temperature > 40 ? 'text-[#ff5451] font-bold' : 'text-[#ffb95f]'}">${l.temperature.toFixed(1)} °C</td>
+                <td class="py-2 px-3 text-[#4cd7f6]">${l.humidity.toFixed(1)} %</td>
+                <td class="py-2 px-3 ${l.gasPpm > 500 ? 'text-[#ff5451] font-bold' : 'text-white'}">${Math.round(l.gasPpm)} ppm</td>
+                <td class="py-2 px-3">${aiBadge}</td>
+                <td class="py-2 px-3 text-[#e4beba]">${l.confidenceScore ? l.confidenceScore.toFixed(1) + '%' : 'N/A'}</td>
+                <td class="py-2 px-3 text-[#e4beba] text-[11px]">${timeStr}</td>
+              </tr>
+            `;
+            logsBody.insertAdjacentHTML('beforeend', tr);
+          });
+        }
+      }
+    };
+  </script>
 </body>
 </html>
-
