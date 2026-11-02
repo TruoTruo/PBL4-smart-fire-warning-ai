@@ -10,46 +10,41 @@ namespace SmartFireApp.Services;
 /// </summary>
 public sealed class DatabaseService
 {
-    private string _connectionString;
-    private string _activeDbName = "smartfiredb";
+    // ⚠ SỬA CHO ĐÚNG MÁY CỦA BẠN (cổng, mật khẩu). Hoặc đặt biến môi trường SMARTFIRE_DB
+    // để khỏi ghi mật khẩu vào code (đừng commit mật khẩu thật lên Git).
+    private const string DefaultConnectionString =
+        "Server=127.0.0.1;Port=3307;Database=SmartFireDB;Uid=root;Pwd=28040528;CharSet=utf8mb4;Connect Timeout=5;";
+
+    private readonly string _connectionString;
+    private readonly string _serverHost;
+    private string _activeDbName = "SmartFireDB";
 
     public DatabaseService(string? connectionString = null)
     {
-        // Ưu tiên smartfiredb — database thật của dự án trên XAMPP
-        _connectionString = connectionString 
-            ?? "Server=localhost;Port=3306;Database=smartfiredb;Uid=root;Pwd=;CharSet=utf8mb4;";
+        _connectionString = connectionString
+            ?? Environment.GetEnvironmentVariable("SMARTFIRE_DB")
+            ?? DefaultConnectionString;
+
+        var b = new MySqlConnectionStringBuilder(_connectionString);
+        _serverHost = $"{b.Server}:{b.Port}";
     }
 
     private async Task<MySqlConnection> OpenConnectionAsync()
     {
-        // Thứ tự ưu tiên: smartfiredb → SmartFireDB → smart_fire_warning
-        string[] candidateDbs = { "smartfiredb", "SmartFireDB", "smart_fire_warning" };
-        string[] candidatePasswords = { "", "YourStrong@Passw0rd" };
-
-        foreach (var db in candidateDbs)
+        // Dùng ĐÚNG 1 chuỗi kết nối (bản cũ tự đoán cổng 3306 + vài mật khẩu mặc định nên
+        // không bao giờ kết nối được tới MySQL cổng 3307 của bạn, và mỗi lần thử mất ~12 giây).
+        var conn = new MySqlConnection(_connectionString);
+        try
         {
-            foreach (var pwd in candidatePasswords)
-            {
-                var connStr = $"Server=localhost;Port=3306;Database={db};Uid=root;Pwd={pwd};CharSet=utf8mb4;Connect Timeout=2;";
-                try
-                {
-                    var conn = new MySqlConnection(connStr);
-                    await conn.OpenAsync();
-                    _connectionString = connStr;
-                    _activeDbName = db;
-                    return conn;
-                }
-                catch
-                {
-                    // Thử tiếp ứng viên khác
-                }
-            }
+            await conn.OpenAsync();
+            _activeDbName = conn.Database;
+            return conn;
         }
-
-        // Fallback cuối: không chỉ định DB
-        var defaultConn = new MySqlConnection("Server=localhost;Port=3306;Uid=root;Pwd=;CharSet=utf8mb4;");
-        await defaultConn.OpenAsync();
-        return defaultConn;
+        catch
+        {
+            await conn.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>
@@ -210,6 +205,19 @@ public sealed class DatabaseService
                     ));
                 }
             }
+
+            // 5. Số liệu tổng thật (không bị giới hạn bởi LIMIT 20 ở trên)
+            await using (var cmd = new MySqlCommand(
+                @"SELECT (SELECT COUNT(*) FROM EnvironmentLogs),
+                         (SELECT COUNT(*) FROM AlertHistory WHERE Acknowledged = FALSE);", conn))
+            await using (var r = await cmd.ExecuteReaderAsync())
+            {
+                if (await r.ReadAsync())
+                {
+                    totalLogs = Convert.ToInt32(r.GetValue(0));
+                    pendingAlerts = Convert.ToInt32(r.GetValue(1));
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -223,7 +231,7 @@ public sealed class DatabaseService
             TotalLogs: totalLogs,
             TotalUsers: totalUsers,
             DatabaseName: _activeDbName,
-            ServerHost: "localhost:3306 (XAMPP)"
+            ServerHost: _serverHost
         );
 
         return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected);

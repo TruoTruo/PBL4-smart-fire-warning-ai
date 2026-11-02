@@ -64,32 +64,46 @@ public sealed class DashboardForm : Form
             MessageBox.Show($"Lỗi khởi tạo WebView2: {ex.Message}", "FireGuard IoT", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        // Lắng nghe MQTT từ Raspberry Pi 5
-        _mqtt.SensorReadingReceived += async (_, _) => await SyncRealDataAsync();
-        _mqtt.AlertReceived += async (_, _) => await SyncRealDataAsync();
+        // Khi WebView2 nạp xong HTML thì đẩy ngay dữ liệu thật từ CSDL vào
+        _webView.NavigationCompleted += async (_, _) => await SyncRealDataAsync();
 
+        // Quét CSDL mỗi 3 giây: đây là nguồn dữ liệu chính của giao diện
+        _syncTimer.Tick += async (_, _) => await SyncRealDataAsync();
+        _syncTimer.Start();
+
+        // MQTT chỉ đóng vai "chuông báo": có tin mới từ Pi/subscriber thì đọc lại CSDL ngay.
+        // Chạy nền để không chặn giao diện (nếu broker không kết nối được sẽ mất vài giây chờ).
+        _mqtt.SensorReadingReceived += (_, _) => RequestSync();
+        _mqtt.AlertReceived += (_, _) => RequestSync();
+        _ = StartMqttAsync();
+    }
+
+    private async Task StartMqttAsync()
+    {
         try
         {
-            await _mqtt.StartAsync("test.mosquitto.org", 1883);
+            await _mqtt.StartAsync("broker.emqx.io", 1883);   // cùng broker với Pi và mqtt-subscriber
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MQTT Init Error] {ex.Message}");
         }
-
-        // Khi WebView2 nạp xong HTML thì đẩy ngay dữ liệu thực từ CSDL vào
-        _webView.NavigationCompleted += async (_, _) =>
-        {
-            await SyncRealDataAsync();
-        };
-
-        // Quét lại CSDL mỗi 3 giây để cập nhật tức thì nếu có dữ liệu mới từ XAMPP
-        _syncTimer.Tick += async (_, _) => await SyncRealDataAsync();
-        _syncTimer.Start();
     }
+
+    /// <summary>Sự kiện MQTT chạy trên thread nền, còn WebView2 chỉ dùng được trên thread giao diện.</summary>
+    private void RequestSync()
+    {
+        if (IsDisposed || !IsHandleCreated) return;
+        try { BeginInvoke(new Func<Task>(SyncRealDataAsync)); }
+        catch (InvalidOperationException) { /* form đang đóng */ }
+    }
+
+    private bool _syncing;   // chặn nhiều lần đồng bộ chồng lên nhau
 
     private async Task SyncRealDataAsync()
     {
+        if (_syncing) return;
+        _syncing = true;
         try
         {
             if (_webView.CoreWebView2 == null) return;
@@ -107,6 +121,10 @@ public sealed class DashboardForm : Form
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SyncRealData Error] {ex.Message}");
+        }
+        finally
+        {
+            _syncing = false;
         }
     }
 

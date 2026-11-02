@@ -29,9 +29,9 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
     /// <summary>
     /// Khởi động kết nối MQTT tới Broker và lắng nghe dữ liệu từ Raspberry Pi 5.
     /// </summary>
-    /// <param name="host">Broker host (mặc định test.mosquitto.org theo file main_iot.py của Pi 5)</param>
+    /// <param name="host">Broker host (mặc định broker.emqx.io, cùng broker với Pi và mqtt-subscriber)</param>
     /// <param name="port">Port MQTT (mặc định 1883)</param>
-    public async Task StartAsync(string host = "test.mosquitto.org", int port = 1883)
+    public async Task StartAsync(string host = "broker.emqx.io", int port = 1883)
     {
         if (_mqttClient != null && _mqttClient.IsConnected)
             return;
@@ -106,7 +106,7 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
             bool isFireDetected = smoke == 1 || temp > 45.0;
 
             var reading = new SensorReading(
-                DeviceId: "PI-05",
+                DeviceId: "PI-01",
                 ZoneName: "Xưởng Gia Công A - Block C2",
                 Temperature: Math.Round(temp, 1),
                 Humidity: Math.Round(hum, 1),
@@ -122,7 +122,7 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
             {
                 var alert = new AlertRecord(
                     AlertId: DateTime.Now.Ticks % 10000,
-                    DeviceId: "PI-05",
+                    DeviceId: "PI-01",
                     ZoneName: "Xưởng Gia Công A",
                     AlertType: smoke == 1 ? "Phát hiện khói (MQ-2)" : "Nhiệt độ cao bất thường",
                     Severity: "High",
