@@ -19,7 +19,7 @@ public sealed class DashboardForm : Form
 
     public DashboardForm()
     {
-        Text = "FireGuard IoT — Giám Sát Cảnh Báo Cháy Thông Minh (CSDL: SmartFireDB)";
+        Text = "FireGuard IoT — Giám Sát Cảnh Báo Cháy Thông Minh";
         BackColor = Color.FromArgb(0x0F, 0x13, 0x1C);
         ForeColor = Color.FromArgb(0xDF, 0xE2, 0xEF);
         MinimumSize = new Size(1280, 800);
@@ -39,6 +39,15 @@ public sealed class DashboardForm : Form
             await _webView.EnsureCoreWebView2Async();
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+
+            // Tự động cấp quyền truy cập Camera cho WebView2 khi bật webcam
+            _webView.CoreWebView2.PermissionRequested += (sender, args) =>
+            {
+                if (args.PermissionKind == Microsoft.Web.WebView2.Core.CoreWebView2PermissionKind.Camera)
+                {
+                    args.State = Microsoft.Web.WebView2.Core.CoreWebView2PermissionState.Allow;
+                }
+            };
 
             // Lắng nghe tương tác từ nút bấm trên trang Web (ví dụ: bấm nút Xác nhận xử lý sự cố)
             _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
