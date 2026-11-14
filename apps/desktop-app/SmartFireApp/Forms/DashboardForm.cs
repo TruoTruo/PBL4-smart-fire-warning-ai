@@ -135,11 +135,57 @@ public sealed class DashboardForm : Form
                 if (action == "acknowledgeAlert" && root.TryGetProperty("alertId", out var idProp))
                 {
                     long alertId = idProp.GetInt64();
-                    await _db.AcknowledgeAlertAsync(alertId);
+                    int userId = root.TryGetProperty("userId", out var uIdProp) ? uIdProp.GetInt32() : 1;
+                    await _db.AcknowledgeAlertAsync(alertId, userId);
                     await SyncRealDataAsync();
                 }
                 else if (action == "refreshDatabase")
                 {
+                    await SyncRealDataAsync();
+                }
+                else if (action == "login")
+                {
+                    string username = root.TryGetProperty("username", out var uProp) ? uProp.GetString() ?? "" : "";
+                    string password = root.TryGetProperty("password", out var pProp) ? pProp.GetString() ?? "" : "";
+
+                    var user = await _db.LoginUserAsync(username, password);
+                    var response = new 
+                    { 
+                        success = user != null, 
+                        user = user, 
+                        error = user == null ? "Tên đăng nhập hoặc mật khẩu không đúng." : null 
+                    };
+
+                    string resJson = JsonSerializer.Serialize(response, new JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                    });
+                    await _webView.ExecuteScriptAsync($"if (window.handleAuthResponse) window.handleAuthResponse('login', {resJson});");
+                    if (user != null) await SyncRealDataAsync();
+                }
+                else if (action == "register")
+                {
+                    string username = root.TryGetProperty("username", out var uProp) ? uProp.GetString() ?? "" : "";
+                    string password = root.TryGetProperty("password", out var pProp) ? pProp.GetString() ?? "" : "";
+                    string fullName = root.TryGetProperty("fullName", out var fnProp) ? fnProp.GetString() ?? "" : "";
+                    string? phone = root.TryGetProperty("phone", out var phProp) ? phProp.GetString() : null;
+                    string? email = root.TryGetProperty("email", out var emProp) ? emProp.GetString() : null;
+                    string role = root.TryGetProperty("role", out var roProp) ? roProp.GetString() ?? "User" : "User";
+
+                    var (success, user, error) = await _db.RegisterUserAsync(username, password, fullName, phone, email, role);
+                    var response = new { success, user, error };
+
+                    string resJson = JsonSerializer.Serialize(response, new JsonSerializerOptions 
+                    { 
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                    });
+                    await _webView.ExecuteScriptAsync($"if (window.handleAuthResponse) window.handleAuthResponse('register', {resJson});");
+                    if (success) await SyncRealDataAsync();
+                }
+                else if (action == "deleteUser" && root.TryGetProperty("userId", out var delIdProp))
+                {
+                    int delUserId = delIdProp.GetInt32();
+                    await _db.DeleteUserAsync(delUserId);
                     await SyncRealDataAsync();
                 }
             }
