@@ -82,10 +82,3 @@ public sealed record AlertRecord(
     DateTime AlertTime,
     bool Acknowledged,
     bool SmsSent);
-
-public sealed record KpiSnapshot(
-    int SensorsOnline,
-    int SensorsTotal,
-    int FireDetected,
-    int HeatWarnings,
-    int ResponseMs);

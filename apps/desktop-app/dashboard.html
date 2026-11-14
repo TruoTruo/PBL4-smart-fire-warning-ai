@@ -33,15 +33,21 @@
     </div>
 
     <!-- Right Header Actions & Active User -->
-    <div class="flex items-center gap-3 w-full md:w-auto justify-end flex-wrap">
+    <div class="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
       <!-- Active User Chip (từ bảng Users) -->
-      <div id="headerUserChip" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] border border-[#31353f] font-mono text-[12px]">
+      <div id="headerUserChip" onclick="openAuthModal('login')" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] font-mono text-[12px] cursor-pointer transition-all" title="Click để chuyển hoặc quản lý tài khoản">
         <div class="w-6 h-6 rounded-full bg-[#ff5451] text-[#5c0008] flex items-center justify-center font-bold text-[10px]" id="headerUserAvatar">U</div>
         <div class="flex flex-col leading-none">
           <span id="headerUserName" class="font-bold text-white">Đang tải user...</span>
           <span id="headerUserRole" class="text-[10px] text-[#4cd7f6]">--</span>
         </div>
       </div>
+
+      <!-- Nút Đăng Nhập / Đăng Ký / Đăng Xuất -->
+      <button id="btnHeaderAuth" onclick="handleHeaderAuthClick()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#4cd7f6] transition-all">
+        <span class="material-symbols-outlined text-[16px]" id="iconHeaderAuth">login</span>
+        <span id="textHeaderAuth">Đăng Nhập</span>
+      </button>
 
       <button onclick="refreshData()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all">
         <span class="material-symbols-outlined text-[16px]">refresh</span>
@@ -249,7 +255,13 @@
         <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">group</span>
         <h2 class="text-[15px] font-bold text-white tracking-tight">Cán Bộ Trực Ban & Người Nhận SMS Cảnh Báo</h2>
       </div>
-      <span class="text-[11px] font-mono text-[#e4beba]">Cấu hình quyền Admin / User và số điện thoại nhận SMS Gateway</span>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-mono text-[#e4beba] hidden md:inline">Cấu hình quyền Admin / User và số điện thoại nhận SMS</span>
+        <button onclick="openAuthModal('register')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-mono font-bold transition-all">
+          <span class="material-symbols-outlined text-[15px]">person_add</span>
+          <span>+ Đăng Ký Cán Bộ Mới</span>
+        </button>
+      </div>
     </div>
 
     <div class="overflow-x-auto">
@@ -262,12 +274,13 @@
             <th class="py-2.5 px-3">VAI TRÒ (ROLE)</th>
             <th class="py-2.5 px-3">SỐ ĐIỆN THOẠI (NHẬN SMS)</th>
             <th class="py-2.5 px-3">EMAIL LIÊN HỆ</th>
-            <th class="py-2.5 px-3 text-right">NGÀY ĐĂNG KÝ</th>
+            <th class="py-2.5 px-3">NGÀY ĐĂNG KÝ</th>
+            <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
           </tr>
         </thead>
         <tbody id="usersTableBody" class="divide-y divide-[#262a34]">
           <tr>
-            <td colspan="7" class="py-6 text-center text-[#e4beba]">Đang tải danh sách người dùng...</td>
+            <td colspan="8" class="py-6 text-center text-[#e4beba]">Đang tải danh sách người dùng...</td>
           </tr>
         </tbody>
       </table>
@@ -307,6 +320,119 @@
     </div>
   </section>
 
+  <!-- ==================== AUTH MODAL (ĐĂNG NHẬP / ĐĂNG KÝ) ==================== -->
+  <div id="authModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4 relative">
+      
+      <!-- Nút đóng Modal -->
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+
+      <!-- Modal Header -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold shadow-md">
+          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+        </div>
+        <div>
+          <h3 class="text-[17px] font-bold text-white tracking-tight">Tài Khoản FireGuard IoT</h3>
+          <p class="text-[11px] font-mono text-[#8a8f9d]">Tương tác trực tiếp với bảng Users trong CSDL MySQL</p>
+        </div>
+      </div>
+
+      <!-- Tab Switcher (Đăng Nhập / Đăng Ký) -->
+      <div class="flex rounded-xl bg-[#0f131c] p-1 border border-[#262a34]">
+        <button id="tabBtnLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow">
+          Đăng Nhập
+        </button>
+        <button id="tabBtnRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all">
+          Đăng Ký Tài Khoản
+        </button>
+      </div>
+
+      <!-- TAB 1: FORM ĐĂNG NHẬP -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="flex flex-col gap-3.5">
+        <div id="loginAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+
+        <div>
+          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập (Username):</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">person</span>
+            <input id="loginUsername" type="text" required placeholder="Ví dụ: admin hoặc supervisor1" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu:</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">lock</span>
+            <input id="loginPassword" type="password" required placeholder="Nhập mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
+          </div>
+        </div>
+
+        <!-- Gợi ý tài khoản có sẵn trong CSDL -->
+        <div class="p-2.5 rounded-xl bg-[#0f131c] border border-[#262a34] text-[10.5px] font-mono text-[#8a8f9d] flex flex-col gap-1">
+          <span class="text-[#4cd7f6] font-bold">Gợi ý tài khoản sẵn có trong CSDL:</span>
+          <div class="flex gap-2 flex-wrap mt-0.5">
+            <button type="button" onclick="fillQuickLogin('admin', '123456')" class="px-2 py-0.5 rounded bg-[#1c1f29] hover:bg-[#262a34] text-white border border-[#31353f]">admin (pass: 123456)</button>
+            <button type="button" onclick="fillQuickLogin('supervisor1', '123456')" class="px-2 py-0.5 rounded bg-[#1c1f29] hover:bg-[#262a34] text-white border border-[#31353f]">supervisor1</button>
+          </div>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg">
+          <span class="material-symbols-outlined text-[18px]">login</span>
+          <span>Đăng Nhập Hệ Thống</span>
+        </button>
+      </form>
+
+      <!-- TAB 2: FORM ĐĂNG KÝ -->
+      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="hidden flex flex-col gap-3">
+        <div id="regAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập *:</label>
+            <input id="regUsername" type="text" required placeholder="user_moi" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu *:</label>
+            <input id="regPassword" type="password" required placeholder="Mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Họ và tên cán bộ *:</label>
+          <input id="regFullName" type="text" required placeholder="Ví dụ: Lê Hoàng Nam" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Số ĐT (Nhận SMS):</label>
+            <input id="regPhone" type="tel" placeholder="09xxxxxxxx" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Vai trò (Role):</label>
+            <select id="regRole" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+              <option value="User">User (Giám sát viên)</option>
+              <option value="Admin">Admin (Quản trị viên)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Email liên hệ:</label>
+          <input id="regEmail" type="email" placeholder="canbo@smartfire.vn" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+        </div>
+
+        <button type="submit" id="btnRegSubmit" class="w-full py-2.5 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg mt-1">
+          <span class="material-symbols-outlined text-[18px]">person_add</span>
+          <span>Tạo Tài Khoản & Lưu Vào CSDL</span>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
   <!-- Toast notification -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -344,12 +470,203 @@
 
     function acknowledgeAlert(alertId) {
       if (window.chrome && window.chrome.webview) {
-        window.chrome.webview.postMessage({ action: 'acknowledgeAlert', alertId: alertId });
+        const uId = window.currentAuthUser ? window.currentAuthUser.userId : 1;
+        window.chrome.webview.postMessage({ action: 'acknowledgeAlert', alertId: alertId, userId: uId });
         showToast(`Đã gửi lệnh xác nhận xử lý sự cố #${alertId}`, 'success');
       } else {
         alert('Cần chạy trên ứng dụng Desktop để tương tác trực tiếp với CSDL.');
       }
     }
+
+    // ========================================================
+    // QUẢN LÝ ĐĂNG NHẬP, ĐĂNG KÝ & TƯƠNG TÁC BẢNG USERS
+    // ========================================================
+    window.currentAuthUser = JSON.parse(sessionStorage.getItem('fireguard_user') || 'null');
+
+    function updateHeaderUserUi() {
+      const avatar = document.getElementById('headerUserAvatar');
+      const nameEl = document.getElementById('headerUserName');
+      const roleEl = document.getElementById('headerUserRole');
+      const textAuth = document.getElementById('textHeaderAuth');
+      const iconAuth = document.getElementById('iconHeaderAuth');
+
+      if (window.currentAuthUser) {
+        if (avatar) avatar.textContent = window.currentAuthUser.fullName.split(' ').pop().charAt(0).toUpperCase();
+        if (nameEl) nameEl.textContent = window.currentAuthUser.fullName;
+        if (roleEl) roleEl.textContent = `${window.currentAuthUser.role.toUpperCase()} (SOC)`;
+        if (textAuth) textAuth.textContent = 'Đăng Xuất';
+        if (iconAuth) iconAuth.textContent = 'logout';
+      } else {
+        if (avatar) avatar.textContent = '?';
+        if (nameEl) nameEl.textContent = 'Chưa đăng nhập';
+        if (roleEl) roleEl.textContent = 'Khách (Guest)';
+        if (textAuth) textAuth.textContent = 'Đăng Nhập';
+        if (iconAuth) iconAuth.textContent = 'login';
+      }
+    }
+
+    function handleHeaderAuthClick() {
+      if (window.currentAuthUser) {
+        logoutUser();
+      } else {
+        openAuthModal('login');
+      }
+    }
+
+    function logoutUser() {
+      window.currentAuthUser = null;
+      sessionStorage.removeItem('fireguard_user');
+      updateHeaderUserUi();
+      showToast('Đã đăng xuất tài khoản.', 'info');
+      openAuthModal('login');
+    }
+
+    function openAuthModal(tab = 'login') {
+      const modal = document.getElementById('authModal');
+      if (modal) modal.classList.remove('hidden');
+      switchAuthTab(tab);
+    }
+
+    function closeAuthModal() {
+      const modal = document.getElementById('authModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('loginForm');
+      const regForm = document.getElementById('registerForm');
+      const tabLogin = document.getElementById('tabBtnLogin');
+      const tabReg = document.getElementById('tabBtnRegister');
+      const loginAlert = document.getElementById('loginAlert');
+      const regAlert = document.getElementById('regAlert');
+
+      if (loginAlert) loginAlert.classList.add('hidden');
+      if (regAlert) regAlert.classList.add('hidden');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden');
+        regForm.classList.add('hidden');
+        tabLogin.className = 'flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow';
+        tabReg.className = 'flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all';
+      } else {
+        loginForm.classList.add('hidden');
+        regForm.classList.remove('hidden');
+        tabReg.className = 'flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow';
+        tabLogin.className = 'flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all';
+      }
+    }
+
+    function fillQuickLogin(user, pass) {
+      document.getElementById('loginUsername').value = user;
+      document.getElementById('loginPassword').value = pass;
+    }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value;
+
+      if (!u || !p) return;
+
+      const alertBox = document.getElementById('loginAlert');
+      if (alertBox) {
+        alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+        alertBox.textContent = 'Đang xác thực thông tin tài khoản từ CSDL...';
+        alertBox.classList.remove('hidden');
+      }
+
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({ action: 'login', username: u, password: p });
+      } else {
+        setTimeout(() => {
+          window.handleAuthResponse('login', {
+            success: true,
+            user: { userId: 1, username: u, fullName: u === 'admin' ? 'Đỗ Khánh Duy' : 'Cán Bộ ' + u, role: u === 'admin' ? 'Admin' : 'User' }
+          });
+        }, 500);
+      }
+    }
+
+    function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const username = document.getElementById('regUsername').value.trim();
+      const password = document.getElementById('regPassword').value;
+      const fullName = document.getElementById('regFullName').value.trim();
+      const phone = document.getElementById('regPhone').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const role = document.getElementById('regRole').value;
+
+      if (!username || !password || !fullName) return;
+
+      const alertBox = document.getElementById('regAlert');
+      if (alertBox) {
+        alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#ff5451]/10 text-[#ff5451] border border-[#ff5451]/30';
+        alertBox.textContent = 'Đang lưu tài khoản vào bảng Users trong CSDL...';
+        alertBox.classList.remove('hidden');
+      }
+
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({
+          action: 'register',
+          username, password, fullName, phone, email, role
+        });
+      } else {
+        setTimeout(() => {
+          window.handleAuthResponse('register', {
+            success: true,
+            user: { userId: 99, username, fullName, phone, email, role }
+          });
+        }, 500);
+      }
+    }
+
+    function confirmDeleteUser(userId, username) {
+      if (window.currentAuthUser && window.currentAuthUser.userId === userId) {
+        alert('Không thể xóa tài khoản bạn đang đăng nhập!');
+        return;
+      }
+      if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" (#${userId}) khỏi bảng Users CSDL không?`)) {
+        if (window.chrome && window.chrome.webview) {
+          window.chrome.webview.postMessage({ action: 'deleteUser', userId: userId });
+          showToast(`Đã gửi lệnh xóa tài khoản #${userId}`, 'info');
+        }
+      }
+    }
+
+    // Nhận phản hồi đăng nhập/đăng ký từ C# WinForms
+    window.handleAuthResponse = function(action, res) {
+      if (action === 'login') {
+        const alertBox = document.getElementById('loginAlert');
+        if (res.success && res.user) {
+          window.currentAuthUser = res.user;
+          sessionStorage.setItem('fireguard_user', JSON.stringify(res.user));
+          updateHeaderUserUi();
+          closeAuthModal();
+          showToast(`Đăng nhập thành công! Chào mừng ${res.user.fullName} (${res.user.role})`, 'success');
+        } else {
+          if (alertBox) {
+            alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]';
+            alertBox.textContent = res.error || 'Tên đăng nhập hoặc mật khẩu không chính xác.';
+            alertBox.classList.remove('hidden');
+          }
+        }
+      } else if (action === 'register') {
+        const alertBox = document.getElementById('regAlert');
+        if (res.success && res.user) {
+          window.currentAuthUser = res.user;
+          sessionStorage.setItem('fireguard_user', JSON.stringify(res.user));
+          updateHeaderUserUi();
+          closeAuthModal();
+          showToast(`Đăng ký thành công! Đã thêm cán bộ "${res.user.fullName}" vào bảng Users.`, 'success');
+        } else {
+          if (alertBox) {
+            alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]';
+            alertBox.textContent = res.error || 'Lỗi khi tạo tài khoản.';
+            alertBox.classList.remove('hidden');
+          }
+        }
+      }
+    };
 
     // ========================================================
     // QUẢN LÝ CAMERA AI & NHẬN DIỆN LUỒNG LỬA (WEBCAM / IP / AI BBOX)
@@ -645,35 +962,38 @@
       const usersBody = document.getElementById('usersTableBody');
       if (usersBody && data.users) {
         if (data.users.length === 0) {
-          usersBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[#e4beba]">Chưa có người dùng nào.</td></tr>';
+          usersBody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-[#e4beba]">Chưa có người dùng nào.</td></tr>';
         } else {
           usersBody.innerHTML = '';
-          data.users.forEach((u, idx) => {
+
+          // Nếu chưa có user đăng nhập, mặc định lấy user đầu tiên
+          if (!window.currentAuthUser && data.users.length > 0) {
+            window.currentAuthUser = data.users[0];
+            sessionStorage.setItem('fireguard_user', JSON.stringify(data.users[0]));
+          }
+          updateHeaderUserUi();
+
+          data.users.forEach((u) => {
             const isAdmin = u.role === 'Admin';
             const roleBadge = isAdmin
               ? '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] border border-[#ff5451]/30">ADMIN</span>'
               : '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] font-bold text-[10px] border border-[#4cd7f6]/30">USER / SUPERVISOR</span>';
 
             const createdStr = new Date(u.createdAt).toLocaleDateString('vi-VN');
-
-            // Cập nhật người dùng đầu tiên lên Header
-            if (idx === 0) {
-              const avatar = document.getElementById('headerUserAvatar');
-              if (avatar) avatar.textContent = u.fullName.split(' ').pop().charAt(0).toUpperCase();
-              const nameEl = document.getElementById('headerUserName');
-              if (nameEl) nameEl.textContent = u.fullName;
-              const roleEl = document.getElementById('headerUserRole');
-              if (roleEl) roleEl.textContent = `${u.role.toUpperCase()} (SOC)`;
-            }
+            const isMe = window.currentAuthUser && window.currentAuthUser.userId === u.userId;
+            const actionCell = isMe
+              ? '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] font-bold border border-[#4cd7f6]/30">BẠN</span>'
+              : `<button onclick="confirmDeleteUser(${u.userId}, '${u.username}')" class="px-2 py-1 rounded bg-[#ff5451]/10 hover:bg-[#ff5451]/20 text-[#ff5451] text-[10.5px] transition-all font-mono border border-[#ff5451]/30">Xóa</button>`;
 
             const tr = `
-              <tr class="hover:bg-[#1c1f29] transition-colors">
+              <tr class="hover:bg-[#1c1f29] transition-colors ${isMe ? 'bg-[#4cd7f6]/5' : ''}">
                 <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${u.userId}</td>
                 <td class="py-2.5 px-3 font-bold text-white flex items-center gap-2">
                   <div class="w-6 h-6 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[10px] text-[#4cd7f6] font-bold">
                     ${u.fullName.split(' ').pop().charAt(0).toUpperCase()}
                   </div>
                   ${u.fullName}
+                  ${isMe ? '<span class="text-[9px] font-mono text-[#4cd7f6] ml-1">(Đang đăng nhập)</span>' : ''}
                 </td>
                 <td class="py-2.5 px-3 text-[#e4beba]">${u.username}</td>
                 <td class="py-2.5 px-3">${roleBadge}</td>
@@ -682,7 +1002,8 @@
                   ${u.phoneNumber || 'Chưa cài đặt'}
                 </td>
                 <td class="py-2.5 px-3 text-[#e4beba]">${u.email || 'N/A'}</td>
-                <td class="py-2.5 px-3 text-right text-[#e4beba]">${createdStr}</td>
+                <td class="py-2.5 px-3 text-[#e4beba]">${createdStr}</td>
+                <td class="py-2.5 px-3 text-right">${actionCell}</td>
               </tr>
             `;
             usersBody.insertAdjacentHTML('beforeend', tr);
