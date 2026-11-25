@@ -4,6 +4,9 @@
 -- từ Raspberry Pi. Chạy sau khi đã chạy schema.sql.
 -- ============================================================
 
+-- Bắt buộc: client mysql trong Docker mặc định latin1, thiếu dòng này tên tiếng Việt sẽ bị lỗi phông
+SET NAMES utf8mb4;
+
 USE SmartFireDB;
 
 -- --- Users ---
@@ -25,12 +28,12 @@ VALUES
     ('PI-02', 'Node giám sát Kho 1', 2, 'Raspberry Pi 5', 'Active', '192.168.1.102');
 
 -- --- EnvironmentLogs: mô phỏng log bình thường + log bất thường ---
-INSERT INTO EnvironmentLogs (DeviceId, Temperature, Humidity, GasPpm, AiResult, ConfidenceScore, RecordedAt)
+INSERT INTO EnvironmentLogs (DeviceId, Temperature, Humidity, SmokeDetected, SmokeLevel, AlertLevel, AiResult, ConfidenceScore, RecordedAt)
 VALUES
-    ('PI-01', 28.5, 55.0, 120.0, FALSE, NULL,  DATE_SUB(NOW(), INTERVAL 30 MINUTE)),
-    ('PI-01', 29.0, 54.0, 130.0, FALSE, NULL,  DATE_SUB(NOW(), INTERVAL 20 MINUTE)),
-    ('PI-01', 45.2, 30.0, 620.0, TRUE,  88.50, DATE_SUB(NOW(), INTERVAL 5 MINUTE)),  -- bất thường: nghi cháy
-    ('PI-02', 26.0, 60.0, 100.0, FALSE, NULL,  DATE_SUB(NOW(), INTERVAL 15 MINUTE));
+    ('PI-01', 28.5, 55.0, FALSE, 12.0, 0, FALSE, NULL,  DATE_SUB(NOW(), INTERVAL 30 MINUTE)),
+    ('PI-01', 29.0, 54.0, FALSE, 13.5, 0, FALSE, NULL,  DATE_SUB(NOW(), INTERVAL 20 MINUTE)),
+    ('PI-01', 45.2, 30.0, TRUE, 78.0, 2, TRUE,  88.50, DATE_SUB(NOW(), INTERVAL 5 MINUTE)),  -- bất thường: nghi cháy
+    ('PI-02', 26.0, 60.0, FALSE, 11.0, 0, FALSE, NULL,  DATE_SUB(NOW(), INTERVAL 15 MINUTE));
 
 -- --- AlertHistory: cảnh báo được tạo từ dòng log bất thường ở trên ---
 INSERT INTO AlertHistory (DeviceId, LogId, AlertType, Severity, AlertTime, SmsSent, Acknowledged)

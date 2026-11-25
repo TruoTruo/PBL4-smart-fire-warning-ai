@@ -27,7 +27,7 @@ BEGIN
 
     SELECT
         l.LogId, l.DeviceId, d.DeviceName, z.ZoneName,
-        l.Temperature, l.Humidity, l.GasPpm,
+        l.Temperature, l.Humidity, l.SmokeDetected, l.SmokeLevel, l.AlertLevel,
         l.AiResult, l.ConfidenceScore, l.RecordedAt
     FROM EnvironmentLogs l
     JOIN Devices d ON d.DeviceId = l.DeviceId
