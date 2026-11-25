@@ -4,6 +4,9 @@
 -- từ Raspberry Pi. Chạy sau khi đã chạy schema.sql.
 -- ============================================================
 
+-- Bắt buộc: client mysql trong Docker mặc định latin1, thiếu dòng này tên tiếng Việt sẽ bị lỗi phông
+SET NAMES utf8mb4;
+
 USE SmartFireDB;
 
 -- --- Users ---

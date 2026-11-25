@@ -24,13 +24,16 @@ services:
       MYSQL_ROOT_PASSWORD: "YourStrong@Passw0rd"
       MYSQL_DATABASE: "SmartFireDB"
     ports:
-      - "3307:3307"
+      # Máy host dùng cổng 3307 (tránh đụng XAMPP/MySQL 3306), trong container MySQL vẫn nghe 3306.
+      # Các app kết nối: Server=localhost;Port=3307;... (xem appsettings.json)
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       # Tự động chạy schema + seed khi container khởi tạo lần đầu
-      - ../services/database-network/sql/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
-      - ../services/database-network/sql/seed.sql:/docker-entrypoint-initdb.d/2_seed.sql
-      - ../services/database-network/sql/stored_procedures.sql:/docker-entrypoint-initdb.d/3_stored_procedures.sql
+      # (DB tạo mới từ schema.sql đã có đủ cột của 002/003/004, KHÔNG cần chạy các file migration đó)
+      - ../services/database-network/sql/migrations/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
+      - ../services/database-network/sql/migrations/seed.sql:/docker-entrypoint-initdb.d/2_seed.sql
+      - ../services/database-network/sql/migrations/stored_procedures.sql:/docker-entrypoint-initdb.d/3_stored_procedures.sql
 
 volumes:
   mysql-data:

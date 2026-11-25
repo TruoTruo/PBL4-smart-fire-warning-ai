@@ -83,6 +83,7 @@ CREATE TABLE AlertHistory (
     LogId                   BIGINT          NULL,       -- log gốc đã kích hoạt cảnh báo này
     AlertType               VARCHAR(50)     NOT NULL,   -- 'Fire', 'Smoke', 'HighTemperature', 'HighGas'
     Severity                VARCHAR(20)     NOT NULL DEFAULT 'Medium',
+    SnapshotBase64          MEDIUMTEXT      NULL,       -- ảnh bằng chứng JPEG (Base64) do Pi gửi kèm khi có cảnh báo
     AlertTime               DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     SmsSent                 BOOLEAN         NOT NULL DEFAULT FALSE,
     Acknowledged            BOOLEAN         NOT NULL DEFAULT FALSE,  -- đã xem/xác nhận trên desktop-app
