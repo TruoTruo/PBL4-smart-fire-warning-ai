@@ -1,4 +1,4 @@
-using MySqlConnector;
+﻿using MySqlConnector;
 using SmartFireApp.Models;
 
 namespace SmartFireApp.Services;
@@ -10,41 +10,46 @@ namespace SmartFireApp.Services;
 /// </summary>
 public sealed class DatabaseService
 {
-    // ⚠ SỬA CHO ĐÚNG MÁY CỦA BẠN (cổng, mật khẩu). Hoặc đặt biến môi trường SMARTFIRE_DB
-    // để khỏi ghi mật khẩu vào code (đừng commit mật khẩu thật lên Git).
-    private const string DefaultConnectionString =
-        "Server=127.0.0.1;Port=3307;Database=SmartFireDB;Uid=root;Pwd=28040528;CharSet=utf8mb4;Connect Timeout=5;";
-
-    private readonly string _connectionString;
-    private readonly string _serverHost;
-    private string _activeDbName = "SmartFireDB";
+    private string _connectionString;
+    private string _activeDbName = "smartfiredb";
 
     public DatabaseService(string? connectionString = null)
     {
-        _connectionString = connectionString
-            ?? Environment.GetEnvironmentVariable("SMARTFIRE_DB")
-            ?? DefaultConnectionString;
-
-        var b = new MySqlConnectionStringBuilder(_connectionString);
-        _serverHost = $"{b.Server}:{b.Port}";
+        // Ưu tiên smartfiredb — database thật của dự án trên XAMPP
+        _connectionString = connectionString 
+            ?? "Server=localhost;Port=3307;Database=smartfiredb;Uid=root;Pwd=;CharSet=utf8mb4;";
     }
 
     private async Task<MySqlConnection> OpenConnectionAsync()
     {
-        // Dùng ĐÚNG 1 chuỗi kết nối (bản cũ tự đoán cổng 3306 + vài mật khẩu mặc định nên
-        // không bao giờ kết nối được tới MySQL cổng 3307 của bạn, và mỗi lần thử mất ~12 giây).
-        var conn = new MySqlConnection(_connectionString);
-        try
+        // Thứ tự ưu tiên: smartfiredb → SmartFireDB → smart_fire_warning
+        string[] candidateDbs = { "smartfiredb", "SmartFireDB", "smart_fire_warning" };
+        string[] candidatePasswords = { "", "YourStrong@Passw0rd" };
+
+        foreach (var db in candidateDbs)
         {
-            await conn.OpenAsync();
-            _activeDbName = conn.Database;
-            return conn;
+            foreach (var pwd in candidatePasswords)
+            {
+                var connStr = $"Server=localhost;Port=3307;Database={db};Uid=root;Pwd=28040528;CharSet=utf8mb4;Connect Timeout=2;";
+                try
+                {
+                    var conn = new MySqlConnection(connStr);
+                    await conn.OpenAsync();
+                    _connectionString = connStr;
+                    _activeDbName = db;
+                    return conn;
+                }
+                catch
+                {
+                    // Thử tiếp ứng viên khác
+                }
+            }
         }
-        catch
-        {
-            await conn.DisposeAsync();
-            throw;
-        }
+
+        // Fallback cuối: không chỉ định DB
+        var defaultConn = new MySqlConnection("Server=localhost;Port=3307;Uid=root;Pwd=28040528;CharSet=utf8mb4;");
+        await defaultConn.OpenAsync();
+        return defaultConn;
     }
 
     /// <summary>
@@ -97,7 +102,9 @@ public sealed class DatabaseService
                        d.DeviceType, d.Status, d.IpAddress,
                        COALESCE(latest.Temperature, 0) AS Temperature,
                        COALESCE(latest.Humidity, 0) AS Humidity,
-                       COALESCE(latest.GasPpm, 0) AS GasPpm,
+                       COALESCE(latest.SmokeDetected, FALSE) AS SmokeDetected,
+                       latest.SmokeLevel,
+                       COALESCE(latest.AlertLevel, 0) AS AlertLevel,
                        COALESCE(latest.AiResult, FALSE) AS AiResult,
                        latest.ConfidenceScore,
                        latest.RecordedAt
@@ -133,7 +140,9 @@ public sealed class DatabaseService
                         IpAddress: r.IsDBNull(r.GetOrdinal("IpAddress")) ? null : r.GetString("IpAddress"),
                         Temperature: Convert.ToDouble(r["Temperature"]),
                         Humidity: Convert.ToDouble(r["Humidity"]),
-                        GasPpm: Convert.ToDouble(r["GasPpm"]),
+                        SmokeDetected: Convert.ToBoolean(r["SmokeDetected"]),
+                        SmokeLevel: r.IsDBNull(r.GetOrdinal("SmokeLevel")) ? null : Convert.ToDouble(r["SmokeLevel"]),
+                        AlertLevel: Convert.ToInt32(r["AlertLevel"]),
                         AiResult: Convert.ToBoolean(r["AiResult"]),
                         ConfidenceScore: r.IsDBNull(r.GetOrdinal("ConfidenceScore")) ? null : Convert.ToDouble(r["ConfidenceScore"]),
                         RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt")
@@ -141,11 +150,11 @@ public sealed class DatabaseService
                 }
             }
 
-            // 3. Lấy danh sách cảnh báo từ AlertHistory
+            // 3. Lấy danh sách cảnh báo từ AlertHistory (kèm ảnh chụp SnapshotBase64 nếu có)
             const string sqlAlerts = @"
                 SELECT a.AlertId, a.DeviceId, COALESCE(d.DeviceName, a.DeviceId) AS DeviceName,
                        COALESCE(z.ZoneName, 'Khu vực') AS ZoneName,
-                       a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged
+                       a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged, a.SnapshotBase64
                 FROM AlertHistory a
                 LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
                 LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
@@ -169,7 +178,8 @@ public sealed class DatabaseService
                         Severity: r.GetString("Severity"),
                         AlertTime: r.GetDateTime("AlertTime"),
                         SmsSent: r.GetBoolean("SmsSent"),
-                        Acknowledged: ack
+                        Acknowledged: ack,
+                        SnapshotBase64: r.IsDBNull(r.GetOrdinal("SnapshotBase64")) ? null : r.GetString("SnapshotBase64")
                     ));
                 }
             }
@@ -179,7 +189,9 @@ public sealed class DatabaseService
                 SELECT e.LogId, e.DeviceId, COALESCE(d.DeviceName, e.DeviceId) AS DeviceName,
                        COALESCE(e.Temperature, 0) AS Temperature,
                        COALESCE(e.Humidity, 0) AS Humidity,
-                       COALESCE(e.GasPpm, 0) AS GasPpm,
+                       COALESCE(e.SmokeDetected, FALSE) AS SmokeDetected,
+                       e.SmokeLevel,
+                       COALESCE(e.AlertLevel, 0) AS AlertLevel,
                        e.AiResult, e.ConfidenceScore, e.RecordedAt
                 FROM EnvironmentLogs e
                 LEFT JOIN Devices d ON e.DeviceId = d.DeviceId
@@ -198,24 +210,13 @@ public sealed class DatabaseService
                         DeviceName: r.GetString("DeviceName"),
                         Temperature: Convert.ToDouble(r["Temperature"]),
                         Humidity: Convert.ToDouble(r["Humidity"]),
-                        GasPpm: Convert.ToDouble(r["GasPpm"]),
+                        SmokeDetected: Convert.ToBoolean(r["SmokeDetected"]),
+                        SmokeLevel: r.IsDBNull(r.GetOrdinal("SmokeLevel")) ? null : Convert.ToDouble(r["SmokeLevel"]),
+                        AlertLevel: Convert.ToInt32(r["AlertLevel"]),
                         AiResult: r.GetBoolean("AiResult"),
                         ConfidenceScore: r.IsDBNull(r.GetOrdinal("ConfidenceScore")) ? null : Convert.ToDouble(r["ConfidenceScore"]),
                         RecordedAt: r.GetDateTime("RecordedAt")
                     ));
-                }
-            }
-
-            // 5. Số liệu tổng thật (không bị giới hạn bởi LIMIT 20 ở trên)
-            await using (var cmd = new MySqlCommand(
-                @"SELECT (SELECT COUNT(*) FROM EnvironmentLogs),
-                         (SELECT COUNT(*) FROM AlertHistory WHERE Acknowledged = FALSE);", conn))
-            await using (var r = await cmd.ExecuteReaderAsync())
-            {
-                if (await r.ReadAsync())
-                {
-                    totalLogs = Convert.ToInt32(r.GetValue(0));
-                    pendingAlerts = Convert.ToInt32(r.GetValue(1));
                 }
             }
         }
@@ -231,10 +232,100 @@ public sealed class DatabaseService
             TotalLogs: totalLogs,
             TotalUsers: totalUsers,
             DatabaseName: _activeDbName,
-            ServerHost: _serverHost
+            ServerHost: "localhost:3307 (XAMPP)"
         );
 
         return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected);
+    }
+
+    /// <summary>
+    /// Lọc danh sách cảnh báo theo khoảng ngày và loại sự cố (phục vụ xem lại lịch sử + ảnh chụp).
+    /// </summary>
+    public async Task<List<AlertModel>> GetAlertsByDateRangeAsync(DateTime? fromDate, DateTime? toDate, string? alertType = null)
+    {
+        var list = new List<AlertModel>();
+        const string sql = @"
+            SELECT a.AlertId, a.DeviceId, COALESCE(d.DeviceName, a.DeviceId) AS DeviceName,
+                   COALESCE(z.ZoneName, 'Khu vực') AS ZoneName,
+                   a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged, a.SnapshotBase64
+            FROM AlertHistory a
+            LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
+            LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+            WHERE (@FromDate IS NULL OR a.AlertTime >= @FromDate)
+              AND (@ToDate IS NULL OR a.AlertTime <= @ToDate)
+              AND (@AlertType IS NULL OR a.AlertType = @AlertType)
+            ORDER BY a.AlertTime DESC
+            LIMIT 100;";
+
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@FromDate", (object?)fromDate ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@ToDate", (object?)toDate ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@AlertType", string.IsNullOrWhiteSpace(alertType) ? DBNull.Value : alertType);
+
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                list.Add(new AlertModel(
+                    AlertId: r.GetInt64("AlertId"),
+                    DeviceId: r.GetString("DeviceId"),
+                    DeviceName: r.GetString("DeviceName"),
+                    ZoneName: r.GetString("ZoneName"),
+                    AlertType: r.GetString("AlertType"),
+                    Severity: r.GetString("Severity"),
+                    AlertTime: r.GetDateTime("AlertTime"),
+                    SmsSent: r.GetBoolean("SmsSent"),
+                    Acknowledged: r.GetBoolean("Acknowledged"),
+                    SnapshotBase64: r.IsDBNull(r.GetOrdinal("SnapshotBase64")) ? null : r.GetString("SnapshotBase64")
+                ));
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MySQL GetAlertsByDateRange Error] {ex.Message}");
+        }
+
+        return list;
+    }
+
+    /// <summary>
+    /// Thống kê số lượng cảnh báo theo từng ngày và loại cảnh báo trong khoảng thời gian đã chọn.
+    /// </summary>
+    public async Task<List<AlertStatItem>> GetAlertStatsAsync(DateTime fromDate, DateTime toDate)
+    {
+        var stats = new List<AlertStatItem>();
+        const string sql = @"
+            SELECT DATE_FORMAT(AlertTime, '%d/%m/%Y') AS DateLabel, AlertType, COUNT(*) AS Cnt
+            FROM AlertHistory
+            WHERE AlertTime BETWEEN @FromDate AND @ToDate
+            GROUP BY DATE(AlertTime), DATE_FORMAT(AlertTime, '%d/%m/%Y'), AlertType
+            ORDER BY DATE(AlertTime) ASC;";
+
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@FromDate", fromDate);
+            cmd.Parameters.AddWithValue("@ToDate", toDate);
+
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                stats.Add(new AlertStatItem(
+                    DateLabel: r.GetString("DateLabel"),
+                    AlertType: r.GetString("AlertType"),
+                    Count: Convert.ToInt32(r["Cnt"])
+                ));
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MySQL GetAlertStats Error] {ex.Message}");
+        }
+
+        return stats;
     }
 
     public static string HashPassword(string password)
@@ -424,6 +515,117 @@ public sealed class DatabaseService
         {
             System.Diagnostics.Debug.WriteLine($"[MySQL AcknowledgeAlert Error] {ex.Message}");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Thêm mới hoặc cập nhật thông tin trạm giám sát (Devices + tự tạo Zone nếu chưa có).
+    /// </summary>
+    public async Task<(bool Success, string? Error)> UpsertDeviceAsync(
+        string deviceId, string deviceName, string zoneName, string deviceType, string status, string? ipAddress, bool isEdit)
+    {
+        if (string.IsNullOrWhiteSpace(deviceId) || string.IsNullOrWhiteSpace(deviceName) || string.IsNullOrWhiteSpace(zoneName))
+            return (false, "Vui lòng nhập đầy đủ Mã thiết bị, Tên trạm và Khu vực.");
+
+        deviceId = deviceId.Trim().ToUpperInvariant();
+        deviceName = deviceName.Trim();
+        zoneName = zoneName.Trim();
+        deviceType = string.IsNullOrWhiteSpace(deviceType) ? "RaspberryPi-Node" : deviceType.Trim();
+        status = string.Equals(status, "Offline", StringComparison.OrdinalIgnoreCase) ? "Offline" : "Active";
+        ipAddress = string.IsNullOrWhiteSpace(ipAddress) ? null : ipAddress.Trim();
+
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+
+            // 1. Tìm hoặc tạo mới Zone theo tên nhập vào
+            int zoneId;
+            const string findZoneSql = "SELECT ZoneId FROM Zones WHERE ZoneName = @ZoneName LIMIT 1;";
+            await using (var findCmd = new MySqlCommand(findZoneSql, conn))
+            {
+                findCmd.Parameters.AddWithValue("@ZoneName", zoneName);
+                var existingZone = await findCmd.ExecuteScalarAsync();
+                if (existingZone != null && existingZone != DBNull.Value)
+                {
+                    zoneId = Convert.ToInt32(existingZone);
+                }
+                else
+                {
+                    const string insZoneSql = "INSERT INTO Zones (ZoneName) VALUES (@ZoneName); SELECT LAST_INSERT_ID();";
+                    await using var insZoneCmd = new MySqlCommand(insZoneSql, conn);
+                    insZoneCmd.Parameters.AddWithValue("@ZoneName", zoneName);
+                    zoneId = Convert.ToInt32(await insZoneCmd.ExecuteScalarAsync());
+                }
+            }
+
+            // 2. Thêm mới hoặc cập nhật Devices
+            if (!isEdit)
+            {
+                const string checkSql = "SELECT COUNT(*) FROM Devices WHERE DeviceId = @DeviceId;";
+                await using var chkCmd = new MySqlCommand(checkSql, conn);
+                chkCmd.Parameters.AddWithValue("@DeviceId", deviceId);
+                if (Convert.ToInt64(await chkCmd.ExecuteScalarAsync()) > 0)
+                    return (false, $"Mã thiết bị '{deviceId}' đã tồn tại!");
+
+                const string insertSql = """
+                    INSERT INTO Devices (DeviceId, DeviceName, ZoneId, DeviceType, Status, IpAddress)
+                    VALUES (@DeviceId, @DeviceName, @ZoneId, @DeviceType, @Status, @IpAddress);
+                    """;
+                await using var cmd = new MySqlCommand(insertSql, conn);
+                cmd.Parameters.AddWithValue("@DeviceId", deviceId);
+                cmd.Parameters.AddWithValue("@DeviceName", deviceName);
+                cmd.Parameters.AddWithValue("@ZoneId", zoneId);
+                cmd.Parameters.AddWithValue("@DeviceType", deviceType);
+                cmd.Parameters.AddWithValue("@Status", status);
+                cmd.Parameters.AddWithValue("@IpAddress", (object?)ipAddress ?? DBNull.Value);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            else
+            {
+                const string updateSql = """
+                    UPDATE Devices
+                    SET DeviceName = @DeviceName, ZoneId = @ZoneId, DeviceType = @DeviceType, Status = @Status, IpAddress = @IpAddress
+                    WHERE DeviceId = @DeviceId;
+                    """;
+                await using var cmd = new MySqlCommand(updateSql, conn);
+                cmd.Parameters.AddWithValue("@DeviceId", deviceId);
+                cmd.Parameters.AddWithValue("@DeviceName", deviceName);
+                cmd.Parameters.AddWithValue("@ZoneId", zoneId);
+                cmd.Parameters.AddWithValue("@DeviceType", deviceType);
+                cmd.Parameters.AddWithValue("@Status", status);
+                cmd.Parameters.AddWithValue("@IpAddress", (object?)ipAddress ?? DBNull.Value);
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            return (false, "Lỗi CSDL: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Xóa trạm giám sát (xóa kèm log/cảnh báo liên quan để tránh lỗi khóa ngoại).
+    /// </summary>
+    public async Task<(bool Success, string? Error)> DeleteDeviceAsync(string deviceId)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            const string sql = """
+                DELETE FROM AlertHistory WHERE DeviceId = @DeviceId;
+                DELETE FROM EnvironmentLogs WHERE DeviceId = @DeviceId;
+                DELETE FROM Devices WHERE DeviceId = @DeviceId;
+                """;
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@DeviceId", deviceId);
+            int rows = await cmd.ExecuteNonQueryAsync();
+            return rows > 0 ? (true, null) : (false, "Không tìm thấy thiết bị để xóa.");
+        }
+        catch (Exception ex)
+        {
+            return (false, "Không thể xóa thiết bị: " + ex.Message);
         }
     }
 }

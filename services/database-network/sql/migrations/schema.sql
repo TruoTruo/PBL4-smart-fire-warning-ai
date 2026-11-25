@@ -62,7 +62,9 @@ CREATE TABLE EnvironmentLogs (
     DeviceId            VARCHAR(20)     NOT NULL,
     Temperature         DECIMAL(5,2)    NULL,           -- độ C, từ DHT11
     Humidity            DECIMAL(5,2)    NULL,           -- %, từ DHT11
-    GasPpm              DECIMAL(6,2)    NULL,           -- ppm, từ MQ-2
+    SmokeDetected       BOOLEAN         NOT NULL DEFAULT FALSE,  -- MQ-2 (ngõ ra số): 1 = có khói, 0 = không
+    SmokeLevel          DECIMAL(5,2)    NULL,                    -- mức khói/gas (% thang đo MQ-2) từ ADC; NULL nếu chỉ đọc chân DO
+    AlertLevel          TINYINT         NOT NULL DEFAULT 0,      -- Pi tự tính: 0 bình thường, 1 cảnh báo sớm, 2 báo cháy
     AiResult            BOOLEAN         NOT NULL DEFAULT FALSE,  -- YOLOv8 phát hiện lửa/khói
     ConfidenceScore     DECIMAL(5,2)    NULL,           -- % độ tin cậy của model AI
     RecordedAt          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,

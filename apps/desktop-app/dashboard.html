@@ -33,21 +33,15 @@
     </div>
 
     <!-- Right Header Actions & Active User -->
-    <div class="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
+    <div class="flex items-center gap-3 w-full md:w-auto justify-end flex-wrap">
       <!-- Active User Chip (từ bảng Users) -->
-      <div id="headerUserChip" onclick="openAuthModal('login')" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] font-mono text-[12px] cursor-pointer transition-all" title="Click để chuyển hoặc quản lý tài khoản">
+      <div id="headerUserChip" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] border border-[#31353f] font-mono text-[12px]">
         <div class="w-6 h-6 rounded-full bg-[#ff5451] text-[#5c0008] flex items-center justify-center font-bold text-[10px]" id="headerUserAvatar">U</div>
         <div class="flex flex-col leading-none">
           <span id="headerUserName" class="font-bold text-white">Đang tải user...</span>
           <span id="headerUserRole" class="text-[10px] text-[#4cd7f6]">--</span>
         </div>
       </div>
-
-      <!-- Nút Đăng Nhập / Đăng Ký / Đăng Xuất -->
-      <button id="btnHeaderAuth" onclick="handleHeaderAuthClick()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#4cd7f6] transition-all">
-        <span class="material-symbols-outlined text-[16px]" id="iconHeaderAuth">login</span>
-        <span id="textHeaderAuth">Đăng Nhập</span>
-      </button>
 
       <button onclick="refreshData()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all">
         <span class="material-symbols-outlined text-[16px]">refresh</span>
@@ -62,7 +56,6 @@
 
   <!-- ==================== KPI COUNTERS ==================== -->
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-    <!-- KPI 1 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">sensors</span> Thiết bị trực tuyến
@@ -73,7 +66,6 @@
       </div>
     </div>
 
-    <!-- KPI 2 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#ff5451]">crisis_alert</span> Sự cố chưa xử lý
@@ -84,7 +76,6 @@
       </div>
     </div>
 
-    <!-- KPI 3 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#ffb95f]">monitoring</span> Bản ghi môi trường
@@ -95,7 +86,6 @@
       </div>
     </div>
 
-    <!-- KPI 4 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">manage_accounts</span> Cán bộ quản lý
@@ -109,7 +99,6 @@
 
   <!-- ==================== SECTION 1: TRẠM GIÁM SÁT & CAMERA AI GIÁM SÁT LUỒNG LỬA ==================== -->
   <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-    
     <!-- KHUNG CAMERA AI PHÁT HIỆN LỬA (5 COLS) -->
     <div id="cameraCard" class="lg:col-span-5 bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col justify-between gap-3 transition-all duration-300">
       <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
@@ -125,16 +114,10 @@
 
       <!-- Khung Video Viewport -->
       <div id="cameraViewport" class="relative aspect-video w-full bg-[#0a0d14] rounded-lg overflow-hidden border border-[#262a34] flex items-center justify-center transition-all duration-300">
-        <!-- Live Video Element (Webcam) -->
         <video id="cameraVideo" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
-
-        <!-- Image Stream (IP Cam / MJPEG từ Raspberry Pi) -->
         <img id="cameraImgStream" class="w-full h-full object-cover hidden" alt="Luồng IP Camera">
-
-        <!-- Canvas vẽ Bounding Box ngọn lửa thời gian thực -->
         <canvas id="cameraCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-20"></canvas>
 
-        <!-- Placeholder khi chưa mở camera -->
         <div id="cameraPlaceholder" class="flex flex-col items-center justify-center text-center p-4 gap-2 z-10">
           <div class="w-12 h-12 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[#4cd7f6]">
             <span class="material-symbols-outlined text-[28px]">videocam_off</span>
@@ -143,13 +126,12 @@
           <span class="text-[10.5px] font-mono text-[#8a8f9d]">Bấm "Bật Webcam" hoặc "Camera IP" bên dưới để kết nối</span>
         </div>
 
-        <!-- OSD Badges góc trên -->
         <div class="absolute top-2 left-2 z-30 flex items-center gap-1.5">
           <span class="text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-white border border-white/10 backdrop-blur flex items-center gap-1">
             <span id="camRecDot" class="w-1.5 h-1.5 rounded-full bg-[#4cd7f6]"></span> CAM-01
           </span>
           <span class="text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10 backdrop-blur">
-            AI: YOLOv8-Fire
+            AI: YOLOv11-Fire
           </span>
         </div>
 
@@ -159,7 +141,6 @@
           </span>
         </div>
 
-        <!-- Banner cảnh báo phát hiện ngọn lửa đỏ rực -->
         <div id="flameWarningBanner" class="hidden absolute bottom-2 left-2 right-2 p-2 rounded-lg bg-[#93000a]/90 backdrop-blur border border-[#ff5451] text-white font-mono z-30 shadow-lg flex items-center justify-between">
           <div class="flex items-center gap-1.5 text-[11px] font-bold text-[#ffdad6]">
             <span class="material-symbols-outlined text-[16px] text-[#ff5451] animate-bounce">local_fire_department</span>
@@ -201,7 +182,13 @@
           <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">developer_board</span>
           <h2 class="text-[15px] font-bold text-white tracking-tight">Danh Sách Trạm Giám Sát</h2>
         </div>
-        <span class="text-[11px] font-mono text-[#e4beba]">Tự động cập nhật số đo mới nhất của từng thiết bị</span>
+        <div class="flex items-center gap-2.5">
+          <span class="hidden sm:inline text-[11px] font-mono text-[#e4beba]">Cập nhật số đo mới nhất</span>
+          <button onclick="openDeviceModal()" class="px-2.5 py-1 rounded-lg bg-[#4cd7f6] hover:bg-[#4cd7f6]/85 text-[#082026] font-mono font-bold text-[11px] flex items-center gap-1 transition-all">
+            <span class="material-symbols-outlined text-[15px]">add</span>
+            <span>Thêm trạm</span>
+          </button>
+        </div>
       </div>
 
       <div id="devicesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -211,30 +198,104 @@
         </div>
       </div>
     </div>
-
   </section>
 
-  <!-- ==================== SECTION 2: BẢNG CẢNH BÁO SỰ CỐ (ALERTHISTORY) ==================== -->
-  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
-    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+  <!-- ==================== SECTION 2: THỐNG KÊ & LỊCH SỬ CẢNH BÁO (ALERTHISTORY) ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-4">
+    <!-- Header + Thanh lọc theo ngày & loại cảnh báo + Xuất CSV -->
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-[#262a34] pb-3">
       <div class="flex items-center gap-2">
-        <span class="material-symbols-outlined text-[#ff5451] text-[20px]">warning</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Lịch Sử Cảnh Báo Khẩn Cấp</h2>
+        <span class="material-symbols-outlined text-[#ff5451] text-[22px]">warning</span>
+        <div>
+          <h2 class="text-[15px] font-bold text-white tracking-tight flex items-center gap-2">
+            Thống Kê & Lịch Sử Cảnh Báo Sự Cố
+            <span id="alertModeBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/30">
+              CHẾ ĐỘ TRỰC TIẾP (20 MỚI NHẤT)
+            </span>
+          </h2>
+          <span class="text-[11px] font-mono text-[#e4beba]">Lọc theo khoảng thời gian, xem thống kê tần suất, bằng chứng hình ảnh AI và xuất CSV</span>
+        </div>
       </div>
-      <span class="text-[11px] font-mono text-[#e4beba]">Chỉ ghi khi AI xác nhận hoặc cảm biến vượt ngưỡng an toàn</span>
+
+      <!-- Bộ lọc thời gian & Xuất CSV -->
+      <div class="flex items-center gap-2 flex-wrap font-mono text-[11.5px]">
+        <div class="flex items-center gap-1.5 bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1">
+          <span class="text-[#e4beba]">Từ:</span>
+          <input type="date" id="filterFromDate" class="bg-transparent text-white outline-none [color-scheme:dark]">
+        </div>
+        <div class="flex items-center gap-1.5 bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1">
+          <span class="text-[#e4beba]">Đến:</span>
+          <input type="date" id="filterToDate" class="bg-transparent text-white outline-none [color-scheme:dark]">
+        </div>
+        <select id="filterAlertType" class="bg-[#1c1f29] border border-[#31353f] text-white rounded-lg px-2.5 py-1.5 outline-none">
+          <option value="">Tất cả loại sự cố</option>
+          <option value="Fire">🔥 Cháy (Fire)</option>
+          <option value="Smoke">💨 Khói (Smoke)</option>
+          <option value="HighTemperature">🌡️ Nhiệt cao (HighTemperature)</option>
+        </select>
+        <button onclick="applyHistoryFilter()" class="px-3 py-1.5 rounded-lg bg-[#4cd7f6] hover:bg-[#4cd7f6]/85 text-[#082026] font-bold flex items-center gap-1 transition-all">
+          <span class="material-symbols-outlined text-[15px]">analytics</span>
+          <span>Lọc & Thống kê</span>
+        </button>
+        <button onclick="exportAlertsCsv()" class="px-3 py-1.5 rounded-lg bg-[#009eb9]/20 hover:bg-[#009eb9]/35 border border-[#4cd7f6]/40 text-[#4cd7f6] font-bold flex items-center gap-1 transition-all">
+          <span class="material-symbols-outlined text-[15px]">download</span>
+          <span>Xuất CSV</span>
+        </button>
+        <button id="btnResetFilter" onclick="resetHistoryFilter()" class="hidden px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#e4beba] flex items-center gap-1 transition-all">
+          <span class="material-symbols-outlined text-[15px]">close</span>
+          <span>Về trực tiếp</span>
+        </button>
+      </div>
     </div>
 
-    <div class="overflow-x-auto">
+    <!-- Khu vực Thống kê nhanh + Biểu đồ cột theo ngày -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 bg-[#131722] border border-[#262a34] rounded-xl p-3.5">
+      <!-- 3 ô đếm theo loại sự cố -->
+      <div class="lg:col-span-4 grid grid-cols-3 gap-2.5 font-mono">
+        <div class="bg-[#181b25] border border-[#ff5451]/30 rounded-lg p-2.5 flex flex-col justify-between">
+          <span class="text-[10px] text-[#ffdad6] uppercase">🔥 Cảnh báo Cháy</span>
+          <span id="statFireCount" class="text-[22px] font-bold text-[#ff5451] mt-1">0</span>
+          <span class="text-[9.5px] text-[#8a8f9d]">Fire / AI</span>
+        </div>
+        <div class="bg-[#181b25] border border-[#ffb95f]/30 rounded-lg p-2.5 flex flex-col justify-between">
+          <span class="text-[10px] text-[#ffb95f] uppercase">💨 Cảnh báo Khói</span>
+          <span id="statSmokeCount" class="text-[22px] font-bold text-[#ffb95f] mt-1">0</span>
+          <span class="text-[9.5px] text-[#8a8f9d]">MQ-2 Smoke</span>
+        </div>
+        <div class="bg-[#181b25] border border-[#4cd7f6]/30 rounded-lg p-2.5 flex flex-col justify-between">
+          <span class="text-[10px] text-[#4cd7f6] uppercase">🌡️ Nhiệt độ cao</span>
+          <span id="statTempCount" class="text-[22px] font-bold text-[#4cd7f6] mt-1">0</span>
+          <span class="text-[9.5px] text-[#8a8f9d]">High Temp</span>
+        </div>
+      </div>
+
+      <!-- Biểu đồ cột tần suất cảnh báo theo ngày -->
+      <div class="lg:col-span-8 bg-[#181b25] border border-[#262a34] rounded-lg p-3 flex flex-col justify-between">
+        <div class="flex items-center justify-between text-[11px] font-mono mb-2">
+          <span class="text-white font-bold flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">bar_chart</span>
+            Biểu Đồ Tần Suất Cảnh Báo Theo Ngày
+          </span>
+          <span id="statChartRangeLabel" class="text-[#8a8f9d]">Dữ liệu hiện hành</span>
+        </div>
+        <div id="statsBarChart" class="h-24 flex items-end gap-2 pt-3 px-1 border-b border-[#262a34] overflow-x-auto">
+          <div class="w-full text-center text-[11px] font-mono text-[#8a8f9d] pb-4">Chưa có dữ liệu thống kê</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bảng chi tiết Lịch sử cảnh báo -->
+    <div class="overflow-x-auto max-h-96">
       <table class="w-full text-left font-mono text-[12px]">
-        <thead>
-          <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
+        <thead class="sticky top-0 bg-[#1c1f29] border-b border-[#31353f] z-10">
+          <tr class="text-[#e4beba]">
             <th class="py-2.5 px-3">MÃ #ID</th>
             <th class="py-2.5 px-3">THIẾT BỊ</th>
             <th class="py-2.5 px-3">KHU VỰC (ZONE)</th>
             <th class="py-2.5 px-3">LOẠI CẢNH BÁO</th>
             <th class="py-2.5 px-3">MỨC ĐỘ</th>
             <th class="py-2.5 px-3">THỜI GIAN</th>
-            <th class="py-2.5 px-3">SMS</th>
+            <th class="py-2.5 px-3">ẢNH BẰNG CHỨNG</th>
             <th class="py-2.5 px-3">TRẠNG THÁI</th>
             <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
           </tr>
@@ -255,13 +316,7 @@
         <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">group</span>
         <h2 class="text-[15px] font-bold text-white tracking-tight">Cán Bộ Trực Ban & Người Nhận SMS Cảnh Báo</h2>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="text-[11px] font-mono text-[#e4beba] hidden md:inline">Cấu hình quyền Admin / User và số điện thoại nhận SMS</span>
-        <button onclick="openAuthModal('register')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-mono font-bold transition-all">
-          <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span>+ Đăng Ký Cán Bộ Mới</span>
-        </button>
-      </div>
+      <span class="text-[11px] font-mono text-[#e4beba]">Cấu hình quyền Admin / User và số điện thoại nhận SMS Gateway</span>
     </div>
 
     <div class="overflow-x-auto">
@@ -274,13 +329,12 @@
             <th class="py-2.5 px-3">VAI TRÒ (ROLE)</th>
             <th class="py-2.5 px-3">SỐ ĐIỆN THOẠI (NHẬN SMS)</th>
             <th class="py-2.5 px-3">EMAIL LIÊN HỆ</th>
-            <th class="py-2.5 px-3">NGÀY ĐĂNG KÝ</th>
-            <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
+            <th class="py-2.5 px-3 text-right">NGÀY ĐĂNG KÝ</th>
           </tr>
         </thead>
         <tbody id="usersTableBody" class="divide-y divide-[#262a34]">
           <tr>
-            <td colspan="8" class="py-6 text-center text-[#e4beba]">Đang tải danh sách người dùng...</td>
+            <td colspan="7" class="py-6 text-center text-[#e4beba]">Đang tải danh sách người dùng...</td>
           </tr>
         </tbody>
       </table>
@@ -305,7 +359,7 @@
             <th class="py-2.5 px-3">THIẾT BỊ</th>
             <th class="py-2.5 px-3">NHIỆT ĐỘ</th>
             <th class="py-2.5 px-3">ĐỘ ẨM</th>
-            <th class="py-2.5 px-3">KHÓI / GAS</th>
+            <th class="py-2.5 px-3">KHÓI</th>
             <th class="py-2.5 px-3">KẾT QUẢ AI</th>
             <th class="py-2.5 px-3">ĐỘ TIN CẬY</th>
             <th class="py-2.5 px-3">THỜI GIAN GHI</th>
@@ -320,116 +374,86 @@
     </div>
   </section>
 
-  <!-- ==================== AUTH MODAL (ĐĂNG NHẬP / ĐĂNG KÝ) ==================== -->
-  <div id="authModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
-    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4 relative">
-      
-      <!-- Nút đóng Modal -->
-      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all">
-        <span class="material-symbols-outlined text-[20px]">close</span>
-      </button>
-
-      <!-- Modal Header -->
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold shadow-md">
-          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+  <!-- ==================== MODAL XEM LẠI HÌNH ẢNH BẰNG CHỨNG ==================== -->
+  <div id="snapshotModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeSnapshotModal(event)">
+    <div class="bg-[#181b25] border border-[#ff5451]/60 rounded-2xl max-w-2xl w-full p-4 shadow-2xl flex flex-col gap-3" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+        <div class="flex items-center gap-2 font-mono">
+          <span class="material-symbols-outlined text-[#ff5451]">photo_camera</span>
+          <h3 id="modalSnapshotTitle" class="text-[14px] font-bold text-white">Bằng Chứng Cảnh Báo</h3>
         </div>
-        <div>
-          <h3 class="text-[17px] font-bold text-white tracking-tight">Tài Khoản FireGuard IoT</h3>
-          <p class="text-[11px] font-mono text-[#8a8f9d]">Tương tác trực tiếp với bảng Users trong CSDL MySQL</p>
-        </div>
-      </div>
-
-      <!-- Tab Switcher (Đăng Nhập / Đăng Ký) -->
-      <div class="flex rounded-xl bg-[#0f131c] p-1 border border-[#262a34]">
-        <button id="tabBtnLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow">
-          Đăng Nhập
-        </button>
-        <button id="tabBtnRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all">
-          Đăng Ký Tài Khoản
+        <button onclick="closeSnapshotModal()" class="p-1 rounded-lg hover:bg-[#262a34] text-[#e4beba] hover:text-white">
+          <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
 
-      <!-- TAB 1: FORM ĐĂNG NHẬP -->
-      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="flex flex-col gap-3.5">
-        <div id="loginAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+      <div class="bg-[#0a0d14] rounded-xl overflow-hidden border border-[#262a34] flex items-center justify-center">
+        <img id="modalSnapshotImg" src="" alt="Ảnh chụp hiện trường" class="max-h-[65vh] w-auto object-contain">
+      </div>
 
-        <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập (Username):</label>
-          <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">person</span>
-            <input id="loginUsername" type="text" required placeholder="Ví dụ: admin hoặc supervisor1" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
-          </div>
+      <div class="flex items-center justify-between text-[11px] font-mono text-[#e4beba] pt-1">
+        <span id="modalSnapshotMeta">--</span>
+        <div class="flex items-center gap-2">
+          <a id="modalSnapshotDownload" href="#" download="fire_evidence.jpg" class="px-3 py-1.5 rounded-lg bg-[#4cd7f6] text-[#082026] font-bold flex items-center gap-1">
+            <span class="material-symbols-outlined text-[15px]">download</span>
+            <span>Tải ảnh về</span>
+          </a>
+          <button onclick="closeSnapshotModal()" class="px-3 py-1.5 rounded-lg bg-[#1c1f29] border border-[#31353f] text-white">Đóng</button>
         </div>
+      </div>
+    </div>
+  </div>
 
-        <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu:</label>
-          <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">lock</span>
-            <input id="loginPassword" type="password" required placeholder="Nhập mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
-          </div>
+  <!-- ==================== MODAL THÊM / SỬA TRẠM GIÁM SÁT ==================== -->
+  <div id="deviceModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onclick="closeDeviceModal()">
+    <div class="bg-[#181b25] border border-[#4cd7f6]/50 rounded-2xl max-w-md w-full p-5 shadow-2xl flex flex-col gap-3.5 font-mono" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">developer_board</span>
+          <h3 id="deviceModalTitle" class="text-[14px] font-bold text-white">Thêm Trạm Giám Sát Mới</h3>
         </div>
-
-        <!-- Gợi ý tài khoản có sẵn trong CSDL -->
-        <div class="p-2.5 rounded-xl bg-[#0f131c] border border-[#262a34] text-[10.5px] font-mono text-[#8a8f9d] flex flex-col gap-1">
-          <span class="text-[#4cd7f6] font-bold">Gợi ý tài khoản sẵn có trong CSDL:</span>
-          <div class="flex gap-2 flex-wrap mt-0.5">
-            <button type="button" onclick="fillQuickLogin('admin', '123456')" class="px-2 py-0.5 rounded bg-[#1c1f29] hover:bg-[#262a34] text-white border border-[#31353f]">admin (pass: 123456)</button>
-            <button type="button" onclick="fillQuickLogin('supervisor1', '123456')" class="px-2 py-0.5 rounded bg-[#1c1f29] hover:bg-[#262a34] text-white border border-[#31353f]">supervisor1</button>
-          </div>
-        </div>
-
-        <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg">
-          <span class="material-symbols-outlined text-[18px]">login</span>
-          <span>Đăng Nhập Hệ Thống</span>
+        <button onclick="closeDeviceModal()" class="p-1 rounded-lg hover:bg-[#262a34] text-[#e4beba] hover:text-white">
+          <span class="material-symbols-outlined text-[18px]">close</span>
         </button>
-      </form>
+      </div>
 
-      <!-- TAB 2: FORM ĐĂNG KÝ -->
-      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="hidden flex flex-col gap-3">
-        <div id="regAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
-
-        <div class="grid grid-cols-2 gap-2.5">
-          <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập *:</label>
-            <input id="regUsername" type="text" required placeholder="user_moi" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
-          </div>
-          <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu *:</label>
-            <input id="regPassword" type="password" required placeholder="Mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
-          </div>
-        </div>
-
+      <input type="hidden" id="devIsEdit" value="false">
+      <div class="flex flex-col gap-2.5 text-[12px]">
         <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Họ và tên cán bộ *:</label>
-          <input id="regFullName" type="text" required placeholder="Ví dụ: Lê Hoàng Nam" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label class="text-[#e4beba] text-[11px] block mb-1">Mã thiết bị (DeviceId — khớp với Pi):</label>
+          <input id="devIdInput" type="text" placeholder="VD: PI-01, PI-02" class="w-full px-3 py-2 rounded-lg bg-[#1c1f29] border border-[#31353f] text-white outline-none focus:border-[#4cd7f6] disabled:opacity-50">
         </div>
-
+        <div>
+          <label class="text-[#e4beba] text-[11px] block mb-1">Tên trạm giám sát:</label>
+          <input id="devNameInput" type="text" placeholder="VD: Trạm cảm biến Phòng bếp" class="w-full px-3 py-2 rounded-lg bg-[#1c1f29] border border-[#31353f] text-white outline-none focus:border-[#4cd7f6]">
+        </div>
+        <div>
+          <label class="text-[#e4beba] text-[11px] block mb-1">Khu vực lắp đặt (ZoneName):</label>
+          <input id="devZoneInput" type="text" placeholder="VD: Phòng bếp, Phòng khách" class="w-full px-3 py-2 rounded-lg bg-[#1c1f29] border border-[#31353f] text-white outline-none focus:border-[#4cd7f6]">
+        </div>
         <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Số ĐT (Nhận SMS):</label>
-            <input id="regPhone" type="tel" placeholder="09xxxxxxxx" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label class="text-[#e4beba] text-[11px] block mb-1">Loại phần cứng:</label>
+            <input id="devTypeInput" type="text" value="RaspberryPi-5" class="w-full px-3 py-2 rounded-lg bg-[#1c1f29] border border-[#31353f] text-white outline-none focus:border-[#4cd7f6]">
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Vai trò (Role):</label>
-            <select id="regRole" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
-              <option value="User">User (Giám sát viên)</option>
-              <option value="Admin">Admin (Quản trị viên)</option>
+            <label class="text-[#e4beba] text-[11px] block mb-1">Trạng thái:</label>
+            <select id="devStatusInput" class="w-full px-3 py-2 rounded-lg bg-[#1c1f29] border border-[#31353f] text-white outline-none focus:border-[#4cd7f6]">
+              <option value="Active">Active (Hoạt động)</option>
+              <option value="Offline">Offline (Tạm ngắt)</option>
             </select>
           </div>
         </div>
-
         <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Email liên hệ:</label>
-          <input id="regEmail" type="email" placeholder="canbo@smartfire.vn" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label class="text-[#e4beba] text-[11px] block mb-1">Địa chỉ IP (tùy chọn):</label>
+          <input id="devIpInput" type="text" placeholder="VD: 192.168.137.100" class="w-full px-3 py-2 rounded-lg bg-[#1c1f29] border border-[#31353f] text-white outline-none focus:border-[#4cd7f6]">
         </div>
+      </div>
 
-        <button type="submit" id="btnRegSubmit" class="w-full py-2.5 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg mt-1">
-          <span class="material-symbols-outlined text-[18px]">person_add</span>
-          <span>Tạo Tài Khoản & Lưu Vào CSDL</span>
-        </button>
-      </form>
-
+      <div class="flex justify-end gap-2 pt-2 border-t border-[#262a34] text-[12px]">
+        <button onclick="closeDeviceModal()" class="px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#e4beba]">Hủy</button>
+        <button onclick="saveDeviceForm()" class="px-4 py-1.5 rounded-lg bg-[#4cd7f6] hover:bg-[#4cd7f6]/85 text-[#082026] font-bold">Lưu thông tin</button>
+      </div>
     </div>
   </div>
 
@@ -438,7 +462,22 @@
 
   <!-- ==================== JAVASCRIPT LOGIC ==================== -->
   <script>
-    // Live clock
+    const alertSnapshotsMap = new Map();
+    const currentDevicesMap = new Map();
+    let isHistoryFilterActive = false;
+    let currentDisplayedAlerts = [];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const today = new Date();
+      const weekAgo = new Date();
+      weekAgo.setDate(today.getDate() - 7);
+      const toEl = document.getElementById('filterToDate');
+      const fromEl = document.getElementById('filterFromDate');
+      if (toEl) toEl.value = today.toISOString().split('T')[0];
+      if (fromEl) fromEl.value = weekAgo.toISOString().split('T')[0];
+      startCameraOverlayLoop();
+    });
+
     setInterval(() => {
       const now = new Date();
       document.getElementById('headerLiveClock').textContent = now.toLocaleTimeString('vi-VN') + ' • ' + now.toLocaleDateString('vi-VN');
@@ -462,6 +501,7 @@
     function refreshData() {
       if (window.chrome && window.chrome.webview) {
         window.chrome.webview.postMessage({ action: 'refreshDatabase' });
+        if (isHistoryFilterActive) applyHistoryFilter(true);
         showToast('Đang yêu cầu đồng bộ lại từ MySQL...', 'info');
       } else {
         location.reload();
@@ -470,8 +510,8 @@
 
     function acknowledgeAlert(alertId) {
       if (window.chrome && window.chrome.webview) {
-        const uId = window.currentAuthUser ? window.currentAuthUser.userId : 1;
-        window.chrome.webview.postMessage({ action: 'acknowledgeAlert', alertId: alertId, userId: uId });
+        window.chrome.webview.postMessage({ action: 'acknowledgeAlert', alertId: alertId });
+        if (isHistoryFilterActive) setTimeout(() => applyHistoryFilter(true), 300);
         showToast(`Đã gửi lệnh xác nhận xử lý sự cố #${alertId}`, 'success');
       } else {
         alert('Cần chạy trên ứng dụng Desktop để tương tác trực tiếp với CSDL.');
@@ -479,204 +519,321 @@
     }
 
     // ========================================================
-    // QUẢN LÝ ĐĂNG NHẬP, ĐĂNG KÝ & TƯƠNG TÁC BẢNG USERS
+    // QUẢN LÝ THÊM / SỬA / XÓA TRẠM GIÁM SÁT (DEVICES)
     // ========================================================
-    window.currentAuthUser = JSON.parse(sessionStorage.getItem('fireguard_user') || 'null');
-
-    function updateHeaderUserUi() {
-      const avatar = document.getElementById('headerUserAvatar');
-      const nameEl = document.getElementById('headerUserName');
-      const roleEl = document.getElementById('headerUserRole');
-      const textAuth = document.getElementById('textHeaderAuth');
-      const iconAuth = document.getElementById('iconHeaderAuth');
-
-      if (window.currentAuthUser) {
-        if (avatar) avatar.textContent = window.currentAuthUser.fullName.split(' ').pop().charAt(0).toUpperCase();
-        if (nameEl) nameEl.textContent = window.currentAuthUser.fullName;
-        if (roleEl) roleEl.textContent = `${window.currentAuthUser.role.toUpperCase()} (SOC)`;
-        if (textAuth) textAuth.textContent = 'Đăng Xuất';
-        if (iconAuth) iconAuth.textContent = 'logout';
+    function openDeviceModal(deviceId = null) {
+      const modal = document.getElementById('deviceModal');
+      const idInput = document.getElementById('devIdInput');
+      if (deviceId && currentDevicesMap.has(deviceId)) {
+        const d = currentDevicesMap.get(deviceId);
+        document.getElementById('deviceModalTitle').textContent = `Chỉnh Sửa Trạm ${d.deviceId}`;
+        document.getElementById('devIsEdit').value = 'true';
+        idInput.value = d.deviceId;
+        idInput.disabled = true;
+        document.getElementById('devNameInput').value = d.deviceName || '';
+        document.getElementById('devZoneInput').value = d.zoneName || '';
+        document.getElementById('devTypeInput').value = d.deviceType || 'RaspberryPi-5';
+        document.getElementById('devStatusInput').value = d.status || 'Active';
+        document.getElementById('devIpInput').value = d.ipAddress || '';
       } else {
-        if (avatar) avatar.textContent = '?';
-        if (nameEl) nameEl.textContent = 'Chưa đăng nhập';
-        if (roleEl) roleEl.textContent = 'Khách (Guest)';
-        if (textAuth) textAuth.textContent = 'Đăng Nhập';
-        if (iconAuth) iconAuth.textContent = 'login';
+        document.getElementById('deviceModalTitle').textContent = 'Thêm Trạm Giám Sát Mới';
+        document.getElementById('devIsEdit').value = 'false';
+        idInput.value = '';
+        idInput.disabled = false;
+        document.getElementById('devNameInput').value = '';
+        document.getElementById('devZoneInput').value = 'Phòng bếp';
+        document.getElementById('devTypeInput').value = 'RaspberryPi-5';
+        document.getElementById('devStatusInput').value = 'Active';
+        document.getElementById('devIpInput').value = '';
       }
+      modal.classList.remove('hidden');
     }
 
-    function handleHeaderAuthClick() {
-      if (window.currentAuthUser) {
-        logoutUser();
-      } else {
-        openAuthModal('login');
-      }
+    function closeDeviceModal() {
+      document.getElementById('deviceModal').classList.add('hidden');
     }
 
-    function logoutUser() {
-      window.currentAuthUser = null;
-      sessionStorage.removeItem('fireguard_user');
-      updateHeaderUserUi();
-      showToast('Đã đăng xuất tài khoản.', 'info');
-      openAuthModal('login');
-    }
-
-    function openAuthModal(tab = 'login') {
-      const modal = document.getElementById('authModal');
-      if (modal) modal.classList.remove('hidden');
-      switchAuthTab(tab);
-    }
-
-    function closeAuthModal() {
-      const modal = document.getElementById('authModal');
-      if (modal) modal.classList.add('hidden');
-    }
-
-    function switchAuthTab(tab) {
-      const loginForm = document.getElementById('loginForm');
-      const regForm = document.getElementById('registerForm');
-      const tabLogin = document.getElementById('tabBtnLogin');
-      const tabReg = document.getElementById('tabBtnRegister');
-      const loginAlert = document.getElementById('loginAlert');
-      const regAlert = document.getElementById('regAlert');
-
-      if (loginAlert) loginAlert.classList.add('hidden');
-      if (regAlert) regAlert.classList.add('hidden');
-
-      if (tab === 'login') {
-        loginForm.classList.remove('hidden');
-        regForm.classList.add('hidden');
-        tabLogin.className = 'flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow';
-        tabReg.className = 'flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all';
-      } else {
-        loginForm.classList.add('hidden');
-        regForm.classList.remove('hidden');
-        tabReg.className = 'flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow';
-        tabLogin.className = 'flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all';
-      }
-    }
-
-    function fillQuickLogin(user, pass) {
-      document.getElementById('loginUsername').value = user;
-      document.getElementById('loginPassword').value = pass;
-    }
-
-    function handleLoginSubmit(e) {
-      e.preventDefault();
-      const u = document.getElementById('loginUsername').value.trim();
-      const p = document.getElementById('loginPassword').value;
-
-      if (!u || !p) return;
-
-      const alertBox = document.getElementById('loginAlert');
-      if (alertBox) {
-        alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
-        alertBox.textContent = 'Đang xác thực thông tin tài khoản từ CSDL...';
-        alertBox.classList.remove('hidden');
-      }
-
+    function saveDeviceForm() {
+      const payload = {
+        action: 'upsertDevice',
+        isEdit: document.getElementById('devIsEdit').value === 'true',
+        deviceId: document.getElementById('devIdInput').value,
+        deviceName: document.getElementById('devNameInput').value,
+        zoneName: document.getElementById('devZoneInput').value,
+        deviceType: document.getElementById('devTypeInput').value,
+        status: document.getElementById('devStatusInput').value,
+        ipAddress: document.getElementById('devIpInput').value
+      };
       if (window.chrome && window.chrome.webview) {
-        window.chrome.webview.postMessage({ action: 'login', username: u, password: p });
+        window.chrome.webview.postMessage(payload);
       } else {
-        setTimeout(() => {
-          window.handleAuthResponse('login', {
-            success: true,
-            user: { userId: 1, username: u, fullName: u === 'admin' ? 'Đỗ Khánh Duy' : 'Cán Bộ ' + u, role: u === 'admin' ? 'Admin' : 'User' }
-          });
-        }, 500);
+        showToast('Cần chạy trên ứng dụng Desktop để lưu vào MySQL.', 'error');
       }
     }
 
-    function handleRegisterSubmit(e) {
-      e.preventDefault();
-      const username = document.getElementById('regUsername').value.trim();
-      const password = document.getElementById('regPassword').value;
-      const fullName = document.getElementById('regFullName').value.trim();
-      const phone = document.getElementById('regPhone').value.trim();
-      const email = document.getElementById('regEmail').value.trim();
-      const role = document.getElementById('regRole').value;
-
-      if (!username || !password || !fullName) return;
-
-      const alertBox = document.getElementById('regAlert');
-      if (alertBox) {
-        alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#ff5451]/10 text-[#ff5451] border border-[#ff5451]/30';
-        alertBox.textContent = 'Đang lưu tài khoản vào bảng Users trong CSDL...';
-        alertBox.classList.remove('hidden');
-      }
-
+    function deleteDevice(deviceId) {
+      if (!confirm(`Bạn có chắc muốn xóa trạm ${deviceId} và toàn bộ lịch sử đo của trạm này?`)) return;
       if (window.chrome && window.chrome.webview) {
-        window.chrome.webview.postMessage({
-          action: 'register',
-          username, password, fullName, phone, email, role
-        });
+        window.chrome.webview.postMessage({ action: 'deleteDevice', deviceId: deviceId });
       } else {
-        setTimeout(() => {
-          window.handleAuthResponse('register', {
-            success: true,
-            user: { userId: 99, username, fullName, phone, email, role }
-          });
-        }, 500);
+        showToast('Cần chạy trên ứng dụng Desktop để xóa thiết bị.', 'error');
       }
     }
 
-    function confirmDeleteUser(userId, username) {
-      if (window.currentAuthUser && window.currentAuthUser.userId === userId) {
-        alert('Không thể xóa tài khoản bạn đang đăng nhập!');
-        return;
-      }
-      if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" (#${userId}) khỏi bảng Users CSDL không?`)) {
-        if (window.chrome && window.chrome.webview) {
-          window.chrome.webview.postMessage({ action: 'deleteUser', userId: userId });
-          showToast(`Đã gửi lệnh xóa tài khoản #${userId}`, 'info');
-        }
-      }
-    }
-
-    // Nhận phản hồi đăng nhập/đăng ký từ C# WinForms
-    window.handleAuthResponse = function(action, res) {
-      if (action === 'login') {
-        const alertBox = document.getElementById('loginAlert');
-        if (res.success && res.user) {
-          window.currentAuthUser = res.user;
-          sessionStorage.setItem('fireguard_user', JSON.stringify(res.user));
-          updateHeaderUserUi();
-          closeAuthModal();
-          showToast(`Đăng nhập thành công! Chào mừng ${res.user.fullName} (${res.user.role})`, 'success');
-        } else {
-          if (alertBox) {
-            alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]';
-            alertBox.textContent = res.error || 'Tên đăng nhập hoặc mật khẩu không chính xác.';
-            alertBox.classList.remove('hidden');
-          }
-        }
-      } else if (action === 'register') {
-        const alertBox = document.getElementById('regAlert');
-        if (res.success && res.user) {
-          window.currentAuthUser = res.user;
-          sessionStorage.setItem('fireguard_user', JSON.stringify(res.user));
-          updateHeaderUserUi();
-          closeAuthModal();
-          showToast(`Đăng ký thành công! Đã thêm cán bộ "${res.user.fullName}" vào bảng Users.`, 'success');
-        } else {
-          if (alertBox) {
-            alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]';
-            alertBox.textContent = res.error || 'Lỗi khi tạo tài khoản.';
-            alertBox.classList.remove('hidden');
-          }
-        }
+    window.handleDeviceActionResult = function(res) {
+      if (res && res.success) {
+        closeDeviceModal();
+        showToast('Đã cập nhật danh sách trạm giám sát!', 'success');
+      } else {
+        showToast((res && res.error) || 'Thao tác thất bại.', 'error');
       }
     };
 
     // ========================================================
-    // QUẢN LÝ CAMERA AI & NHẬN DIỆN LUỒNG LỬA (WEBCAM / IP / AI BBOX)
+    // LỌC LỊCH SỬ, THỐNG KÊ, XUẤT CSV & MODAL XEM ẢNH BẰNG CHỨNG
+    // ========================================================
+    function applyHistoryFilter(silent = false) {
+      const fromDate = document.getElementById('filterFromDate')?.value || '';
+      const toDate = document.getElementById('filterToDate')?.value || '';
+      const alertType = document.getElementById('filterAlertType')?.value || '';
+
+      isHistoryFilterActive = true;
+      document.getElementById('btnResetFilter')?.classList.remove('hidden');
+      const modeBadge = document.getElementById('alertModeBadge');
+      if (modeBadge) {
+        modeBadge.textContent = `ĐANG LỌC: ${fromDate || '...'} → ${toDate || '...'}`;
+        modeBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-[#ffb95f]/20 text-[#ffb95f] border border-[#ffb95f]/40';
+      }
+
+      if (window.chrome && window.chrome.webview) {
+        window.chrome.webview.postMessage({
+          action: 'queryHistoryAndStats',
+          fromDate: fromDate,
+          toDate: toDate,
+          alertType: alertType
+        });
+        if (!silent) showToast('Đang truy vấn thống kê & lịch sử cảnh báo...', 'info');
+      }
+    }
+
+    function resetHistoryFilter() {
+      isHistoryFilterActive = false;
+      document.getElementById('btnResetFilter')?.classList.add('hidden');
+      document.getElementById('filterAlertType').value = '';
+      const modeBadge = document.getElementById('alertModeBadge');
+      if (modeBadge) {
+        modeBadge.textContent = 'CHẾ ĐỘ TRỰC TIẾP (20 MỚI NHẤT)';
+        modeBadge.className = 'text-[10px] font-mono px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/30';
+      }
+      refreshData();
+    }
+
+    function exportAlertsCsv() {
+      if (!currentDisplayedAlerts || currentDisplayedAlerts.length === 0) {
+        showToast('Không có dữ liệu cảnh báo để xuất CSV.', 'error');
+        return;
+      }
+
+      const headers = [
+        'Ma Su Co (#ID)',
+        'Ma Thiet Bi',
+        'Ten Thiet Bi',
+        'Khu Vuc (Zone)',
+        'Loai Canh Bao',
+        'Muc Do',
+        'Thoi Gian Phat Hien',
+        'Co Anh Bang Chung',
+        'Trang Thai Xu Ly'
+      ];
+
+      const escapeCsv = (val) => {
+        const str = val == null ? '' : String(val);
+        return `"${str.replace(/"/g, '""')}"`;
+      };
+
+      const rows = currentDisplayedAlerts.map(a => [
+        `#${a.alertId}`,
+        a.deviceId,
+        a.deviceName,
+        a.zoneName,
+        a.alertType,
+        a.severity,
+        new Date(a.alertTime).toLocaleString('vi-VN'),
+        a.snapshotBase64 ? 'Co anh' : 'Khong',
+        a.acknowledged ? 'Da xac nhan xu ly' : 'Chua xu ly'
+      ].map(escapeCsv).join(','));
+
+      const csvContent = '\uFEFF' + [headers.map(escapeCsv).join(','), ...rows].join('\r\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const fromVal = document.getElementById('filterFromDate')?.value || '';
+      const toVal = document.getElementById('filterToDate')?.value || '';
+      const fileSuffix = isHistoryFilterActive && fromVal && toVal
+        ? `${fromVal}_den_${toVal}`
+        : new Date().toISOString().slice(0, 10);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `BaoCao_CanhBaoChay_${fileSuffix}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showToast(`Đã xuất ${currentDisplayedAlerts.length} dòng cảnh báo ra file CSV!`, 'success');
+    }
+
+    function openSnapshotModal(alertId) {
+      const info = alertSnapshotsMap.get(alertId);
+      if (!info || !info.snapshotBase64) {
+        showToast('Sự cố này không có ảnh chụp lưu kèm.', 'error');
+        return;
+      }
+      const dataUrl = info.snapshotBase64.startsWith('data:')
+        ? info.snapshotBase64
+        : `data:image/jpeg;base64,${info.snapshotBase64}`;
+
+      document.getElementById('modalSnapshotTitle').textContent = `Sự cố #${alertId} — ${info.alertType} (${info.deviceId})`;
+      document.getElementById('modalSnapshotImg').src = dataUrl;
+      document.getElementById('modalSnapshotMeta').textContent = `${info.zoneName} • Thời điểm: ${new Date(info.alertTime).toLocaleString('vi-VN')}`;
+      const dlLink = document.getElementById('modalSnapshotDownload');
+      dlLink.href = dataUrl;
+      dlLink.download = `FireGuard_Alert_${alertId}_${info.deviceId}.jpg`;
+
+      document.getElementById('snapshotModal').classList.remove('hidden');
+    }
+
+    function closeSnapshotModal() {
+      document.getElementById('snapshotModal').classList.add('hidden');
+    }
+
+    function renderAlertsList(alerts) {
+      currentDisplayedAlerts = alerts || [];
+      const alertsBody = document.getElementById('alertsTableBody');
+      if (!alertsBody) return;
+
+      if (!alerts || alerts.length === 0) {
+        alertsBody.innerHTML = '<tr><td colspan="9" class="py-5 text-center text-[#4cd7f6]">Không tìm thấy cảnh báo nào trong khoảng thời gian này.</td></tr>';
+        return;
+      }
+
+      alertsBody.innerHTML = '';
+      alerts.forEach(a => {
+        if (a.snapshotBase64) {
+          alertSnapshotsMap.set(a.alertId, a);
+        }
+
+        const isHigh = a.severity === 'High';
+        const sevBadge = isHigh
+          ? '<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">HIGH</span>'
+          : '<span class="px-2 py-0.5 rounded bg-[#ee9800]/20 text-[#ffb95f] font-bold text-[10px]">MEDIUM</span>';
+
+        const statusBadge = a.acknowledged
+          ? '<span class="px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] font-bold text-[10px]">ĐÃ XÁC NHẬN</span>'
+          : '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] animate-pulse">CHƯA XỬ LÝ</span>';
+
+        const photoBtn = a.snapshotBase64
+          ? `<button onclick="openSnapshotModal(${a.alertId})" class="px-2 py-1 rounded bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/30 border border-[#4cd7f6]/40 text-[#4cd7f6] font-bold text-[10.5px] inline-flex items-center gap-1 transition-all">
+               <span class="material-symbols-outlined text-[14px]">image</span> Xem ảnh
+             </button>`
+          : '<span class="text-[10.5px] text-[#8a8f9d]">Không có ảnh</span>';
+
+        const actionBtn = a.acknowledged
+          ? '<span class="text-[11px] text-[#e4beba]">Đã đóng</span>'
+          : `<button onclick="acknowledgeAlert(${a.alertId})" class="px-2.5 py-1 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold rounded text-[11px] transition-all">Xác nhận xử lý</button>`;
+
+        const timeStr = new Date(a.alertTime).toLocaleString('vi-VN');
+
+        const tr = `
+          <tr class="hover:bg-[#1c1f29] transition-colors">
+            <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${a.alertId}</td>
+            <td class="py-2.5 px-3 font-bold text-white">${a.deviceId} <span class="text-[11px] text-[#e4beba] font-normal">(${a.deviceName})</span></td>
+            <td class="py-2.5 px-3">${a.zoneName}</td>
+            <td class="py-2.5 px-3 font-bold ${isHigh ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${a.alertType}</td>
+            <td class="py-2.5 px-3">${sevBadge}</td>
+            <td class="py-2.5 px-3 text-[#e4beba]">${timeStr}</td>
+            <td class="py-2.5 px-3">${photoBtn}</td>
+            <td class="py-2.5 px-3">${statusBadge}</td>
+            <td class="py-2.5 px-3 text-right">${actionBtn}</td>
+          </tr>
+        `;
+        alertsBody.insertAdjacentHTML('beforeend', tr);
+      });
+    }
+
+    function renderStatsSummary(alerts, statsItems, rangeText = '20 bản ghi gần nhất') {
+      let fireCnt = 0, smokeCnt = 0, tempCnt = 0;
+
+      if (statsItems && statsItems.length > 0) {
+        statsItems.forEach(s => {
+          if (s.alertType === 'Fire') fireCnt += s.count;
+          else if (s.alertType === 'Smoke') smokeCnt += s.count;
+          else tempCnt += s.count;
+        });
+      } else if (alerts) {
+        alerts.forEach(a => {
+          if (a.alertType === 'Fire') fireCnt++;
+          else if (a.alertType === 'Smoke') smokeCnt++;
+          else tempCnt++;
+        });
+      }
+
+      document.getElementById('statFireCount').textContent = fireCnt;
+      document.getElementById('statSmokeCount').textContent = smokeCnt;
+      document.getElementById('statTempCount').textContent = tempCnt;
+      document.getElementById('statChartRangeLabel').textContent = rangeText;
+
+      const dayTotals = new Map();
+      if (statsItems && statsItems.length > 0) {
+        statsItems.forEach(s => {
+          dayTotals.set(s.dateLabel, (dayTotals.get(s.dateLabel) || 0) + s.count);
+        });
+      } else if (alerts) {
+        alerts.forEach(a => {
+          const dLabel = new Date(a.alertTime).toLocaleDateString('vi-VN');
+          dayTotals.set(dLabel, (dayTotals.get(dLabel) || 0) + 1);
+        });
+      }
+
+      const chartEl = document.getElementById('statsBarChart');
+      if (!chartEl) return;
+
+      if (dayTotals.size === 0) {
+        chartEl.innerHTML = '<div class="w-full text-center text-[11px] font-mono text-[#8a8f9d] pb-4">Không có sự cố nào trong giai đoạn này</div>';
+        return;
+      }
+
+      const entries = Array.from(dayTotals.entries());
+      const maxVal = Math.max(...entries.map(e => e[1]), 1);
+
+      chartEl.innerHTML = entries.map(([dateLabel, count]) => {
+        const heightPct = Math.max(Math.round((count / maxVal) * 100), 12);
+        return `
+          <div class="flex-1 min-w-[54px] flex flex-col items-center justify-end h-full gap-1 font-mono group">
+            <span class="text-[10px] font-bold text-[#ffb95f]">${count}</span>
+            <div class="w-7 rounded-t bg-gradient-to-t from-[#ff5451] to-[#ffb95f] transition-all duration-300 group-hover:brightness-125" style="height: ${heightPct}%;"></div>
+            <span class="text-[9.5px] text-[#e4beba] truncate max-w-[64px]">${dateLabel}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.renderHistoryAndStats = function(res) {
+      if (!res) return;
+      renderAlertsList(res.alerts || []);
+      renderStatsSummary(res.alerts || [], res.stats || [], `Từ ${res.fromDate} đến ${res.toDate}`);
+    };
+
+    // ========================================================
+    // QUẢN LÝ CAMERA AI & NHẬN DIỆN LUỒNG LỬA
     // ========================================================
     let mediaStream = null;
     let isCameraLive = false;
     let isFlameDetected = false;
     let isSimulatingFlame = false;
     let animFrameId = null;
-    let flameBBox = { x: 0.32, y: 0.22, width: 0.36, height: 0.52 }; // Tỷ lệ tương đối trên khung hình
+    let flameBBox = { x: 0.32, y: 0.22, width: 0.36, height: 0.52 };
 
     async function toggleWebcam() {
       const video = document.getElementById('cameraVideo');
@@ -686,7 +843,6 @@
       const camDot = document.getElementById('camRecDot');
 
       if (isCameraLive && mediaStream) {
-        // Tắt webcam
         mediaStream.getTracks().forEach(t => t.stop());
         mediaStream = null;
         video.srcObject = null;
@@ -697,7 +853,6 @@
         camDot.className = 'w-1.5 h-1.5 rounded-full bg-[#4cd7f6]';
         showToast('Đã dừng webcam.', 'info');
       } else {
-        // Mở webcam
         try {
           imgStream.classList.add('hidden');
           mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -713,15 +868,14 @@
           showToast('Đã kết nối luồng Webcam thành công!', 'success');
           startCameraOverlayLoop();
         } catch (err) {
-          console.error(err);
           showToast('Không thể mở Webcam: ' + (err.message || 'Thiết bị bận hoặc từ chối quyền'), 'error');
         }
       }
     }
 
     function connectIpCamera() {
-      const currentUrl = localStorage.getItem('smartfire_ip_cam') || 'http://192.168.1.101:8080/stream.mjpg';
-      const url = prompt('Nhập địa chỉ luồng MJPEG / IP Camera từ Raspberry Pi hoặc mạng nội bộ:', currentUrl);
+      const currentUrl = localStorage.getItem('smartfire_ip_cam') || 'http://192.168.137.100:5000/video_feed';
+      const url = prompt('Nhập địa chỉ luồng MJPEG / IP Camera từ Raspberry Pi (ví dụ http://<IP-Pi>:5000/video_feed):', currentUrl);
       if (!url) return;
 
       localStorage.setItem('smartfire_ip_cam', url);
@@ -730,7 +884,6 @@
       const placeholder = document.getElementById('cameraPlaceholder');
       const camDot = document.getElementById('camRecDot');
 
-      // Tắt webcam nếu đang bật
       if (mediaStream) {
         mediaStream.getTracks().forEach(t => t.stop());
         mediaStream = null;
@@ -816,7 +969,6 @@
       const w = canvas.width;
       const h = canvas.height;
 
-      // 1. Vẽ Crosshair trung tâm định vị mục tiêu
       ctx.strokeStyle = 'rgba(76, 215, 246, 0.2)';
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
@@ -828,9 +980,7 @@
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // 2. Nếu phát hiện lửa -> Vẽ Bounding Box AI đỏ rực với nhãn
       if (isFlameDetected) {
-        // Tọa độ ngọn lửa động nhẹ mô phỏng flicker ngọn lửa
         const time = Date.now() / 200;
         const jitterX = Math.sin(time) * 4;
         const jitterY = Math.cos(time * 1.5) * 3;
@@ -840,34 +990,26 @@
         const bw = flameBBox.width * w;
         const bh = flameBBox.height * h;
 
-        // Vùng phủ sáng màu lửa đỏ cam trong bounding box
         const grad = ctx.createRadialGradient(bx + bw / 2, by + bh / 2, 10, bx + bw / 2, by + bh / 2, bw);
         grad.addColorStop(0, 'rgba(255, 84, 81, 0.25)');
         grad.addColorStop(1, 'rgba(255, 84, 81, 0.05)');
         ctx.fillStyle = grad;
         ctx.fillRect(bx, by, bw, bh);
 
-        // Khung chữ nhật viền lửa
         ctx.strokeStyle = '#ff5451';
         ctx.lineWidth = 2.5;
         ctx.strokeRect(bx, by, bw, bh);
 
-        // 4 góc HUD brackets
         const cornerLen = 14;
         ctx.lineWidth = 4;
         ctx.strokeStyle = '#ffb95f';
-        // Top-Left
         ctx.beginPath();
         ctx.moveTo(bx, by + cornerLen); ctx.lineTo(bx, by); ctx.lineTo(bx + cornerLen, by);
-        // Top-Right
         ctx.moveTo(bx + bw - cornerLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cornerLen);
-        // Bottom-Left
         ctx.moveTo(bx, by + bh - cornerLen); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + cornerLen, by + bh);
-        // Bottom-Right
         ctx.moveTo(bx + bw - cornerLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cornerLen);
         ctx.stroke();
 
-        // Nhãn AI Bounding Box
         ctx.fillStyle = '#ff5451';
         ctx.fillRect(bx, by - 22, 160, 22);
 
@@ -890,24 +1032,11 @@
       } else if (!img.classList.contains('hidden') && img.src) {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       } else {
-        // Tạo ảnh snapshot nền tối
         ctx.fillStyle = '#0f131c';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = '#ffffff';
         ctx.font = '24px monospace';
         ctx.fillText('FIREGUARD IOT SNAPSHOT • ' + new Date().toLocaleString('vi-VN'), 50, 80);
-      }
-
-      // Đính kèm watermark và nhãn AI nếu có lửa
-      if (isFlameDetected) {
-        ctx.strokeStyle = '#ff5451';
-        ctx.lineWidth = 5;
-        ctx.strokeRect(450, 180, 400, 350);
-        ctx.fillStyle = '#ff5451';
-        ctx.fillRect(450, 140, 250, 40);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 18px monospace';
-        ctx.fillText('🔥 FLAME DETECTED 95%', 460, 168);
       }
 
       const a = document.createElement('a');
@@ -917,30 +1046,21 @@
       showToast('Đã chụp và tải về ảnh bằng chứng camera!', 'success');
     }
 
-    // Khởi động vòng lặp overlay ngay từ đầu
-    window.addEventListener('DOMContentLoaded', () => {
-      startCameraOverlayLoop();
-    });
-
     // ========================================================
     // C# GỌI HÀM NÀY ĐỂ ĐỒNG BỘ 100% DỮ LIỆU TỪ CSDL VÀO GIAO DIỆN
     // ========================================================
     window.renderRealDatabaseData = function(data) {
       if (!data) return;
 
-      // Đồng bộ trạng thái lửa của Camera với CSDL (nếu không đang bật chế độ test thủ công)
       if (!isSimulatingFlame) {
         const fireDev = data.devices && data.devices.find(d => d.aiResult);
         if (fireDev) {
-          setFlameAlert(true, fireDev.confidenceScore || 94.5, `${fireDev.deviceId} - ${fireDev.deviceName}`);
-        } else if (data.kpis && data.kpis.pendingAlerts > 0) {
-          setFlameAlert(true, 88.5, 'Khu vực phát sinh cảnh báo');
+          setFlameAlert(true, fireDev.confidenceScore != null ? fireDev.confidenceScore : '--', `${fireDev.deviceId} - ${fireDev.deviceName}`);
         } else {
           setFlameAlert(false);
         }
       }
 
-      // 1. Cập nhật trạng thái CSDL & KPIs
       const dbBadge = document.getElementById('dbStatusBadge');
       if (dbBadge) {
         if (data.isConnected) {
@@ -958,42 +1078,37 @@
       document.getElementById('kpiTotalLogs').textContent = data.kpis.totalLogs;
       document.getElementById('kpiTotalUsers').textContent = String(data.kpis.totalUsers).padStart(2, '0');
 
-      // 2. Render Cán bộ / Người dùng từ bảng Users
       const usersBody = document.getElementById('usersTableBody');
       if (usersBody && data.users) {
         if (data.users.length === 0) {
-          usersBody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-[#e4beba]">Chưa có người dùng nào.</td></tr>';
+          usersBody.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[#e4beba]">Chưa có người dùng nào.</td></tr>';
         } else {
           usersBody.innerHTML = '';
-
-          // Nếu chưa có user đăng nhập, mặc định lấy user đầu tiên
-          if (!window.currentAuthUser && data.users.length > 0) {
-            window.currentAuthUser = data.users[0];
-            sessionStorage.setItem('fireguard_user', JSON.stringify(data.users[0]));
-          }
-          updateHeaderUserUi();
-
-          data.users.forEach((u) => {
+          data.users.forEach((u, idx) => {
             const isAdmin = u.role === 'Admin';
             const roleBadge = isAdmin
               ? '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] border border-[#ff5451]/30">ADMIN</span>'
               : '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] font-bold text-[10px] border border-[#4cd7f6]/30">USER / SUPERVISOR</span>';
 
             const createdStr = new Date(u.createdAt).toLocaleDateString('vi-VN');
-            const isMe = window.currentAuthUser && window.currentAuthUser.userId === u.userId;
-            const actionCell = isMe
-              ? '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] font-bold border border-[#4cd7f6]/30">BẠN</span>'
-              : `<button onclick="confirmDeleteUser(${u.userId}, '${u.username}')" class="px-2 py-1 rounded bg-[#ff5451]/10 hover:bg-[#ff5451]/20 text-[#ff5451] text-[10.5px] transition-all font-mono border border-[#ff5451]/30">Xóa</button>`;
+
+            if (idx === 0) {
+              const avatar = document.getElementById('headerUserAvatar');
+              if (avatar) avatar.textContent = u.fullName.split(' ').pop().charAt(0).toUpperCase();
+              const nameEl = document.getElementById('headerUserName');
+              if (nameEl) nameEl.textContent = u.fullName;
+              const roleEl = document.getElementById('headerUserRole');
+              if (roleEl) roleEl.textContent = `${u.role.toUpperCase()} (SOC)`;
+            }
 
             const tr = `
-              <tr class="hover:bg-[#1c1f29] transition-colors ${isMe ? 'bg-[#4cd7f6]/5' : ''}">
+              <tr class="hover:bg-[#1c1f29] transition-colors">
                 <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${u.userId}</td>
                 <td class="py-2.5 px-3 font-bold text-white flex items-center gap-2">
                   <div class="w-6 h-6 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[10px] text-[#4cd7f6] font-bold">
                     ${u.fullName.split(' ').pop().charAt(0).toUpperCase()}
                   </div>
                   ${u.fullName}
-                  ${isMe ? '<span class="text-[9px] font-mono text-[#4cd7f6] ml-1">(Đang đăng nhập)</span>' : ''}
                 </td>
                 <td class="py-2.5 px-3 text-[#e4beba]">${u.username}</td>
                 <td class="py-2.5 px-3">${roleBadge}</td>
@@ -1002,8 +1117,7 @@
                   ${u.phoneNumber || 'Chưa cài đặt'}
                 </td>
                 <td class="py-2.5 px-3 text-[#e4beba]">${u.email || 'N/A'}</td>
-                <td class="py-2.5 px-3 text-[#e4beba]">${createdStr}</td>
-                <td class="py-2.5 px-3 text-right">${actionCell}</td>
+                <td class="py-2.5 px-3 text-right text-[#e4beba]">${createdStr}</td>
               </tr>
             `;
             usersBody.insertAdjacentHTML('beforeend', tr);
@@ -1011,7 +1125,6 @@
         }
       }
 
-      // Trạng thái an toàn hệ thống
       const safetyBadge = document.getElementById('systemSafetyBadge');
       if (safetyBadge) {
         if (data.kpis.pendingAlerts > 0) {
@@ -1023,32 +1136,40 @@
         }
       }
 
-      // 3. Render danh sách thiết bị thật từ bảng Devices
       const devContainer = document.getElementById('devicesContainer');
       if (devContainer) {
+        currentDevicesMap.clear();
         if (!data.devices || data.devices.length === 0) {
           devContainer.innerHTML = '<div class="col-span-full py-6 text-center text-[#e4beba] font-mono">Hiện chưa có thiết bị nào.</div>';
         } else {
           devContainer.innerHTML = '';
           data.devices.forEach(d => {
-            const isDanger = d.temperature > 40 || d.gasPpm > 500 || d.aiResult;
+            currentDevicesMap.set(d.deviceId, d);
+            const isDanger = d.alertLevel >= 2;
             const cardBorder = isDanger ? 'border-[#ff5451] bg-[#ff5451]/5 shadow-[0_0_15px_rgba(255,84,81,0.2)]' : 'border-[#262a34] bg-[#181b25]';
-            const statusBadge = d.status === 'Active' 
+            const statusBadge = d.status === 'Active'
               ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#009eb9]/30 text-[#4cd7f6]">ACTIVE</span>'
               : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#31353f] text-[#e4beba]">OFFLINE</span>';
 
             const html = `
               <div class="rounded-xl border ${cardBorder} p-3.5 flex flex-col justify-between transition-all">
-                <div class="flex items-start justify-between">
+                <div class="flex items-start justify-between gap-2">
                   <div>
                     <span class="text-[11px] font-mono font-bold text-[#4cd7f6]">${d.deviceId}</span>
                     <h3 class="text-[14px] font-bold text-white mt-0.5">${d.deviceName}</h3>
                     <span class="text-[11px] text-[#e4beba] font-mono">${d.zoneName} • ${d.deviceType}</span>
                   </div>
-                  ${statusBadge}
+                  <div class="flex items-center gap-1.5">
+                    ${statusBadge}
+                    <button onclick="openDeviceModal('${d.deviceId}')" class="p-1 rounded bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#4cd7f6]" title="Sửa trạm">
+                      <span class="material-symbols-outlined text-[14px]">edit</span>
+                    </button>
+                    <button onclick="deleteDevice('${d.deviceId}')" class="p-1 rounded bg-[#1c1f29] hover:bg-[#93000a] border border-[#31353f] text-[#ff5451]" title="Xóa trạm">
+                      <span class="material-symbols-outlined text-[14px]">delete</span>
+                    </button>
+                  </div>
                 </div>
 
-                <!-- Thông số realtime -->
                 <div class="grid grid-cols-3 gap-2 my-3 p-2 rounded-lg bg-[#1c1f29] border border-[#262a34] text-center font-mono">
                   <div>
                     <div class="text-[10px] text-[#e4beba]">Nhiệt độ</div>
@@ -1059,16 +1180,15 @@
                     <div class="text-[15px] font-bold text-[#4cd7f6]">${d.humidity.toFixed(1)}%</div>
                   </div>
                   <div>
-                    <div class="text-[10px] text-[#e4beba]">Khói/Gas</div>
-                    <div class="text-[15px] font-bold ${d.gasPpm > 500 ? 'text-[#ff5451]' : 'text-white'}">${Math.round(d.gasPpm)} ppm</div>
+                    <div class="text-[10px] text-[#e4beba]">Khói</div>
+                    <div class="text-[15px] font-bold ${d.smokeDetected ? 'text-[#ff5451]' : 'text-white'}">${d.smokeLevel != null ? Math.round(d.smokeLevel) + '% · ' : ''}${d.smokeDetected ? 'CÓ KHÓI' : 'Không'}</div>
                   </div>
                 </div>
 
-                <!-- Footer trạm -->
                 <div class="flex items-center justify-between text-[11px] font-mono text-[#e4beba] pt-1 border-t border-[#262a34]">
                   <span>IP: ${d.ipAddress || 'DHCP'}</span>
                   <span class="${d.aiResult ? 'text-[#ff5451] font-bold' : 'text-[#4cd7f6]'}">
-                    ${d.aiResult ? `🔥 AI: Có Cháy (${d.confidenceScore || 0}%)` : 'AI: An toàn'}
+                    ${d.aiResult ? `🔥 AI: Có Cháy (${d.confidenceScore != null ? Number(d.confidenceScore).toFixed(1) : '--'}%)` : 'AI: An toàn'}
                   </span>
                 </div>
               </div>
@@ -1078,48 +1198,11 @@
         }
       }
 
-      // 4. Render danh sách cảnh báo thật từ bảng AlertHistory
-      const alertsBody = document.getElementById('alertsTableBody');
-      if (alertsBody) {
-        if (!data.alerts || data.alerts.length === 0) {
-          alertsBody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-[#4cd7f6]">Không có cảnh báo cháy nào.</td></tr>';
-        } else {
-          alertsBody.innerHTML = '';
-          data.alerts.forEach(a => {
-            const isHigh = a.severity === 'High';
-            const sevBadge = isHigh 
-              ? '<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">HIGH</span>'
-              : '<span class="px-2 py-0.5 rounded bg-[#ee9800]/20 text-[#ffb95f] font-bold text-[10px]">MEDIUM</span>';
-
-            const statusBadge = a.acknowledged
-              ? '<span class="px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] font-bold text-[10px]">ĐÃ XÁC NHẬN</span>'
-              : '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] animate-pulse">CHƯA XỬ LÝ</span>';
-
-            const actionBtn = a.acknowledged
-              ? '<span class="text-[11px] text-[#e4beba]">Đã đóng</span>'
-              : `<button onclick="acknowledgeAlert(${a.alertId})" class="px-2.5 py-1 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold rounded text-[11px] transition-all">Xác nhận đã xử lý</button>`;
-
-            const timeStr = new Date(a.alertTime).toLocaleString('vi-VN');
-
-            const tr = `
-              <tr class="hover:bg-[#1c1f29] transition-colors">
-                <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${a.alertId}</td>
-                <td class="py-2.5 px-3 font-bold text-white">${a.deviceId} <span class="text-[11px] text-[#e4beba] font-normal">(${a.deviceName})</span></td>
-                <td class="py-2.5 px-3">${a.zoneName}</td>
-                <td class="py-2.5 px-3 font-bold ${isHigh ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${a.alertType}</td>
-                <td class="py-2.5 px-3">${sevBadge}</td>
-                <td class="py-2.5 px-3 text-[#e4beba]">${timeStr}</td>
-                <td class="py-2.5 px-3">${a.smsSent ? '<span class="text-[#4cd7f6]">✓ Đã gửi</span>' : '<span class="text-[#e4beba]">Chưa gửi</span>'}</td>
-                <td class="py-2.5 px-3">${statusBadge}</td>
-                <td class="py-2.5 px-3 text-right">${actionBtn}</td>
-              </tr>
-            `;
-            alertsBody.insertAdjacentHTML('beforeend', tr);
-          });
-        }
+      if (!isHistoryFilterActive) {
+        renderAlertsList(data.alerts || []);
+        renderStatsSummary(data.alerts || [], null, '20 sự cố gần nhất');
       }
 
-      // 5. Render 20 lượt ghi đo từ EnvironmentLogs
       const logsBody = document.getElementById('logsTableBody');
       if (logsBody) {
         if (!data.logs || data.logs.length === 0) {
@@ -1127,7 +1210,7 @@
         } else {
           logsBody.innerHTML = '';
           data.logs.forEach(l => {
-            const aiBadge = l.aiResult 
+            const aiBadge = l.aiResult
               ? `<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">CÓ CHÁY</span>`
               : `<span class="px-2 py-0.5 rounded bg-[#1c1f29] text-[#4cd7f6] text-[10px]">AN TOÀN</span>`;
 
@@ -1139,7 +1222,7 @@
                 <td class="py-2 px-3 font-bold text-white">${l.deviceId} <span class="text-[10.5px] text-[#e4beba]">(${l.deviceName})</span></td>
                 <td class="py-2 px-3 ${l.temperature > 40 ? 'text-[#ff5451] font-bold' : 'text-[#ffb95f]'}">${l.temperature.toFixed(1)} °C</td>
                 <td class="py-2 px-3 text-[#4cd7f6]">${l.humidity.toFixed(1)} %</td>
-                <td class="py-2 px-3 ${l.gasPpm > 500 ? 'text-[#ff5451] font-bold' : 'text-white'}">${Math.round(l.gasPpm)} ppm</td>
+                <td class="py-2 px-3 ${l.smokeDetected ? 'text-[#ff5451] font-bold' : 'text-white'}">${l.smokeLevel != null ? Math.round(l.smokeLevel) + '% · ' : ''}${l.smokeDetected ? 'CÓ KHÓI' : 'Không'}</td>
                 <td class="py-2 px-3">${aiBadge}</td>
                 <td class="py-2 px-3 text-[#e4beba]">${l.confidenceScore ? l.confidenceScore.toFixed(1) + '%' : 'N/A'}</td>
                 <td class="py-2 px-3 text-[#e4beba] text-[11px]">${timeStr}</td>

@@ -1,4 +1,4 @@
-namespace SmartFireApp.Models;
+﻿namespace SmartFireApp.Models;
 
 public sealed record UserModel(
     int UserId,
@@ -18,7 +18,9 @@ public sealed record DeviceCardModel(
     string? IpAddress,
     double Temperature,
     double Humidity,
-    double GasPpm,
+    bool SmokeDetected,
+    double? SmokeLevel,
+    int AlertLevel,
     bool AiResult,
     double? ConfidenceScore,
     DateTime? RecordedAt);
@@ -32,7 +34,8 @@ public sealed record AlertModel(
     string Severity,
     DateTime AlertTime,
     bool SmsSent,
-    bool Acknowledged);
+    bool Acknowledged,
+    string? SnapshotBase64 = null);
 
 public sealed record EnvironmentLogModel(
     long LogId,
@@ -40,7 +43,9 @@ public sealed record EnvironmentLogModel(
     string DeviceName,
     double Temperature,
     double Humidity,
-    double GasPpm,
+    bool SmokeDetected,
+    double? SmokeLevel,
+    int AlertLevel,
     bool AiResult,
     double? ConfidenceScore,
     DateTime RecordedAt);
@@ -68,10 +73,12 @@ public sealed record SensorReading(
     string ZoneName,
     double Temperature,
     double Humidity,
-    double GasPpm,
+    bool SmokeDetected,
     bool AiDetected,
     DateTime Timestamp,
-    double? ConfidenceScore = null);
+    double? ConfidenceScore = null,
+    int AlertLevel = 0,
+    double? SmokeLevel = null);
 
 public sealed record AlertRecord(
     long AlertId,
@@ -82,3 +89,12 @@ public sealed record AlertRecord(
     DateTime AlertTime,
     bool Acknowledged,
     bool SmsSent);
+
+public sealed record KpiSnapshot(
+    int SensorsOnline,
+    int SensorsTotal,
+    int FireDetected,
+    int HeatWarnings,
+    int ResponseMs);
+
+public sealed record AlertStatItem(string DateLabel, string AlertType, int Count);

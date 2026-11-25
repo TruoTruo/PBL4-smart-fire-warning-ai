@@ -91,7 +91,7 @@ public sealed class DashboardForm : Form
     {
         try
         {
-            await _mqtt.StartAsync("broker.emqx.io", 1883);   // cùng broker với Pi và mqtt-subscriber
+            await _mqtt.StartAsync("192.168.137.191", 1883);   // cùng broker với Pi và mqtt-subscriber
         }
         catch (Exception ex)
         {
@@ -161,22 +161,53 @@ public sealed class DashboardForm : Form
                 {
                     await SyncRealDataAsync();
                 }
+                else if (action == "queryHistoryAndStats")
+                {
+                    string? fromStr = root.TryGetProperty("fromDate", out var fProp) ? fProp.GetString() : null;
+                    string? toStr = root.TryGetProperty("toDate", out var tProp) ? tProp.GetString() : null;
+                    string? alertType = root.TryGetProperty("alertType", out var typeProp) ? typeProp.GetString() : null;
+
+                    DateTime fromDate = DateTime.TryParse(fromStr, out var fParsed)
+                        ? fParsed.Date
+                        : DateTime.Today.AddDays(-30);
+                    DateTime toDate = DateTime.TryParse(toStr, out var tParsed)
+                        ? tParsed.Date.AddDays(1).AddSeconds(-1)
+                        : DateTime.Today.AddDays(1).AddSeconds(-1);
+
+                    var filteredAlerts = await _db.GetAlertsByDateRangeAsync(fromDate, toDate, alertType);
+                    var stats = await _db.GetAlertStatsAsync(fromDate, toDate);
+
+                    var resultObj = new
+                    {
+                        alerts = filteredAlerts,
+                        stats = stats,
+                        fromDate = fromDate.ToString("yyyy-MM-dd"),
+                        toDate = toDate.ToString("yyyy-MM-dd")
+                    };
+
+                    string resJson = JsonSerializer.Serialize(resultObj, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                    });
+
+                    await _webView.ExecuteScriptAsync($"if (window.renderHistoryAndStats) window.renderHistoryAndStats({resJson});");
+                }
                 else if (action == "login")
                 {
                     string username = root.TryGetProperty("username", out var uProp) ? uProp.GetString() ?? "" : "";
                     string password = root.TryGetProperty("password", out var pProp) ? pProp.GetString() ?? "" : "";
 
                     var user = await _db.LoginUserAsync(username, password);
-                    var response = new 
-                    { 
-                        success = user != null, 
-                        user = user, 
-                        error = user == null ? "Tên đăng nhập hoặc mật khẩu không đúng." : null 
+                    var response = new
+                    {
+                        success = user != null,
+                        user = user,
+                        error = user == null ? "Tên đăng nhập hoặc mật khẩu không đúng." : null
                     };
 
-                    string resJson = JsonSerializer.Serialize(response, new JsonSerializerOptions 
-                    { 
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                    string resJson = JsonSerializer.Serialize(response, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                     });
                     await _webView.ExecuteScriptAsync($"if (window.handleAuthResponse) window.handleAuthResponse('login', {resJson});");
                     if (user != null) await SyncRealDataAsync();
@@ -193,9 +224,9 @@ public sealed class DashboardForm : Form
                     var (success, user, error) = await _db.RegisterUserAsync(username, password, fullName, phone, email, role);
                     var response = new { success, user, error };
 
-                    string resJson = JsonSerializer.Serialize(response, new JsonSerializerOptions 
-                    { 
-                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase 
+                    string resJson = JsonSerializer.Serialize(response, new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                     });
                     await _webView.ExecuteScriptAsync($"if (window.handleAuthResponse) window.handleAuthResponse('register', {resJson});");
                     if (success) await SyncRealDataAsync();
@@ -205,6 +236,29 @@ public sealed class DashboardForm : Form
                     int delUserId = delIdProp.GetInt32();
                     await _db.DeleteUserAsync(delUserId);
                     await SyncRealDataAsync();
+                }
+                else if (action == "upsertDevice")
+                {
+                    string deviceId = root.TryGetProperty("deviceId", out var dId) ? dId.GetString() ?? "" : "";
+                    string deviceName = root.TryGetProperty("deviceName", out var dName) ? dName.GetString() ?? "" : "";
+                    string zoneName = root.TryGetProperty("zoneName", out var zName) ? zName.GetString() ?? "" : "";
+                    string deviceType = root.TryGetProperty("deviceType", out var dType) ? dType.GetString() ?? "RaspberryPi-Node" : "RaspberryPi-Node";
+                    string status = root.TryGetProperty("status", out var st) ? st.GetString() ?? "Active" : "Active";
+                    string? ipAddress = root.TryGetProperty("ipAddress", out var ip) ? ip.GetString() : null;
+                    bool isEdit = root.TryGetProperty("isEdit", out var ed) && ed.GetBoolean();
+
+                    var (success, error) = await _db.UpsertDeviceAsync(deviceId, deviceName, zoneName, deviceType, status, ipAddress, isEdit);
+                    string resJson = JsonSerializer.Serialize(new { success, error }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                    await _webView.ExecuteScriptAsync($"if (window.handleDeviceActionResult) window.handleDeviceActionResult({resJson});");
+                    if (success) await SyncRealDataAsync();
+                }
+                else if (action == "deleteDevice" && root.TryGetProperty("deviceId", out var delDevProp))
+                {
+                    string delDevId = delDevProp.GetString() ?? "";
+                    var (success, error) = await _db.DeleteDeviceAsync(delDevId);
+                    string resJson = JsonSerializer.Serialize(new { success, error }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                    await _webView.ExecuteScriptAsync($"if (window.handleDeviceActionResult) window.handleDeviceActionResult({resJson});");
+                    if (success) await SyncRealDataAsync();
                 }
             }
         }

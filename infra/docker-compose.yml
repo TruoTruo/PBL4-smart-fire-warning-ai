@@ -24,7 +24,7 @@ services:
       MYSQL_ROOT_PASSWORD: "YourStrong@Passw0rd"
       MYSQL_DATABASE: "SmartFireDB"
     ports:
-      - "3306:3306"
+      - "3307:3307"
     volumes:
       - mysql-data:/var/lib/mysql
       # Tự động chạy schema + seed khi container khởi tạo lần đầu

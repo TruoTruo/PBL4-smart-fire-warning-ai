@@ -22,3 +22,6 @@ apps/desktop-app/**/obj/
 # OS
 .DS_Store
 Thumbs.db
+
+bin/
+obj/
