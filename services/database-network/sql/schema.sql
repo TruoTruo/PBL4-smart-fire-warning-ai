@@ -1,3 +1,0 @@
--- Schema chuẩn hóa 3NF: 5 bảng
--- TaiKhoan, KhuVuc, ThietBi, NhatKyMoiTruong, LichSuCanhBao
--- TODO: định nghĩa CREATE TABLE tại đây (nguồn chân lý duy nhất cho cả nhóm)
