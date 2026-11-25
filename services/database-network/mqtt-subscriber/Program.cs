@@ -42,6 +42,7 @@ Console.OutputEncoding = Encoding.UTF8;
 var config = new ConfigurationBuilder()
     .SetBasePath(AppContext.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile("appsettings.Local.json", optional: true)   // KHÔNG commit: mật khẩu MySQL / IP broker riêng từng máy
     .AddEnvironmentVariables()
     .Build();
  

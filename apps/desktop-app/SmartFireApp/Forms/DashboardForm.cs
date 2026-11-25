@@ -14,11 +14,14 @@ public sealed class DashboardForm : Form
 {
     private readonly WebView2 _webView = new();
     private readonly MqttAlertSubscriber _mqtt = new();
-    private readonly DatabaseService _db = new();
+    private readonly AppSettings _settings = AppSettings.Load();   // appsettings.json (+ .Local.json / biến môi trường)
+    private readonly DatabaseService _db;
     private readonly System.Windows.Forms.Timer _syncTimer = new() { Interval = 3000 };
 
     public DashboardForm()
     {
+        _db = new DatabaseService(_settings.ConnectionString);
+
         Text = "FireGuard IoT — Giám Sát Cảnh Báo Cháy Thông Minh";
         BackColor = Color.FromArgb(0x0F, 0x13, 0x1C);
         ForeColor = Color.FromArgb(0xDF, 0xE2, 0xEF);
@@ -91,7 +94,7 @@ public sealed class DashboardForm : Form
     {
         try
         {
-            await _mqtt.StartAsync("192.168.137.191", 1883);   // cùng broker với Pi và mqtt-subscriber
+            await _mqtt.StartAsync(_settings.MqttHost, _settings.MqttPort);   // cùng broker với Pi và mqtt-subscriber
         }
         catch (Exception ex)
         {

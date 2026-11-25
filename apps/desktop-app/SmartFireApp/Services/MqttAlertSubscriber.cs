@@ -31,7 +31,7 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
     /// </summary>
     /// <param name="host">Broker host (mặc định 192.168.137.191 - PHẢI trùng broker với Pi và mqtt-subscriber)</param>
     /// <param name="port">Port MQTT (mặc định 1883)</param>
-    public async Task StartAsync(string host = "192.168.137.191", int port = 1883)
+    public async Task StartAsync(string host = AppSettings.DefaultMqttHost, int port = AppSettings.DefaultMqttPort)
     {
         if (_mqttClient != null && _mqttClient.IsConnected)
             return;

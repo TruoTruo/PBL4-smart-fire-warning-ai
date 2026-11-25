@@ -25,3 +25,6 @@ Thumbs.db
 
 bin/
 obj/
+
+# Cấu hình riêng từng máy (mật khẩu MySQL, IP broker) — xem appsettings.json
+appsettings.Local.json

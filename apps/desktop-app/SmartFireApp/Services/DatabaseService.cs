@@ -10,46 +10,36 @@ namespace SmartFireApp.Services;
 /// </summary>
 public sealed class DatabaseService
 {
-    private string _connectionString;
-    private string _activeDbName = "smartfiredb";
+    private readonly string _connectionString;
+    private readonly string _activeDbName;
+    private readonly string _serverHost;
 
+    /// <param name="connectionString">
+    /// Chuỗi kết nối MySQL. Bỏ trống thì đọc từ appsettings.json / appsettings.Local.json /
+    /// biến môi trường Database__ConnectionString (xem AppSettings.cs).
+    /// </param>
     public DatabaseService(string? connectionString = null)
     {
-        // Ưu tiên smartfiredb — database thật của dự án trên XAMPP
-        _connectionString = connectionString 
-            ?? "Server=localhost;Port=3307;Database=smartfiredb;Uid=root;Pwd=;CharSet=utf8mb4;";
+        _connectionString = connectionString ?? AppSettings.Load().ConnectionString;
+
+        var csb = new MySqlConnectionStringBuilder(_connectionString);
+        _activeDbName = string.IsNullOrEmpty(csb.Database) ? "(chưa chọn DB)" : csb.Database;
+        _serverHost = $"{csb.Server}:{csb.Port}";
     }
 
     private async Task<MySqlConnection> OpenConnectionAsync()
     {
-        // Thứ tự ưu tiên: smartfiredb → SmartFireDB → smart_fire_warning
-        string[] candidateDbs = { "smartfiredb", "SmartFireDB", "smart_fire_warning" };
-        string[] candidatePasswords = { "", "YourStrong@Passw0rd" };
-
-        foreach (var db in candidateDbs)
+        var conn = new MySqlConnection(_connectionString);
+        try
         {
-            foreach (var pwd in candidatePasswords)
-            {
-                var connStr = $"Server=localhost;Port=3307;Database={db};Uid=root;Pwd=28040528;CharSet=utf8mb4;Connect Timeout=2;";
-                try
-                {
-                    var conn = new MySqlConnection(connStr);
-                    await conn.OpenAsync();
-                    _connectionString = connStr;
-                    _activeDbName = db;
-                    return conn;
-                }
-                catch
-                {
-                    // Thử tiếp ứng viên khác
-                }
-            }
+            await conn.OpenAsync();
+            return conn;
         }
-
-        // Fallback cuối: không chỉ định DB
-        var defaultConn = new MySqlConnection("Server=localhost;Port=3307;Uid=root;Pwd=28040528;CharSet=utf8mb4;");
-        await defaultConn.OpenAsync();
-        return defaultConn;
+        catch
+        {
+            await conn.DisposeAsync();
+            throw;
+        }
     }
 
     /// <summary>
@@ -232,7 +222,7 @@ public sealed class DatabaseService
             TotalLogs: totalLogs,
             TotalUsers: totalUsers,
             DatabaseName: _activeDbName,
-            ServerHost: "localhost:3307 (XAMPP)"
+            ServerHost: _serverHost
         );
 
         return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected);

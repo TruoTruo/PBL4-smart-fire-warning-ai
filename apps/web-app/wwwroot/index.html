@@ -1079,7 +1079,7 @@
         } else {
           devContainer.innerHTML = '';
           data.devices.forEach(d => {
-            const isDanger = d.temperature > 40 || d.gasPpm > 500 || d.aiResult;
+            const isDanger = d.alertLevel >= 2;
             const cardBorder = isDanger ? 'border-[#ff5451] bg-[#ff5451]/5 shadow-[0_0_15px_rgba(255,84,81,0.2)]' : 'border-[#262a34] bg-[#181b25]';
             const statusBadge = d.status === 'Active' 
               ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#009eb9]/30 text-[#4cd7f6]">ACTIVE</span>'
@@ -1107,8 +1107,8 @@
                     <div class="text-[15px] font-bold text-[#4cd7f6]">${d.humidity.toFixed(1)}%</div>
                   </div>
                   <div>
-                    <div class="text-[10px] text-[#e4beba]">Khói/Gas</div>
-                    <div class="text-[15px] font-bold ${d.gasPpm > 500 ? 'text-[#ff5451]' : 'text-white'}">${Math.round(d.gasPpm)} ppm</div>
+                    <div class="text-[10px] text-[#e4beba]">Khói</div>
+                    <div class="text-[15px] font-bold ${d.smokeDetected ? 'text-[#ff5451]' : 'text-white'}">${d.smokeLevel != null ? Math.round(d.smokeLevel) + '% · ' : ''}${d.smokeDetected ? 'CÓ KHÓI' : 'Không'}</div>
                   </div>
                 </div>
 
@@ -1187,7 +1187,7 @@
                 <td class="py-2 px-3 font-bold text-white">${l.deviceId} <span class="text-[10.5px] text-[#e4beba]">(${l.deviceName})</span></td>
                 <td class="py-2 px-3 ${l.temperature > 40 ? 'text-[#ff5451] font-bold' : 'text-[#ffb95f]'}">${l.temperature.toFixed(1)} °C</td>
                 <td class="py-2 px-3 text-[#4cd7f6]">${l.humidity.toFixed(1)} %</td>
-                <td class="py-2 px-3 ${l.gasPpm > 500 ? 'text-[#ff5451] font-bold' : 'text-white'}">${Math.round(l.gasPpm)} ppm</td>
+                <td class="py-2 px-3 ${l.smokeDetected ? 'text-[#ff5451] font-bold' : 'text-white'}">${l.smokeLevel != null ? Math.round(l.smokeLevel) + '% · ' : ''}${l.smokeDetected ? 'CÓ KHÓI' : 'Không'}</td>
                 <td class="py-2 px-3">${aiBadge}</td>
                 <td class="py-2 px-3 text-[#e4beba]">${l.confidenceScore ? l.confidenceScore.toFixed(1) + '%' : 'N/A'}</td>
                 <td class="py-2 px-3 text-[#e4beba] text-[11px]">${timeStr}</td>

@@ -11,4 +11,16 @@
     <PackageReference Include="MySqlConnector" Version="2.3.7" />
   </ItemGroup>
 
+  <!--
+    Dùng CHUNG code với desktop-app (không chép thành bản riêng) để web và desktop
+    luôn khớp một schema CSDL và một định dạng MQTT. Sửa model / truy vấn thì sửa ở
+    apps/desktop-app/SmartFireApp, web-app tự build lại theo.
+  -->
+  <ItemGroup>
+    <Compile Include="..\desktop-app\SmartFireApp\Models\DashboardModels.cs" Link="Shared\Models\DashboardModels.cs" />
+    <Compile Include="..\desktop-app\SmartFireApp\Services\AppSettings.cs" Link="Shared\Services\AppSettings.cs" />
+    <Compile Include="..\desktop-app\SmartFireApp\Services\DatabaseService.cs" Link="Shared\Services\DatabaseService.cs" />
+    <Compile Include="..\desktop-app\SmartFireApp\Services\MqttAlertSubscriber.cs" Link="Shared\Services\MqttAlertSubscriber.cs" />
+  </ItemGroup>
+
 </Project>

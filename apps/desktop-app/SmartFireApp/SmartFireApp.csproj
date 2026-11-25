@@ -26,4 +26,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <!-- Cấu hình MQTT / MySQL, xem Services/AppSettings.cs. appsettings.Local.json KHÔNG commit. -->
+    <None Update="appsettings.json;appsettings.Local.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
 </Project>

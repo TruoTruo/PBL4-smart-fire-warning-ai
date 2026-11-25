@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using SmartFireWeb.Hubs;
+using SmartFireApp.Services;
 using SmartFireWeb.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,7 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Cho phép truy cập từ localhost và các thiết bị trong mạng LAN (điện thoại, laptop khác)
 builder.WebHost.UseUrls("http://0.0.0.0:5000");
 
-builder.Services.AddSingleton<DatabaseService>();
+// Cùng file cấu hình với desktop-app và mqtt-subscriber: appsettings.json (+ appsettings.Local.json, biến môi trường)
+var settings = AppSettings.Load(builder.Environment.ContentRootPath);
+builder.Services.AddSingleton(settings);
+builder.Services.AddSingleton(new DatabaseService(settings.ConnectionString));
 builder.Services.AddSingleton<MqttAlertSubscriber>();
 builder.Services.AddHostedService<MqttHostedService>();
 builder.Services.AddSignalR();

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using SmartFireApp.Services;
 using SmartFireWeb.Hubs;
 
 namespace SmartFireWeb.Services;
@@ -13,13 +14,16 @@ public sealed class MqttHostedService : BackgroundService
     private readonly DatabaseService _db;
     private readonly IHubContext<FireAlertHub> _hub;
     private readonly ILogger<MqttHostedService> _logger;
+    private readonly AppSettings _settings;
 
     public MqttHostedService(
         MqttAlertSubscriber mqtt,
         DatabaseService db,
         IHubContext<FireAlertHub> hub,
-        ILogger<MqttHostedService> logger)
+        ILogger<MqttHostedService> logger,
+        AppSettings settings)
     {
+        _settings = settings;
         _mqtt = mqtt;
         _db = db;
         _hub = hub;
@@ -42,8 +46,8 @@ public sealed class MqttHostedService : BackgroundService
 
         try
         {
-            await _mqtt.StartAsync("test.mosquitto.org", 1883);
-            _logger.LogInformation("Đã kết nối MQTT Broker test.mosquitto.org:1883");
+            await _mqtt.StartAsync(_settings.MqttHost, _settings.MqttPort);
+            _logger.LogInformation("Đã kết nối MQTT Broker {Host}:{Port}", _settings.MqttHost, _settings.MqttPort);
         }
         catch (Exception ex)
         {
