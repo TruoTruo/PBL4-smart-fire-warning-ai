@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "dgSpecHash": "9tNYIBbzCvM=",
+  "success": true,
+  "projectFilePath": "C:\\IT\\Nam3_Ki1\\PBL4\\PBL4-smart-fire-warning-ai\\apps\\web-app\\SmartFireWeb.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Wowi\\.nuget\\packages\\mqttnet\\4.3.7.1207\\mqttnet.4.3.7.1207.nupkg.sha512",
+    "C:\\Users\\Wowi\\.nuget\\packages\\mysqlconnector\\2.3.7\\mysqlconnector.2.3.7.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1902",
+      "level": "Warning",
+      "message": "Package 'MySqlConnector' 2.3.7 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-473q-m89c-ghf8",
+      "projectPath": "C:\\IT\\Nam3_Ki1\\PBL4\\PBL4-smart-fire-warning-ai\\apps\\web-app\\SmartFireWeb.csproj",
+      "warningLevel": 1,
+      "filePath": "C:\\IT\\Nam3_Ki1\\PBL4\\PBL4-smart-fire-warning-ai\\apps\\web-app\\SmartFireWeb.csproj",
+      "libraryId": "MySqlConnector",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    }
+  ]
+}
