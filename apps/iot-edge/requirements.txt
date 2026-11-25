@@ -1,0 +1,10 @@
+# Thu vien cho main_iot.py (Raspberry Pi 5)
+# Cai: pip install -r requirements.txt
+# Luu y: lgpio tren Pi 5 co the can "sudo apt install swig liblgpio-dev" truoc khi pip install
+paho-mqtt>=2.0,<3          # main_iot.py dung mqtt.CallbackAPIVersion (chi co tu ban 2.0)
+lgpio==0.2.2.0
+adafruit-circuitpython-dht==3.2.0
+adafruit-blinka            # cung cap module "board"
+opencv-python
+flask
+ultralytics                # YOLOv8, tu cai kem torch
