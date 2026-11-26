@@ -3,7 +3,7 @@
 ## Module bị ảnh hưởng
 - [ ] ai-vision
 - [ ] iot-edge
-- [ ] desktop-app
+- [ ] web-app
 - [ ] database-network
 - [ ] docs
 
