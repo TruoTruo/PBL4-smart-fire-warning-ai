@@ -54,6 +54,7 @@ public sealed class DatabaseService
         var devices = new List<DeviceCardModel>();
         var alerts = new List<AlertModel>();
         var logs = new List<EnvironmentLogModel>();
+        var zones = new List<ZoneModel>();
         int totalDevices = 0;
         int activeDevices = 0;
         int pendingAlerts = 0;
@@ -99,9 +100,11 @@ public sealed class DatabaseService
                        COALESCE(latest.AlertLevel, 0) AS AlertLevel,
                        COALESCE(latest.AiResult, FALSE) AS AiResult,
                        latest.ConfidenceScore,
-                       latest.RecordedAt
+                       latest.RecordedAt,
+                       d.ZoneId, m.FullName AS ManagerName, m.PhoneNumber AS ManagerPhone
                 FROM Devices d
                 LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+                LEFT JOIN Users m ON z.ManagerUserId = m.UserId
                 LEFT JOIN (
                     SELECT e1.*
                     FROM EnvironmentLogs e1
@@ -137,7 +140,10 @@ public sealed class DatabaseService
                         AlertLevel: Convert.ToInt32(r["AlertLevel"]),
                         AiResult: Convert.ToBoolean(r["AiResult"]),
                         ConfidenceScore: r.IsDBNull(r.GetOrdinal("ConfidenceScore")) ? null : Convert.ToDouble(r["ConfidenceScore"]),
-                        RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt")
+                        RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt"),
+                        ZoneId: r.GetInt32("ZoneId"),
+                        ManagerName: GetNullableString(r, "ManagerName"),
+                        ManagerPhone: GetNullableString(r, "ManagerPhone")
                     ));
                 }
             }
@@ -192,7 +198,10 @@ public sealed class DatabaseService
                 }
             }
 
-            // Chỉ coi là kết nối tốt khi cả 4 truy vấn đều chạy xong
+            // 5. Khu vực + cán bộ phụ trách
+            zones = await ReadZonesAsync(conn);
+
+            // Chỉ coi là kết nối tốt khi mọi truy vấn đều chạy xong
             isConnected = true;
         }
         catch (Exception ex)
@@ -211,13 +220,19 @@ public sealed class DatabaseService
             ServerHost: _serverHost
         );
 
-        return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected, error);
+        return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected, error, zones);
     }
 
     private static double? GetNullableDouble(MySqlDataReader r, string column)
     {
         int i = r.GetOrdinal(column);
         return r.IsDBNull(i) ? null : Convert.ToDouble(r.GetValue(i), CultureInfo.InvariantCulture);
+    }
+
+    private static string? GetNullableString(MySqlDataReader r, string column)
+    {
+        int i = r.GetOrdinal(column);
+        return r.IsDBNull(i) ? null : r.GetString(i);
     }
 
     private string DescribeDbError(Exception ex) => ex is MySqlException { ErrorCode: MySqlErrorCode.UnableToConnectToHost }
@@ -230,7 +245,8 @@ public sealed class DatabaseService
                COALESCE(z.ZoneName, 'Khu vực') AS ZoneName,
                a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged,
                (a.SnapshotBase64 IS NOT NULL AND a.SnapshotBase64 <> '') AS HasSnapshot,
-               u.FullName AS AcknowledgedByName, a.AcknowledgedAt
+               u.FullName AS AcknowledgedByName, a.AcknowledgedAt,
+               a.Resolution, z.ManagerUserId
         FROM AlertHistory a
         LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
         LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
@@ -248,7 +264,9 @@ public sealed class DatabaseService
         Acknowledged: r.GetBoolean("Acknowledged"),
         HasSnapshot: Convert.ToBoolean(r["HasSnapshot"]),
         AcknowledgedByName: r.IsDBNull(r.GetOrdinal("AcknowledgedByName")) ? null : r.GetString("AcknowledgedByName"),
-        AcknowledgedAt: r.IsDBNull(r.GetOrdinal("AcknowledgedAt")) ? null : r.GetDateTime("AcknowledgedAt"));
+        AcknowledgedAt: r.IsDBNull(r.GetOrdinal("AcknowledgedAt")) ? null : r.GetDateTime("AcknowledgedAt"),
+        Resolution: GetNullableString(r, "Resolution"),
+        ManagerUserId: r.IsDBNull(r.GetOrdinal("ManagerUserId")) ? null : r.GetInt32("ManagerUserId"));
 
     /// <summary>
     /// Lọc lịch sử cảnh báo theo khoảng thời gian, loại, mức độ, trạng thái xử lý (tối đa 500 dòng mới nhất).
@@ -803,6 +821,229 @@ public sealed class DatabaseService
         catch (Exception ex)
         {
             return (false, "Không thể xóa thiết bị: " + ex.Message);
+        }
+    }
+
+    // ============================================================
+    // KHU VỰC (Zones) + CÁN BỘ PHỤ TRÁCH
+    // ============================================================
+
+    private static async Task<List<ZoneModel>> ReadZonesAsync(MySqlConnection conn)
+    {
+        const string sql = @"
+            SELECT z.ZoneId, z.ZoneName, z.Description, z.ManagerUserId,
+                   m.FullName AS ManagerName, m.PhoneNumber AS ManagerPhone,
+                   (SELECT COUNT(*) FROM Devices d WHERE d.ZoneId = z.ZoneId) AS DeviceCount,
+                   (SELECT COUNT(*) FROM AlertHistory a
+                      JOIN Devices d ON a.DeviceId = d.DeviceId
+                     WHERE d.ZoneId = z.ZoneId AND a.Acknowledged = FALSE) AS PendingAlerts
+            FROM Zones z
+            LEFT JOIN Users m ON z.ManagerUserId = m.UserId
+            ORDER BY z.ZoneName ASC;";
+        var zones = new List<ZoneModel>();
+        await using var cmd = new MySqlCommand(sql, conn);
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+        {
+            zones.Add(new ZoneModel(
+                ZoneId: r.GetInt32("ZoneId"),
+                ZoneName: r.GetString("ZoneName"),
+                Description: GetNullableString(r, "Description"),
+                ManagerUserId: r.IsDBNull(r.GetOrdinal("ManagerUserId")) ? null : r.GetInt32("ManagerUserId"),
+                ManagerName: GetNullableString(r, "ManagerName"),
+                ManagerPhone: GetNullableString(r, "ManagerPhone"),
+                DeviceCount: Convert.ToInt32(r["DeviceCount"]),
+                PendingAlerts: Convert.ToInt32(r["PendingAlerts"])));
+        }
+        return zones;
+    }
+
+    /// <summary>Thêm (zoneId = null) hoặc sửa khu vực. Tên khu vực không được trùng.</summary>
+    public async Task<(bool Success, string? Error)> UpsertZoneAsync(
+        int? zoneId, string zoneName, string? description, int? managerUserId)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+
+            await using (var dup = new MySqlCommand(
+                "SELECT COUNT(*) FROM Zones WHERE ZoneName = @Name AND (@Id IS NULL OR ZoneId <> @Id);", conn))
+            {
+                dup.Parameters.AddWithValue("@Name", zoneName);
+                dup.Parameters.AddWithValue("@Id", (object?)zoneId ?? DBNull.Value);
+                if (Convert.ToInt64(await dup.ExecuteScalarAsync()) > 0)
+                    return (false, $"Khu vực '{zoneName}' đã tồn tại.");
+            }
+
+            if (managerUserId is int mid)
+            {
+                await using var chk = new MySqlCommand("SELECT COUNT(*) FROM Users WHERE UserId = @Uid;", conn);
+                chk.Parameters.AddWithValue("@Uid", mid);
+                if (Convert.ToInt64(await chk.ExecuteScalarAsync()) == 0)
+                    return (false, "Cán bộ phụ trách không còn tồn tại.");
+            }
+
+            string sql = zoneId is null
+                ? "INSERT INTO Zones (ZoneName, Description, ManagerUserId) VALUES (@Name, @Desc, @Mgr);"
+                : "UPDATE Zones SET ZoneName = @Name, Description = @Desc, ManagerUserId = @Mgr WHERE ZoneId = @Id;";
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Name", zoneName);
+            cmd.Parameters.AddWithValue("@Desc", (object?)description ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Mgr", (object?)managerUserId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Id", (object?)zoneId ?? DBNull.Value);
+            if (await cmd.ExecuteNonQueryAsync() == 0)
+                return (false, "Không tìm thấy khu vực để sửa.");
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>
+    /// Xoá khu vực. Chỉ xoá được khi không còn trạm nào thuộc khu vực
+    /// (FK Devices → Zones là ON DELETE CASCADE, xoá thẳng sẽ mất cả trạm và dữ liệu của trạm).
+    /// </summary>
+    public async Task<(bool Success, string? Error)> DeleteZoneAsync(int zoneId)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using (var chk = new MySqlCommand("SELECT COUNT(*) FROM Devices WHERE ZoneId = @Id;", conn))
+            {
+                chk.Parameters.AddWithValue("@Id", zoneId);
+                long n = Convert.ToInt64(await chk.ExecuteScalarAsync());
+                if (n > 0)
+                    return (false, $"Khu vực còn {n} trạm. Chuyển hoặc xoá các trạm trước khi xoá khu vực.");
+            }
+            await using var cmd = new MySqlCommand("DELETE FROM Zones WHERE ZoneId = @Id;", conn);
+            cmd.Parameters.AddWithValue("@Id", zoneId);
+            return await cmd.ExecuteNonQueryAsync() > 0
+                ? (true, null)
+                : (false, "Không tìm thấy khu vực để xoá.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    // ============================================================
+    // PHIẾU SỰ CỐ
+    // ============================================================
+
+    /// <summary>
+    /// Cảnh báo có tồn tại không và ai phụ trách khu vực của nó (null = khu vực chưa có người phụ trách).
+    /// Lỗi CSDL được ném ra cho nơi gọi xử lý.
+    /// </summary>
+    public async Task<(bool Exists, int? ManagerUserId)> GetAlertManagerAsync(long alertId)
+    {
+        const string sql = @"
+            SELECT z.ManagerUserId
+            FROM AlertHistory a
+            LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
+            LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+            WHERE a.AlertId = @AlertId
+            LIMIT 1;";
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@AlertId", alertId);
+        await using var r = await cmd.ExecuteReaderAsync();
+        if (!await r.ReadAsync()) return (false, null);
+        return (true, r.IsDBNull(0) ? null : r.GetInt32(0));
+    }
+
+    /// <summary>Phiếu sự cố của một cảnh báo (null nếu không có). Lỗi CSDL được ném ra cho nơi gọi xử lý.</summary>
+    public async Task<IncidentModel?> GetIncidentAsync(long alertId)
+    {
+        const string sql = @"
+            SELECT a.AlertId, a.DeviceId, COALESCE(d.DeviceName, a.DeviceId) AS DeviceName,
+                   z.ZoneId, COALESCE(z.ZoneName, 'Chưa phân khu') AS ZoneName, z.Description AS ZoneDescription,
+                   z.ManagerUserId, m.FullName AS ManagerName, m.PhoneNumber AS ManagerPhone,
+                   a.AlertType, a.Severity, a.AlertTime, a.SmsSent,
+                   (a.SnapshotBase64 IS NOT NULL AND a.SnapshotBase64 <> '') AS HasSnapshot,
+                   a.Acknowledged, u.FullName AS AcknowledgedByName, a.AcknowledgedAt,
+                   TIMESTAMPDIFF(SECOND, a.AlertTime, a.AcknowledgedAt) AS ResponseSeconds,
+                   a.Resolution, a.ResolutionNote,
+                   e.LogId, e.Temperature, e.Humidity, e.SmokeDetected, e.SmokeLevel,
+                   e.AlertLevel, e.AiResult, e.ConfidenceScore, e.RecordedAt
+            FROM AlertHistory a
+            LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
+            LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+            LEFT JOIN Users m ON z.ManagerUserId = m.UserId
+            LEFT JOIN Users u ON a.AcknowledgedByUserId = u.UserId
+            LEFT JOIN EnvironmentLogs e ON a.LogId = e.LogId
+            WHERE a.AlertId = @AlertId
+            LIMIT 1;";
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@AlertId", alertId);
+        await using var r = await cmd.ExecuteReaderAsync();
+        if (!await r.ReadAsync()) return null;
+
+        bool hasLog = !r.IsDBNull(r.GetOrdinal("LogId"));
+        int? NullInt(string c) => r.IsDBNull(r.GetOrdinal(c)) ? null : Convert.ToInt32(r[c]);
+        return new IncidentModel(
+            AlertId: r.GetInt64("AlertId"),
+            DeviceId: r.GetString("DeviceId"),
+            DeviceName: r.GetString("DeviceName"),
+            ZoneId: NullInt("ZoneId"),
+            ZoneName: r.GetString("ZoneName"),
+            ZoneDescription: GetNullableString(r, "ZoneDescription"),
+            ManagerUserId: NullInt("ManagerUserId"),
+            ManagerName: GetNullableString(r, "ManagerName"),
+            ManagerPhone: GetNullableString(r, "ManagerPhone"),
+            AlertType: r.GetString("AlertType"),
+            Severity: r.GetString("Severity"),
+            AlertTime: r.GetDateTime("AlertTime"),
+            SmsSent: r.GetBoolean("SmsSent"),
+            HasSnapshot: Convert.ToBoolean(r["HasSnapshot"]),
+            Acknowledged: r.GetBoolean("Acknowledged"),
+            AcknowledgedByName: GetNullableString(r, "AcknowledgedByName"),
+            AcknowledgedAt: r.IsDBNull(r.GetOrdinal("AcknowledgedAt")) ? null : r.GetDateTime("AcknowledgedAt"),
+            ResponseSeconds: NullInt("ResponseSeconds"),
+            Resolution: GetNullableString(r, "Resolution"),
+            ResolutionNote: GetNullableString(r, "ResolutionNote"),
+            LogId: hasLog ? r.GetInt64("LogId") : null,
+            Temperature: GetNullableDouble(r, "Temperature"),
+            Humidity: GetNullableDouble(r, "Humidity"),
+            SmokeDetected: hasLog ? Convert.ToBoolean(r["SmokeDetected"]) : null,
+            SmokeLevel: GetNullableDouble(r, "SmokeLevel"),
+            AlertLevel: NullInt("AlertLevel"),
+            AiResult: hasLog ? Convert.ToBoolean(r["AiResult"]) : null,
+            ConfidenceScore: GetNullableDouble(r, "ConfidenceScore"),
+            RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt"));
+    }
+
+    /// <summary>
+    /// Ghi kết quả xử lý vào phiếu sự cố. Cảnh báo chưa xác nhận thì xác nhận luôn bằng người ghi phiếu;
+    /// đã xác nhận rồi thì giữ nguyên người và thời điểm xác nhận ban đầu.
+    /// </summary>
+    public async Task<bool> ResolveAlertAsync(long alertId, int userId, string resolution, string? note)
+    {
+        const string sql = @"
+            UPDATE AlertHistory
+            SET Resolution = @Resolution,
+                ResolutionNote = @Note,
+                AcknowledgedByUserId = IF(Acknowledged, AcknowledgedByUserId, @UserId),
+                AcknowledgedAt = IF(Acknowledged, AcknowledgedAt, NOW()),
+                Acknowledged = TRUE
+            WHERE AlertId = @AlertId;";
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@AlertId", alertId);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            cmd.Parameters.AddWithValue("@Resolution", resolution);
+            cmd.Parameters.AddWithValue("@Note", (object?)note ?? DBNull.Value);
+            return await cmd.ExecuteNonQueryAsync() > 0;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MySQL ResolveAlert Error] {ex.Message}");
+            return false;
         }
     }
 }

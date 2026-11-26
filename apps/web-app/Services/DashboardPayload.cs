@@ -7,7 +7,8 @@ namespace SmartFireWeb.Services;
 /// Dữ liệu dashboard gửi cho trình duyệt (REST và SignalR dùng chung):
 ///   - tài khoản không phải Admin không thấy SĐT / email của cán bộ;
 ///   - danh sách cảnh báo chỉ có cờ hasSnapshot, ảnh tải riêng qua /api/alerts/{id}/snapshot;
-///   - thêm trạng thái MQTT, trạng thái camera và online/offline do Pi báo về.
+///   - thêm trạng thái MQTT, trạng thái camera và online/offline do Pi báo về;
+///   - khu vực kèm tên và SĐT cán bộ phụ trách (số liên hệ khi có sự cố, mọi cán bộ đều thấy).
 /// </summary>
 public static class DashboardPayload
 {
@@ -18,6 +19,7 @@ public static class DashboardPayload
             ? data.Users
             : data.Users.Select(u => u with { PhoneNumber = null, Email = null }).ToList(),
         devices = data.Devices,
+        zones = data.Zones ?? [],
         alerts = data.Alerts,
         logs = data.Logs,
         isConnected = data.IsConnected,

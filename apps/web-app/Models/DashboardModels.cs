@@ -23,7 +23,10 @@ public sealed record DeviceCardModel(
     int AlertLevel,
     bool AiResult,
     double? ConfidenceScore,
-    DateTime? RecordedAt);
+    DateTime? RecordedAt,
+    int? ZoneId = null,
+    string? ManagerName = null,   // cán bộ phụ trách khu vực của trạm
+    string? ManagerPhone = null);
 
 public sealed record AlertModel(
     long AlertId,
@@ -37,7 +40,52 @@ public sealed record AlertModel(
     bool Acknowledged,
     bool HasSnapshot = false,           // có ảnh bằng chứng; ảnh tải riêng theo AlertId (không kéo Base64 mỗi lần quét)
     string? AcknowledgedByName = null,  // cán bộ đã xác nhận
-    DateTime? AcknowledgedAt = null);
+    DateTime? AcknowledgedAt = null,
+    string? Resolution = null,          // kết quả phiếu sự cố: Handled / FalseAlarm / Test
+    int? ManagerUserId = null);         // cán bộ phụ trách khu vực (để trang biết ai được xử lý)
+
+/// <summary>Khu vực giám sát và cán bộ phụ trách (bảng Zones).</summary>
+public sealed record ZoneModel(
+    int ZoneId,
+    string ZoneName,
+    string? Description,
+    int? ManagerUserId,
+    string? ManagerName,
+    string? ManagerPhone,
+    int DeviceCount,
+    int PendingAlerts);
+
+/// <summary>Phiếu sự cố: một cảnh báo kèm số đo gốc (LogId), khu vực, người phụ trách và kết quả xử lý.</summary>
+public sealed record IncidentModel(
+    long AlertId,
+    string DeviceId,
+    string DeviceName,
+    int? ZoneId,
+    string ZoneName,
+    string? ZoneDescription,
+    int? ManagerUserId,
+    string? ManagerName,
+    string? ManagerPhone,
+    string AlertType,
+    string Severity,
+    DateTime AlertTime,
+    bool SmsSent,
+    bool HasSnapshot,
+    bool Acknowledged,
+    string? AcknowledgedByName,
+    DateTime? AcknowledgedAt,
+    int? ResponseSeconds,         // từ lúc báo đến lúc xác nhận
+    string? Resolution,
+    string? ResolutionNote,
+    long? LogId,                  // số đo cảm biến đã kích hoạt cảnh báo
+    double? Temperature,
+    double? Humidity,
+    bool? SmokeDetected,
+    double? SmokeLevel,
+    int? AlertLevel,
+    bool? AiResult,
+    double? ConfidenceScore,
+    DateTime? RecordedAt);
 
 public sealed record EnvironmentLogModel(
     long LogId,
@@ -68,7 +116,8 @@ public sealed record RealDashboardData(
     IReadOnlyList<AlertModel> Alerts,
     IReadOnlyList<EnvironmentLogModel> Logs,
     bool IsConnected,
-    string? Error = null);        // thông báo lỗi CSDL khi IsConnected = false
+    string? Error = null,         // thông báo lỗi CSDL khi IsConnected = false
+    IReadOnlyList<ZoneModel>? Zones = null);
 
 // Backward compatibility models
 public sealed record SensorReading(

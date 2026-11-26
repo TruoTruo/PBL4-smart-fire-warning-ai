@@ -141,11 +141,13 @@ docker exec smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' SmartFireDB \
 
 ## 6. Nâng cấp DB cũ (đã tạo trước đây, không muốn xoá dữ liệu)
 
-Chạy lần lượt các file chưa chạy, theo đúng thứ tự `002` → `003` → `004` → `005`
-(`005_time_indexes.sql` thêm chỉ mục theo thời gian, chạy lại nhiều lần cũng không lỗi):
+Chạy lần lượt các file chưa chạy, theo đúng thứ tự `002` → `003` → `004` → `005` → `006`
+(`005_time_indexes.sql` thêm chỉ mục theo thời gian, `006_alert_resolution.sql` thêm cột kết quả
+xử lý cho phiếu sự cố; hai file này chạy lại nhiều lần cũng không lỗi):
 
 ```bash
 docker exec -i smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' SmartFireDB < services/database-network/sql/migrations/005_time_indexes.sql
+docker exec -i smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' --default-character-set=utf8mb4 SmartFireDB < services/database-network/sql/migrations/006_alert_resolution.sql
 ```
 
 Muốn làm lại từ đầu thì đơn giản hơn: `docker compose down -v` rồi `docker compose up -d --build`.

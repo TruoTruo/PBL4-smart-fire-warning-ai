@@ -135,6 +135,9 @@ app.MapPost("/api/alerts/acknowledge", async (
     if (req.AlertId <= 0)
         return Results.BadRequest(new { success = false, error = "Mã cảnh báo không hợp lệ." });
 
+    var denied = await CheckAlertPermissionAsync(req.AlertId, user, db);
+    if (denied != null) return denied;
+
     bool ok = await db.AcknowledgeAlertAsync(req.AlertId, CurrentUserId(user));
     if (!ok)
         return Results.Json(new { success = false, error = $"Không xác nhận được sự cố #{req.AlertId} (không tồn tại hoặc lỗi CSDL)." },
@@ -276,6 +279,80 @@ app.MapDelete("/api/devices/{deviceId}", async (string deviceId, DatabaseService
     return Results.Ok(new { success = true });
 }).RequireAuthorization("Admin");
 
+// 6f. Phiếu sự cố: cảnh báo + số đo gốc + khu vực + người phụ trách + kết quả xử lý
+app.MapGet("/api/alerts/{alertId:long}", async (long alertId, ClaimsPrincipal user, DatabaseService db) =>
+{
+    try
+    {
+        var incident = await db.GetIncidentAsync(alertId);
+        if (incident == null)
+            return Results.NotFound(new { success = false, error = $"Không tìm thấy cảnh báo #{alertId}." });
+
+        // canHandle: trang dùng để hiện hoặc ẩn nút xử lý (máy chủ vẫn kiểm tra lại khi ghi)
+        bool canHandle = CanHandleZone(user, incident.ManagerUserId);
+        return Results.Ok(new { success = true, incident, canHandle });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Lỗi CSDL khi đọc phiếu sự cố: " + ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).RequireAuthorization();
+
+// 6g. Ghi kết quả xử lý vào phiếu sự cố (chỉ Admin hoặc cán bộ phụ trách khu vực)
+app.MapPost("/api/alerts/{alertId:long}/resolve", async (
+    long alertId,
+    ResolveAlertRequest req,
+    ClaimsPrincipal user,
+    DatabaseService db,
+    DashboardBroadcaster broadcaster) =>
+{
+    if (req.Resolution is not ("Handled" or "FalseAlarm" or "Test"))
+        return Results.BadRequest(new { success = false, error = "Kết quả xử lý chỉ được là Đã xử lý, Báo nhầm hoặc Diễn tập." });
+    string? note = string.IsNullOrWhiteSpace(req.Note) ? null : req.Note.Trim();
+    if (note is { Length: > 500 })
+        return Results.BadRequest(new { success = false, error = "Ghi chú tối đa 500 ký tự." });
+
+    var denied = await CheckAlertPermissionAsync(alertId, user, db);
+    if (denied != null) return denied;
+
+    if (!await db.ResolveAlertAsync(alertId, CurrentUserId(user), req.Resolution, note))
+        return Results.Json(new { success = false, error = $"Không ghi được phiếu sự cố #{alertId} (lỗi CSDL)." },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization();
+
+// 6h. Thêm / sửa khu vực và cán bộ phụ trách (chỉ Admin)
+app.MapPost("/api/zones", async (UpsertZoneRequest req, DatabaseService db, DashboardBroadcaster broadcaster) =>
+{
+    string name = (req.ZoneName ?? "").Trim();
+    string? desc = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
+    if (name.Length is 0 or > 100)
+        return Results.BadRequest(new { success = false, error = "Tên khu vực bắt buộc, tối đa 100 ký tự." });
+    if (desc is { Length: > 255 })
+        return Results.BadRequest(new { success = false, error = "Mô tả tối đa 255 ký tự." });
+
+    var (success, error) = await db.UpsertZoneAsync(req.ZoneId, name, desc, req.ManagerUserId);
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
+// 6i. Xoá khu vực (chỉ Admin, chỉ khi khu vực không còn trạm)
+app.MapDelete("/api/zones/{zoneId:int}", async (int zoneId, DatabaseService db, DashboardBroadcaster broadcaster) =>
+{
+    var (success, error) = await db.DeleteZoneAsync(zoneId);
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
 // 7. Đăng ký tài khoản mới (chỉ Admin; chỉ Admin mới được chọn vai trò)
 app.MapPost("/api/auth/register", async (
     RegisterRequest req,
@@ -319,6 +396,30 @@ app.Run();
 static int CurrentUserId(ClaimsPrincipal user) =>
     int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out int id) ? id : 0;
 
+// Admin xử lý mọi khu vực; cán bộ thường chỉ xử lý khu vực mình phụ trách hoặc khu vực chưa có người phụ trách
+static bool CanHandleZone(ClaimsPrincipal user, int? managerUserId) =>
+    user.IsInRole("Admin") || managerUserId is null || managerUserId == CurrentUserId(user);
+
+// null = được phép; khác null = phản hồi lỗi trả thẳng cho trình duyệt
+static async Task<IResult?> CheckAlertPermissionAsync(long alertId, ClaimsPrincipal user, DatabaseService db)
+{
+    try
+    {
+        var (exists, managerUserId) = await db.GetAlertManagerAsync(alertId);
+        if (!exists)
+            return Results.NotFound(new { success = false, error = $"Không tìm thấy cảnh báo #{alertId}." });
+        if (!CanHandleZone(user, managerUserId))
+            return Results.Json(new { success = false, error = "Chỉ cán bộ phụ trách khu vực này hoặc quản trị viên mới được xử lý cảnh báo." },
+                statusCode: StatusCodes.Status403Forbidden);
+        return null;
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Lỗi CSDL khi kiểm tra quyền: " + ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}
+
 static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
 static object CurrentUser(ClaimsPrincipal user) => new
@@ -346,6 +447,8 @@ public sealed record UpsertDeviceRequest(
     string? Status,
     string? IpAddress,
     bool IsEdit = false);
+public sealed record ResolveAlertRequest(string? Resolution, string? Note);
+public sealed record UpsertZoneRequest(int? ZoneId, string? ZoneName, string? Description, int? ManagerUserId);
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
 public sealed record RegisterRequest(
     string? Username,

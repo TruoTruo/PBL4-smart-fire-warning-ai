@@ -32,8 +32,11 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
 ## Phân quyền
 
 - Chưa đăng nhập: chỉ thấy màn hình đăng nhập. Mọi API (trừ đăng nhập) và SignalR trả `401` dạng JSON.
-- User: xem dashboard, xác nhận cảnh báo (người xác nhận lấy từ phiên đăng nhập), xem ảnh bằng chứng. Không thấy SĐT/email cán bộ.
-- Admin: thêm/xoá cán bộ và chọn vai trò, thêm/sửa/xoá trạm giám sát. Không xoá được chính mình.
+- User: xem dashboard, xem ảnh bằng chứng và phiếu sự cố. Không thấy SĐT/email cán bộ trong bảng cán bộ
+  (riêng SĐT người phụ trách khu vực thì mọi cán bộ đều thấy, để liên hệ khi có sự cố).
+- Xác nhận cảnh báo và ghi kết quả phiếu sự cố: Admin, hoặc cán bộ phụ trách khu vực của cảnh báo;
+  khu vực chưa phân công thì mọi cán bộ đều làm được. Người xác nhận lấy từ phiên đăng nhập.
+- Admin: thêm/xoá cán bộ và chọn vai trò, thêm/sửa/xoá trạm và khu vực, phân công người phụ trách. Không xoá được chính mình.
 - Cookie `HttpOnly`, `SameSite=Strict`, hết hạn sau 8 giờ không dùng. Không bật CORS (trang và API cùng origin).
 - Đăng nhập tối đa 20 lần/phút/IP.
 
@@ -44,12 +47,16 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
 | GET | `/api/auth/me` | đã đăng nhập |
 | POST | `/api/auth/change-password` | đã đăng nhập |
 | GET | `/api/dashboard` | đã đăng nhập |
-| POST | `/api/alerts/acknowledge` `{ "alertId": 5 }` | đã đăng nhập |
+| POST | `/api/alerts/acknowledge` `{ "alertId": 5 }` | Admin hoặc người phụ trách khu vực |
+| GET | `/api/alerts/{id}` (phiếu sự cố: số đo gốc, khu vực, người phụ trách, kết quả xử lý) | đã đăng nhập |
+| POST | `/api/alerts/{id}/resolve` `{ "resolution": "Handled\|FalseAlarm\|Test", "note": "..." }` | Admin hoặc người phụ trách khu vực |
 | GET | `/api/alerts/{id}/snapshot` (ảnh JPEG) | đã đăng nhập |
 | GET | `/api/alerts/history?fromDate=2026-11-20&toDate=2026-11-26&alertType=Fire` | đã đăng nhập |
 | GET | `/api/environment/{deviceId}?minutes=60` (chuỗi nhiệt độ / độ ẩm) | đã đăng nhập |
 | POST | `/api/devices` (thêm / sửa trạm, `status`: Active, Inactive, Maintenance) | Admin |
 | DELETE | `/api/devices/{deviceId}` (xoá kèm nhật ký đo và cảnh báo của trạm) | Admin |
+| POST | `/api/zones` `{ "zoneId": null, "zoneName": "...", "description": "...", "managerUserId": 2 }` (thêm / sửa khu vực) | Admin |
+| DELETE | `/api/zones/{id}` (chỉ khi khu vực không còn trạm) | Admin |
 | POST | `/api/auth/register` | Admin |
 | DELETE | `/api/users/{id}` | Admin |
 | SignalR | `/hubs/firealert` (sự kiện `DashboardUpdated`) | đã đăng nhập |
@@ -78,6 +85,9 @@ sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên th
   Đường nét đứt đỏ là ngưỡng 45 °C của Pi; đường bị ngắt khi mất cảm biến (giá trị null) hoặc quá 60 giây không có số đo.
 - **Lịch sử & thống kê**: lọc theo khoảng ngày (mặc định 7 ngày), loại, mức độ, trạng thái; biểu đồ số cảnh báo
   mỗi ngày; "Xuất CSV" (UTF-8 có BOM để Excel hiện đúng tiếng Việt, ô bắt đầu bằng `= + - @` được thêm `'` phía trước).
-- **Trạm & cán bộ**: Admin thêm / sửa / xoá trạm và cán bộ. Tài khoản giám sát viên không thấy phần quản lý trạm.
+- **Trạm & cán bộ**: bảng khu vực (mô tả, người phụ trách, số trạm, số cảnh báo chưa xác nhận); Admin thêm / sửa / xoá
+  khu vực, trạm và cán bộ. Tài khoản giám sát viên không thấy phần quản lý trạm.
+- **Phiếu sự cố**: bấm mã cảnh báo hoặc nút "Phiếu" để xem số đo cảm biến lúc báo, người phụ trách, người xác nhận,
+  thời gian phản hồi; người có quyền ghi kết quả (Đã xử lý / Báo nhầm / Diễn tập) và ghi chú.
 - Thanh tiêu đề có 3 trạng thái: CSDL, MQTT (máy chủ web có đang nối broker không), CAMERA (luồng đang xem
   và `camera_ok` do Pi báo qua MQTT).

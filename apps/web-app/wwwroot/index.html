@@ -417,6 +417,38 @@
 
   <div data-tab-panel="manage" class="hidden flex flex-col gap-5">
 
+  <!-- khu vực và cán bộ phụ trách -->
+  <section class="bg-white border border-[#d9dde2] rounded-sm p-4 flex flex-col gap-4">
+    <div class="-mx-4 -mt-4 px-4 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3 flex-wrap">
+      <h2 class="text-[15px] font-bold text-[#1c2229]">Khu vực và người phụ trách</h2>
+      <div class="flex items-center gap-2">
+        <span class="text-[12px] text-[#5d6670]">Cảnh báo của khu vực nào do người phụ trách khu vực đó xử lý</span>
+        <button type="button" onclick="openZoneModal(null)" class="admin-only hidden flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-[#1c2229] hover:bg-[#3a434d] text-white text-[13px] font-bold transition-all">
+          <span>+ Thêm khu vực</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto -mx-4 -mb-4">
+      <table class="w-full text-left text-[13px]">
+        <thead>
+          <tr class="text-[#5d6670] border-b border-[#d9dde2] bg-[#f6f7f8]">
+            <th class="py-2.5 px-3">Khu vực</th>
+            <th class="py-2.5 px-3">Mô tả</th>
+            <th class="py-2.5 px-3">Người phụ trách</th>
+            <th class="py-2.5 px-3">Liên hệ</th>
+            <th class="py-2.5 px-3 text-right">Số trạm</th>
+            <th class="py-2.5 px-3 text-right">Chưa xác nhận</th>
+            <th class="admin-only hidden py-2.5 px-3 text-right">Tác vụ</th>
+          </tr>
+        </thead>
+        <tbody id="zoneTableBody" class="divide-y divide-[#d9dde2]">
+          <tr><td colspan="7" class="py-6 text-center text-[#5d6670]">Đang tải danh sách khu vực...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- quản lý trạm giám sát -->
   <section class="admin-only hidden bg-white border border-[#d9dde2] rounded-sm p-4 flex flex-col gap-4">
     <div class="-mx-4 -mt-4 px-4 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3 flex-wrap">
@@ -580,7 +612,7 @@
   </div>
 
   <!-- modal xem ảnh bằng chứng -->
-  <div id="snapshotModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  <div id="snapshotModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
     <div class="bg-[#ffffff] border border-[#c9ced5] rounded-sm w-full max-w-3xl p-4 flex flex-col gap-3 relative">
       <div class="flex items-center justify-between gap-2">
         <div>
@@ -646,6 +678,72 @@
     </div>
   </div>
 
+  <!-- modal thêm / sửa khu vực -->
+  <div id="zoneModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="bg-[#ffffff] border border-[#c9ced5] rounded-sm w-full max-w-lg p-5 flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <h3 id="zoneModalTitle" class="text-[15px] font-bold text-[#1c2229]">Thêm khu vực</h3>
+        <button type="button" onclick="closeZoneModal()" class="text-[#7b838d] hover:text-[#1c2229] p-1 rounded-sm hover:bg-[#e8ebee] transition-all" title="Đóng">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+      <div id="zoneAlert" class="hidden p-2.5 rounded-sm text-[12px]"></div>
+      <form id="zoneForm" onsubmit="handleZoneSubmit(event)" class="flex flex-col gap-3 text-[12px] text-[#5d6670]">
+        <label class="flex flex-col gap-1">Tên khu vực
+          <input id="zoneName" type="text" required maxlength="100" placeholder="Kho hàng A" autocomplete="off" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]">
+        </label>
+        <label class="flex flex-col gap-1">Mô tả (vật liệu, mức nguy cơ, lối thoát...)
+          <input id="zoneDesc" type="text" maxlength="255" placeholder="Kho chứa vật liệu dễ cháy" autocomplete="off" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]">
+        </label>
+        <label class="flex flex-col gap-1">Cán bộ phụ trách
+          <select id="zoneManager" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]"></select>
+        </label>
+        <p class="text-[12px] text-[#7b838d]">Người phụ trách nhận cảnh báo của khu vực và là người ghi kết quả xử lý. Để trống thì mọi cán bộ đều xử lý được.</p>
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="button" onclick="closeZoneModal()" class="px-3.5 py-2 rounded-sm bg-[#f4f5f7] hover:bg-[#e8ebee] border border-[#c9ced5] text-[#1c2229] text-[13px] transition-all">Huỷ</button>
+          <button id="btnZoneSubmit" type="submit" class="px-3.5 py-2 rounded-sm bg-[#1c2229] hover:bg-[#3a434d] text-white font-bold text-[13px] transition-all disabled:opacity-50">Lưu khu vực</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- modal phiếu sự cố -->
+  <div id="incidentModal" class="hidden fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 p-4 overflow-y-auto">
+    <div class="bg-[#ffffff] border border-[#c9ced5] rounded-sm w-full max-w-2xl flex flex-col">
+      <div class="px-5 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3">
+        <div>
+          <h3 id="incTitle" class="text-[15px] font-bold text-[#1c2229]">Phiếu sự cố</h3>
+          <p id="incSubtitle" class="text-[12px] text-[#7b838d]"></p>
+        </div>
+        <button type="button" onclick="closeIncidentModal()" class="text-[#7b838d] hover:text-[#1c2229] p-1 rounded-sm hover:bg-[#e8ebee] transition-all" title="Đóng">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+      <div id="incBody" class="px-5 py-4 flex flex-col gap-4 text-[13px] text-[#1c2229]">
+        <p class="text-[#5d6670]">Đang tải phiếu sự cố...</p>
+      </div>
+      <form id="incForm" onsubmit="handleIncidentSubmit(event)" class="hidden px-5 py-4 border-t border-[#d9dde2] bg-[#f6f7f8] flex flex-col gap-3 text-[12px] text-[#5d6670]">
+        <div id="incAlert" class="hidden p-2.5 rounded-sm text-[12px]"></div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <label class="flex flex-col gap-1">Kết quả xử lý
+            <select id="incResolution" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] bg-white">
+              <option value="Handled">Đã xử lý sự cố</option>
+              <option value="FalseAlarm">Báo nhầm</option>
+              <option value="Test">Diễn tập / thử hệ thống</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 md:col-span-2">Ghi chú (đã làm gì, nguyên nhân)
+            <textarea id="incNote" rows="2" maxlength="500" placeholder="Ví dụ: Ổ cắm máy hàn bị chập, đã ngắt điện và dùng bình CO2." class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] bg-white resize-y"></textarea>
+          </label>
+        </div>
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <span id="incFormNote" class="text-[12px] text-[#7b838d]"></span>
+          <button id="btnIncSubmit" type="submit" class="px-3.5 py-2 rounded-sm bg-[#1c2229] hover:bg-[#3a434d] text-white font-bold text-[13px] transition-all disabled:opacity-50">Lưu kết quả</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast notification -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
@@ -688,6 +786,7 @@
     const DEVICE_STATUS_TEXT = { Active: 'Hoạt động', Inactive: 'Ngừng hoạt động', Maintenance: 'Bảo trì' };
     const ROLE_TEXT = { Admin: 'Quản trị viên', User: 'Giám sát viên' };
     const LEVEL_TEXT = ['Bình thường', 'Mức 1', 'Mức 2'];
+    const RESOLUTION_TEXT = { Handled: 'Đã xử lý sự cố', FalseAlarm: 'Báo nhầm', Test: 'Diễn tập' };
 
     const severityText = (s) => SEVERITY_TEXT[s] || String(s || '');
     const alertTypeText = (t) => ALERT_TYPE_TEXT[t] || String(t || '');
@@ -1086,6 +1185,9 @@
       const id = toInt(btn.dataset.id);
       if (id <= 0) return;
       if (btn.dataset.action === 'ack') acknowledgeAlert(id);
+      else if (btn.dataset.action === 'incident') openIncidentModal(id);
+      else if (btn.dataset.action === 'edit-zone') openZoneModal(id);
+      else if (btn.dataset.action === 'delete-zone') confirmDeleteZone(id);
       else if (btn.dataset.action === 'snapshot') openSnapshotModal(id);
       else if (btn.dataset.action === 'delete-user') confirmDeleteUser(id);
     });
@@ -1159,7 +1261,10 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
-      closeSnapshotModal();
+      // ảnh mở từ phiếu sự cố: Esc chỉ đóng ảnh, giữ phiếu
+      if (!el('snapshotModal').classList.contains('hidden')) { closeSnapshotModal(); return; }
+      closeIncidentModal();
+      closeZoneModal();
       closeRegisterModal();
       closePasswordModal();
       closeDeviceModal();
@@ -1518,7 +1623,8 @@
       const devs = data.devices || [];
       const fire = devs.filter(d => toInt(d.alertLevel) >= 2);
       const warn = devs.filter(d => toInt(d.alertLevel) === 1);
-      const where = (list) => list.map(d => `${escapeHtml(d.deviceId)} (${escapeHtml(d.zoneName)})`).join(', ');
+      const where = (list) => list.map(d => `${escapeHtml(d.deviceId)} (${escapeHtml(d.zoneName)})`
+        + (d.managerName ? ` – phụ trách ${escapeHtml(d.managerName)}${d.managerPhone ? ', ' + escapeHtml(d.managerPhone) : ''}` : '')).join('; ');
       let tone, word, note = '';
       if (!data.isConnected) { tone = 'amber'; word = 'MẤT KẾT NỐI CSDL'; }
       else if (fire.length) { tone = 'red'; word = 'BÁO CHÁY'; note = where(fire); }
@@ -1646,7 +1752,7 @@
           <tr class="${row}">
             <td class="py-2.5 px-3"><span class="block w-2.5 h-2.5 rounded-full ${led}"></span></td>
             <td class="py-2.5 px-3 whitespace-nowrap"><b class="text-[#1c2229]">${escapeHtml(d.deviceId)}</b> <span class="text-[#5d6670]">${escapeHtml(d.deviceName)}</span></td>
-            <td class="py-2.5 px-3 whitespace-nowrap">${escapeHtml(d.zoneName)}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${escapeHtml(d.zoneName)}<div class="text-[12px] text-[#7b838d]">${d.managerName ? 'Phụ trách: ' + escapeHtml(d.managerName) : 'Chưa có người phụ trách'}</div></td>
             <td class="py-2.5 px-3 text-right whitespace-nowrap">${tempCell(d.temperature, d.recordedAt, false)}</td>
             <td class="py-2.5 px-3 text-right whitespace-nowrap">${humidityCell(d.humidity, d.recordedAt, false)}</td>
             <td class="py-2.5 px-3 ${d.smokeDetected ? 'text-[#a3121f] font-bold' : ''}">${smokeText(d.smokeLevel, d.smokeDetected)}</td>
@@ -1667,16 +1773,18 @@
       const snapCell = a.hasSnapshot
         ? `<button data-action="snapshot" data-id="${id}" class="text-[#1c2229] underline underline-offset-2 hover:text-[#5d6670] whitespace-nowrap">Xem ảnh</button>`
         : '<span class="text-[#a0a6b0]">—</span>';
+      const resText = a.resolution ? RESOLUTION_TEXT[a.resolution] || a.resolution : '';
       const ackCell = a.acknowledged
-        ? `<span class="text-[#23703a]">Đã xác nhận</span><div class="text-[13px] text-[#7b838d] whitespace-nowrap">${escapeHtml(a.acknowledgedByName) || '—'}${a.acknowledgedAt ? ', ' + escapeHtml(fmtDateTime(a.acknowledgedAt)) : ''}</div>`
+        ? `<span class="${a.resolution === 'FalseAlarm' ? 'text-[#5d6670]' : 'text-[#23703a]'}">${escapeHtml(resText || 'Đã xác nhận')}</span><div class="text-[13px] text-[#7b838d] whitespace-nowrap">${escapeHtml(a.acknowledgedByName) || '—'}${a.acknowledgedAt ? ', ' + escapeHtml(fmtDateTime(a.acknowledgedAt)) : ''}</div>`
         : '<span class="text-[#c62828] font-bold">Chưa xử lý</span>';
-      const actionBtn = a.acknowledged
-        ? ''
-        : `<button data-action="ack" data-id="${id}" class="px-2.5 py-1 rounded-sm border border-[#b8bec6] bg-white hover:bg-[#f4f5f7] text-[#1c2229] whitespace-nowrap">Xác nhận</button>`;
+      const ackBtn = !a.acknowledged && canHandleAlert(a)
+        ? `<button data-action="ack" data-id="${id}" class="px-2.5 py-1 rounded-sm border border-[#b8bec6] bg-white hover:bg-[#f4f5f7] text-[#1c2229] whitespace-nowrap">Xác nhận</button>`
+        : '';
+      const actionBtn = `<div class="flex justify-end gap-1.5">${ackBtn}<button data-action="incident" data-id="${id}" class="px-2.5 py-1 rounded-sm border border-[#d9dde2] bg-white hover:bg-[#f4f5f7] text-[#1c2229] whitespace-nowrap">Phiếu</button></div>`;
 
       return `
           <tr class="hover:bg-[#f6f7f8] ${a.acknowledged ? 'text-[#5d6670]' : ''}">
-            <td class="py-2 px-3 text-[#7b838d]">#${id}</td>
+            <td class="py-2 px-3"><button data-action="incident" data-id="${id}" class="text-[#7b838d] hover:text-[#1c2229] underline underline-offset-2">#${id}</button></td>
             <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(fmtDateTime(a.alertTime))}</td>
             <td class="py-2 px-3 whitespace-nowrap"><b class="text-[#1c2229]">${escapeHtml(a.deviceId)}</b> <span class="text-[#5d6670]">${escapeHtml(a.zoneName)}</span></td>
             <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(alertTypeText(a.alertType))} ${sevBadge}</td>
@@ -1947,7 +2055,7 @@
       const list = devices || [];
 
       // Gợi ý khu vực đã có (tạo bằng DOM, không ghép chuỗi HTML)
-      const zones = [...new Set(list.map(d => d.zoneName).filter(Boolean))].sort();
+      const zones = [...new Set([...((lastData && lastData.zones) || []).map(z => z.zoneName), ...list.map(d => d.zoneName)].filter(Boolean))].sort();
       el('devZoneList').replaceChildren(...zones.map(z => new Option(z, z)));
 
       if (list.length === 0) {
@@ -2064,6 +2172,274 @@
         await fetchDashboardData(false);
       } else {
         showToast(res.body.error || `Không xóa được trạm ${deviceId}.`, 'error');
+      }
+    }
+
+    // ========================================================
+    // KHU VỰC VÀ NGƯỜI PHỤ TRÁCH
+    // ========================================================
+    let zoneEditId = null;
+
+    // Admin xử lý mọi khu vực; cán bộ thường xử lý khu vực mình phụ trách hoặc khu vực chưa có người phụ trách
+    // (máy chủ kiểm tra lại, ở đây chỉ để ẩn nút không dùng được)
+    function canHandleAlert(a) {
+      if (isAdmin()) return true;
+      if (a.managerUserId === null || a.managerUserId === undefined) return true;
+      return !!currentUser && toInt(a.managerUserId) === currentUser.userId;
+    }
+
+    function findZone(zoneId) {
+      return ((lastData && lastData.zones) || []).find(z => toInt(z.zoneId) === zoneId) || null;
+    }
+
+    function renderZones(zones) {
+      const body = el('zoneTableBody');
+      const admin = isAdmin();
+      const list = zones || [];
+      if (list.length === 0) {
+        body.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-[#5d6670]">Chưa có khu vực nào.</td></tr>';
+        return;
+      }
+      body.innerHTML = list.map(z => {
+        const id = toInt(z.zoneId);
+        const mine = currentUser && toInt(z.managerUserId) === currentUser.userId;
+        const pending = toInt(z.pendingAlerts);
+        const actions = !admin ? '' : `
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+              <button type="button" data-action="edit-zone" data-id="${id}" class="px-2 py-1 rounded-sm bg-[#1c2229]/10 hover:bg-[#1c2229]/20 text-[#1c2229] text-[12px] border border-[#1c2229]/30 transition-all">Sửa</button>
+              <button type="button" data-action="delete-zone" data-id="${id}" class="px-2 py-1 rounded-sm bg-[#d32f2f]/10 hover:bg-[#d32f2f]/20 text-[#c62828] text-[12px] border border-[#d32f2f]/30 transition-all">Xóa</button>
+            </td>`;
+        return `
+          <tr class="hover:bg-[#f4f5f7] transition-colors ${mine ? 'bg-[#1c2229]/5' : ''}">
+            <td class="py-2.5 px-3 font-bold text-[#1c2229] whitespace-nowrap">${escapeHtml(z.zoneName)}</td>
+            <td class="py-2.5 px-3 text-[#5d6670]">${escapeHtml(z.description) || '—'}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${z.managerName ? escapeHtml(z.managerName) + (mine ? ' <span class="text-[12px] text-[#5d6670]">(bạn)</span>' : '') : '<span class="text-[#9a5b00]">Chưa phân công</span>'}</td>
+            <td class="py-2.5 px-3 text-[#5d6670] whitespace-nowrap">${escapeHtml(z.managerPhone) || '—'}</td>
+            <td class="py-2.5 px-3 text-right">${toInt(z.deviceCount)}</td>
+            <td class="py-2.5 px-3 text-right ${pending > 0 ? 'text-[#c62828] font-bold' : 'text-[#5d6670]'}">${pending}</td>
+            ${actions}
+          </tr>`;
+      }).join('');
+    }
+
+    function setBoxAlert(boxId, message, isError) {
+      const box = el(boxId);
+      if (!message) { box.className = 'hidden p-2.5 rounded-sm text-[12px]'; box.textContent = ''; return; }
+      box.className = isError
+        ? 'p-2.5 rounded-sm text-[12px] bg-[#fdecea] text-[#b3261e] border border-[#d32f2f]'
+        : 'p-2.5 rounded-sm text-[12px] bg-[#e6f2ea] text-[#23703a] border border-[#b7dcbf]';
+      box.textContent = message;
+    }
+
+    function openZoneModal(zoneId) {
+      if (!isAdmin()) return;
+      el('zoneForm').reset();
+      setBoxAlert('zoneAlert', null);
+      const z = zoneId ? findZone(zoneId) : null;
+      if (zoneId && !z) { showToast('Không tìm thấy khu vực (có thể vừa bị xoá).', 'error'); return; }
+      zoneEditId = z ? toInt(z.zoneId) : null;
+      el('zoneModalTitle').textContent = z ? `Sửa khu vực "${z.zoneName}"` : 'Thêm khu vực';
+
+      // Danh sách cán bộ tạo bằng DOM (không ghép chuỗi HTML)
+      const users = (lastData && lastData.users) || [];
+      el('zoneManager').replaceChildren(
+        new Option('— Chưa phân công —', ''),
+        ...users.map(u => new Option(`${u.fullName} (${roleText(u.role)})`, String(toInt(u.userId)))));
+      if (z) {
+        el('zoneName').value = z.zoneName || '';
+        el('zoneDesc').value = z.description || '';
+        el('zoneManager').value = z.managerUserId ? String(toInt(z.managerUserId)) : '';
+      }
+      el('zoneModal').classList.remove('hidden');
+      setTimeout(() => el('zoneName').focus(), 0);
+    }
+
+    function closeZoneModal() {
+      el('zoneModal').classList.add('hidden');
+      zoneEditId = null;
+    }
+
+    async function handleZoneSubmit(e) {
+      e.preventDefault();
+      if (!isAdmin()) return;
+      const mgr = el('zoneManager').value;
+      const body = {
+        zoneId: zoneEditId,
+        zoneName: el('zoneName').value.trim(),
+        description: el('zoneDesc').value.trim(),
+        managerUserId: mgr ? toInt(mgr) : null
+      };
+      if (!body.zoneName) { setBoxAlert('zoneAlert', 'Vui lòng nhập tên khu vực.', true); return; }
+
+      setBoxAlert('zoneAlert', 'Đang lưu vào CSDL...', false);
+      const btn = el('btnZoneSubmit');
+      btn.disabled = true;
+      const res = await api('/api/zones', { method: 'POST', body });
+      btn.disabled = false;
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        const isEdit = zoneEditId !== null;
+        closeZoneModal();
+        showToast(isEdit ? `Đã cập nhật khu vực "${body.zoneName}".` : `Đã thêm khu vực "${body.zoneName}".`, 'success');
+        await fetchDashboardData(false);
+      } else {
+        setBoxAlert('zoneAlert', res.body.error || ('Không lưu được khu vực (HTTP ' + res.status + ').'), true);
+      }
+    }
+
+    async function confirmDeleteZone(zoneId) {
+      if (!isAdmin()) return;
+      const z = findZone(zoneId);
+      if (z && toInt(z.deviceCount) > 0) {
+        showToast(`Khu vực "${z.zoneName}" còn ${toInt(z.deviceCount)} trạm. Chuyển hoặc xoá các trạm trước.`, 'error');
+        return;
+      }
+      if (!confirm(`Xóa khu vực ${z ? '"' + z.zoneName + '"' : '#' + zoneId}?`)) return;
+      const res = await api(`/api/zones/${zoneId}`, { method: 'DELETE' });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        showToast('Đã xóa khu vực.', 'success');
+        await fetchDashboardData(false);
+      } else {
+        showToast(res.body.error || 'Không xóa được khu vực.', 'error');
+      }
+    }
+
+    // ========================================================
+    // PHIẾU SỰ CỐ
+    // ========================================================
+    let incidentId = null;
+
+    function fmtDuration(sec) {
+      const s = toInt(sec);
+      if (sec === null || sec === undefined || s < 0) return '—';
+      if (s < 60) return `${s} giây`;
+      if (s < 3600) return `${Math.floor(s / 60)} phút ${s % 60} giây`;
+      if (s < 86400) return `${Math.floor(s / 3600)} giờ ${Math.floor((s % 3600) / 60)} phút`;
+      return `${Math.floor(s / 86400)} ngày ${Math.floor((s % 86400) / 3600)} giờ`;
+    }
+
+    // Một ô "nhãn / giá trị" trong phiếu; value đã escape sẵn
+    const incField = (label, value) => `
+      <div class="flex flex-col gap-0.5 min-w-0">
+        <span class="text-[12px] text-[#7b838d]">${label}</span>
+        <span class="break-words">${value}</span>
+      </div>`;
+    const incSection = (title, inner) => `
+      <section class="flex flex-col gap-2">
+        <h4 class="text-[12px] font-bold uppercase tracking-wide text-[#5d6670] border-b border-[#d9dde2] pb-1">${title}</h4>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">${inner}</div>
+      </section>`;
+
+    function renderIncident(inc, canHandle) {
+      const id = toInt(inc.alertId);
+      const sev = inc.severity === 'High'
+        ? `<b class="text-[#b3261e]">${escapeHtml(severityText(inc.severity))}</b>`
+        : `<b class="text-[#9a5b00]">${escapeHtml(severityText(inc.severity))}</b>`;
+      el('incTitle').textContent = `Phiếu sự cố #${id}`;
+      el('incSubtitle').textContent = `${alertTypeText(inc.alertType)} tại ${inc.zoneName} • ${fmtDateTime(inc.alertTime)}`;
+
+      const where = incSection('Sự cố',
+        incField('Thời điểm báo', escapeHtml(fmtDateTime(inc.alertTime)))
+        + incField('Loại, mức', `${escapeHtml(alertTypeText(inc.alertType))} – ${sev}`)
+        + incField('Trạm', `<b>${escapeHtml(inc.deviceId)}</b> ${escapeHtml(inc.deviceName)}`)
+        + incField('Khu vực', escapeHtml(inc.zoneName))
+        + incField('Đặc điểm khu vực', escapeHtml(inc.zoneDescription) || '—')
+        + incField('Ảnh bằng chứng', inc.hasSnapshot
+            ? `<button type="button" data-action="snapshot" data-id="${id}" class="underline underline-offset-2 hover:text-[#5d6670]">Xem ảnh</button>`
+            : '<span class="text-[#7b838d]">Không có</span>'));
+
+      const who = incSection('Người phụ trách',
+        incField('Cán bộ phụ trách', inc.managerName ? `<b>${escapeHtml(inc.managerName)}</b>` : '<span class="text-[#9a5b00]">Khu vực chưa phân công</span>')
+        + incField('Số điện thoại', escapeHtml(inc.managerPhone) || '—')
+        + incField('Thông báo SMS', inc.smsSent ? 'Đã gửi' : '<span class="text-[#7b838d]">Chưa gửi</span>'));
+
+      let reading;
+      if (inc.logId === null || inc.logId === undefined) {
+        reading = `<section class="flex flex-col gap-2">
+          <h4 class="text-[12px] font-bold uppercase tracking-wide text-[#5d6670] border-b border-[#d9dde2] pb-1">Số đo lúc báo</h4>
+          <p class="text-[#7b838d]">Cảnh báo này không gắn với dòng số đo nào (bản ghi gốc đã bị xoá hoặc Pi không gửi kèm).</p></section>`;
+      } else {
+        const conf = fmtNumber(inc.confidenceScore);
+        const lvl = toInt(inc.alertLevel);
+        reading = incSection(`Số đo lúc báo <span class="font-normal normal-case tracking-normal">(bản ghi #${toInt(inc.logId)})</span>`,
+          incField('Nhiệt độ', tempCell(inc.temperature, inc.recordedAt, false))
+          + incField('Độ ẩm', humidityCell(inc.humidity, inc.recordedAt, false))
+          + incField('Khói (MQ-2)', `<span class="${inc.smokeDetected ? 'text-[#a3121f] font-bold' : ''}">${smokeText(inc.smokeLevel, inc.smokeDetected)}</span>`)
+          + incField('Camera AI', inc.aiResult ? `<b class="text-[#a3121f]">Có lửa${conf !== null ? ' ' + conf + '%' : ''}</b>` : 'Không phát hiện lửa')
+          + incField('Mức Pi tính', `<span class="${lvl >= 2 ? 'text-[#a3121f] font-bold' : lvl === 1 ? 'text-[#8a5200] font-bold' : ''}">${escapeHtml(LEVEL_TEXT[lvl] || String(lvl))}</span>`)
+          + incField('Thời điểm đo', escapeHtml(fmtDateTime(inc.recordedAt))));
+      }
+
+      const handled = incSection('Xử lý',
+        incField('Trạng thái', inc.acknowledged ? '<span class="text-[#23703a]">Đã xác nhận</span>' : '<b class="text-[#c62828]">Chưa xử lý</b>')
+        + incField('Người xác nhận', escapeHtml(inc.acknowledgedByName) || '—')
+        + incField('Lúc xác nhận', escapeHtml(fmtDateTime(inc.acknowledgedAt)) || '—')
+        + incField('Thời gian phản hồi', inc.acknowledged ? escapeHtml(fmtDuration(inc.responseSeconds)) : '—')
+        + incField('Kết quả', inc.resolution ? `<b>${escapeHtml(RESOLUTION_TEXT[inc.resolution] || inc.resolution)}</b>` : '<span class="text-[#7b838d]">Chưa ghi</span>')
+        + incField('Ghi chú', escapeHtml(inc.resolutionNote) || '—'));
+
+      el('incBody').innerHTML = where + who + reading + handled;
+
+      // Form ghi kết quả: chỉ người có quyền mới thấy
+      el('incForm').classList.toggle('hidden', !canHandle);
+      if (canHandle) {
+        el('incResolution').value = inc.resolution || 'Handled';
+        el('incNote').value = inc.resolutionNote || '';
+        el('incFormNote').textContent = inc.acknowledged
+          ? 'Lưu sẽ cập nhật kết quả, giữ nguyên người và thời điểm xác nhận.'
+          : 'Lưu kết quả cũng đồng thời xác nhận cảnh báo.';
+        el('btnIncSubmit').textContent = inc.resolution ? 'Cập nhật kết quả' : 'Lưu kết quả';
+      }
+    }
+
+    async function openIncidentModal(alertId) {
+      incidentId = alertId;
+      el('incTitle').textContent = `Phiếu sự cố #${alertId}`;
+      el('incSubtitle').textContent = '';
+      el('incBody').innerHTML = '<p class="text-[#5d6670]">Đang tải phiếu sự cố...</p>';
+      el('incForm').classList.add('hidden');
+      setBoxAlert('incAlert', null);
+      el('incidentModal').classList.remove('hidden');
+      await loadIncident();
+    }
+
+    async function loadIncident() {
+      const id = incidentId;
+      if (!id) return;
+      const res = await api(`/api/alerts/${id}`);
+      if (res.status === 401 || incidentId !== id) return;
+      if (!res.ok || !res.body.incident) {
+        el('incBody').innerHTML = `<p class="text-[#b3261e]">${escapeHtml(res.body.error || 'Không tải được phiếu sự cố.')}</p>`;
+        return;
+      }
+      renderIncident(res.body.incident, !!res.body.canHandle);
+    }
+
+    function closeIncidentModal() {
+      el('incidentModal').classList.add('hidden');
+      incidentId = null;
+    }
+
+    async function handleIncidentSubmit(e) {
+      e.preventDefault();
+      const id = incidentId;
+      if (!id) return;
+      const body = { resolution: el('incResolution').value, note: el('incNote').value.trim() };
+      setBoxAlert('incAlert', 'Đang lưu vào CSDL...', false);
+      const btn = el('btnIncSubmit');
+      btn.disabled = true;
+      const res = await api(`/api/alerts/${id}/resolve`, { method: 'POST', body });
+      btn.disabled = false;
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        setBoxAlert('incAlert', null);
+        showToast(`Đã ghi kết quả phiếu sự cố #${id}.`, 'success');
+        await loadIncident();
+        await fetchDashboardData(false);
+        if (hist.loaded) loadHistory(false);
+      } else {
+        setBoxAlert('incAlert', res.body.error || ('Không lưu được (HTTP ' + res.status + ').'), true);
       }
     }
 
@@ -2347,6 +2723,7 @@
 
       renderUsers(data.users);
       renderDevices(data.devices);
+      renderZones(data.zones);
       renderDeviceMgmt(data.devices);
       renderAlerts(data.alerts);
       renderLogs(data.logs);

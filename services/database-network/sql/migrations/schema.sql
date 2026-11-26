@@ -90,6 +90,8 @@ CREATE TABLE AlertHistory (
     Acknowledged            BOOLEAN         NOT NULL DEFAULT FALSE,  -- đã xem/xác nhận trên web-app
     AcknowledgedByUserId    INT             NULL,
     AcknowledgedAt          DATETIME        NULL,
+    Resolution              VARCHAR(20)     NULL,       -- kết quả xử lý: 'Handled', 'FalseAlarm', 'Test' (NULL = chưa ghi)
+    ResolutionNote          VARCHAR(500)    NULL,       -- ghi chú phiếu sự cố của cán bộ
     CONSTRAINT FK_AlertHistory_Devices FOREIGN KEY (DeviceId)
         REFERENCES Devices(DeviceId) ON DELETE CASCADE,
     CONSTRAINT FK_AlertHistory_EnvironmentLogs FOREIGN KEY (LogId)
@@ -97,6 +99,7 @@ CREATE TABLE AlertHistory (
     CONSTRAINT FK_AlertHistory_Users FOREIGN KEY (AcknowledgedByUserId)
         REFERENCES Users(UserId) ON DELETE SET NULL,
     CONSTRAINT CK_AlertHistory_Severity CHECK (Severity IN ('Low', 'Medium', 'High')),
+    CONSTRAINT CK_AlertHistory_Resolution CHECK (Resolution IN ('Handled', 'FalseAlarm', 'Test')),
     INDEX IX_AlertHistory_Device_Time (DeviceId, AlertTime DESC),
     INDEX IX_AlertHistory_Time (AlertTime DESC)              -- lịch sử/thống kê theo ngày cho mọi thiết bị
 ) ENGINE=InnoDB;
