@@ -3,80 +3,78 @@
 <head>
   <meta charset="utf-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
-  <title>FireGuard IoT — Giám Sát Cảnh Báo Cháy Thông Minh</title>
+  <title>Hệ thống cảnh báo sớm cháy nổ</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="lib/tailwindcss/tailwindcss-3.4.17.js"></script>
-  <script src="js/tailwind-config.js"></script>
   <script src="lib/signalr/signalr-8.0.7.min.js"></script>
 </head>
 <body class="bg-[#0f131c] text-[#dfe2ef] font-sans antialiased min-h-screen">
 
-  <!-- ==================== ĐANG KIỂM TRA PHIÊN ĐĂNG NHẬP ==================== -->
-  <div id="bootScreen" class="min-h-screen flex items-center justify-center gap-2 text-[#e4beba] font-mono text-[13px]">
+  <!-- đang kiểm tra phiên đăng nhập -->
+  <div id="bootScreen" class="min-h-screen flex items-center justify-center gap-2 text-[#e4beba] text-[13px]">
     <div class="w-5 h-5 border-2 border-[#4cd7f6] border-t-transparent rounded-full animate-spin"></div>
     <span>Đang kiểm tra phiên đăng nhập...</span>
   </div>
 
-  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP ==================== -->
+  <!-- màn hình đăng nhập -->
   <div id="loginScreen" class="hidden min-h-screen flex items-center justify-center p-4">
-    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold shadow-md">
+        <div class="w-10 h-10 rounded-xl bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold">
           <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
         </div>
         <div>
-          <h1 class="text-[17px] font-bold text-white tracking-tight">FireGuard IoT — Đăng Nhập</h1>
-          <p class="text-[11px] font-mono text-[#8a8f9d]">Hệ thống giám sát cảnh báo cháy · PBL4</p>
+          <h1 class="text-[17px] font-bold text-white">Đăng nhập</h1>
+          <p class="text-[11px] text-[#8a8f9d]">Hệ thống cảnh báo sớm cháy nổ</p>
         </div>
       </div>
 
       <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="flex flex-col gap-3.5" autocomplete="on">
-        <div id="loginAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+        <div id="loginAlert" class="hidden p-2.5 rounded-lg text-[11px]"></div>
 
         <div>
-          <label for="loginUsername" class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập:</label>
+          <label for="loginUsername" class="block text-[11px] text-[#e4beba] mb-1">Tên đăng nhập:</label>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">person</span>
-            <input id="loginUsername" type="text" required autocomplete="username" placeholder="Tên đăng nhập" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
+            <input id="loginUsername" type="text" required autocomplete="username" placeholder="Tên đăng nhập" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] text-white outline-none transition-all">
           </div>
         </div>
 
         <div>
-          <label for="loginPassword" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu:</label>
+          <label for="loginPassword" class="block text-[11px] text-[#e4beba] mb-1">Mật khẩu:</label>
           <div class="relative">
             <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">lock</span>
-            <input id="loginPassword" type="password" required autocomplete="current-password" placeholder="Nhập mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
+            <input id="loginPassword" type="password" required autocomplete="current-password" placeholder="Nhập mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] text-white outline-none transition-all">
           </div>
         </div>
 
-        <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg">
+        <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold rounded-xl text-[13px] transition-all flex items-center justify-center gap-2">
           <span class="material-symbols-outlined text-[18px]">login</span>
-          <span>Đăng Nhập Hệ Thống</span>
+          <span>Đăng nhập</span>
         </button>
       </form>
 
-      <p class="text-[10.5px] font-mono text-[#8a8f9d]">Tài khoản do quản trị viên cấp. Quên mật khẩu thì liên hệ quản trị viên.</p>
+      <p class="text-[10.5px] text-[#8a8f9d]">Tài khoản do quản trị viên cấp. Quên mật khẩu thì liên hệ quản trị viên.</p>
     </div>
   </div>
 
-  <!-- ==================== DASHBOARD (CHỈ HIỆN SAU KHI ĐĂNG NHẬP) ==================== -->
+  <!-- dashboard -->
   <div id="appRoot" class="hidden min-h-screen p-4 lg:p-6 flex flex-col gap-5">
 
-  <!-- ==================== HEADER ==================== -->
-  <header class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
+  <!-- header -->
+  <header class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-lg bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold shadow-md">
+      <div class="w-10 h-10 rounded-lg bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold">
         <span class="material-symbols-outlined text-[26px]">local_fire_department</span>
       </div>
       <div>
-        <h1 class="text-[18px] font-bold text-white tracking-tight flex items-center gap-2">
-          FireGuard IoT — Hệ Thống Giám Sát Cảnh Báo Cháy
-          <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30">PBL4</span>
+        <h1 class="text-[18px] font-bold text-white flex items-center gap-2">
+          Hệ thống cảnh báo sớm cháy nổ
         </h1>
-        <div class="text-[12px] text-[#e4beba] flex items-center gap-2 mt-0.5 font-mono flex-wrap">
+        <div class="text-[12px] text-[#e4beba] flex items-center gap-2 mt-0.5 flex-wrap">
           <span id="dbStatusBadge" class="flex items-center gap-1.5 text-[#8a8f9d]">
             <span class="w-2 h-2 rounded-full bg-[#8a8f9d]"></span>
-            CSDL: ĐANG TẢI
+            CSDL: đang tải
           </span>
           <span>•</span>
           <span id="mqttStatusBadge" class="flex items-center gap-1.5 text-[#8a8f9d]">
@@ -86,7 +84,7 @@
           <span>•</span>
           <span id="camChip" class="flex items-center gap-1.5 text-[#8a8f9d]">
             <span class="w-2 h-2 rounded-full bg-[#8a8f9d]"></span>
-            CAMERA: --
+            Camera: --
           </span>
           <span>•</span>
           <span id="headerLiveClock">--:--:--</span>
@@ -96,7 +94,7 @@
 
     <!-- Người đang đăng nhập & thao tác -->
     <div class="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
-      <div id="headerUserChip" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] border border-[#31353f] font-mono text-[12px]">
+      <div id="headerUserChip" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] border border-[#31353f] text-[12px]">
         <div class="w-6 h-6 rounded-full bg-[#ff5451] text-[#5c0008] flex items-center justify-center font-bold text-[10px]" id="headerUserAvatar">?</div>
         <div class="flex flex-col leading-none">
           <span id="headerUserName" class="font-bold text-white">--</span>
@@ -104,87 +102,87 @@
         </div>
       </div>
 
-      <button id="btnSound" onclick="toggleSound()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all" title="Âm thanh báo động khi có cảnh báo mới">
+      <button id="btnSound" onclick="toggleSound()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] text-[#dfe2ef] transition-all" title="Âm thanh báo động khi có cảnh báo mới">
         <span class="material-symbols-outlined text-[16px]" id="iconSound">volume_up</span>
         <span id="textSound">Âm thanh: Bật</span>
       </button>
 
-      <button onclick="refreshData()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all">
+      <button onclick="refreshData()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] text-[#dfe2ef] transition-all">
         <span class="material-symbols-outlined text-[16px]">refresh</span>
         <span>Làm mới dữ liệu</span>
       </button>
 
-      <button onclick="openPasswordModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all">
+      <button onclick="openPasswordModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] text-[#dfe2ef] transition-all">
         <span class="material-symbols-outlined text-[16px]">key</span>
         <span>Đổi mật khẩu</span>
       </button>
 
-      <button onclick="logoutUser()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#ffb3ad] transition-all">
+      <button onclick="logoutUser()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] text-[#ffb3ad] transition-all">
         <span class="material-symbols-outlined text-[16px]">logout</span>
-        <span>Đăng Xuất</span>
+        <span>Đăng xuất</span>
       </button>
 
-      <div id="systemSafetyBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] text-[#8a8f9d] border border-[#31353f] text-[12px] font-mono font-bold">
+      <div id="systemSafetyBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] text-[#8a8f9d] border border-[#31353f] text-[12px] font-bold">
         <span class="w-2 h-2 rounded-full bg-[#8a8f9d]"></span>
-        <span>HỆ THỐNG: ĐANG TẢI</span>
+        <span>Đang tải...</span>
       </div>
     </div>
   </header>
 
-  <!-- Lỗi CSDL (B25): hiện nguyên văn lỗi để người trực biết dữ liệu đang không cập nhật -->
-  <div id="dbErrorBanner" class="hidden p-3 rounded-xl bg-[#93000a]/40 border border-[#ff5451] text-[#ffdad6] font-mono text-[12px] flex items-start gap-2">
+  <!-- báo lỗi CSDL -->
+  <div id="dbErrorBanner" class="hidden p-3 rounded-xl bg-[#93000a]/40 border border-[#ff5451] text-[#ffdad6] text-[12px] flex items-start gap-2">
     <span class="material-symbols-outlined text-[18px] text-[#ff5451]">database</span>
     <div>
-      <div class="font-bold">Mất kết nối CSDL — số liệu bên dưới có thể đã cũ</div>
+      <div class="font-bold">Mất kết nối CSDL, số liệu bên dưới có thể đã cũ</div>
       <div id="dbErrorText" class="text-[11px] text-[#ffdad6]/80 mt-0.5 break-all"></div>
     </div>
   </div>
 
-  <!-- ==================== KPI COUNTERS ==================== -->
+  <!-- KPI counters -->
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
-      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+      <span class="text-[11px] text-[#e4beba] flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">sensors</span> Thiết bị hoạt động
       </span>
       <div class="flex items-baseline gap-1.5 mt-2">
-        <span id="kpiActiveDevices" class="text-[26px] font-bold font-mono text-[#4cd7f6] leading-none">--</span>
-        <span id="kpiTotalDevices" class="text-[12px] font-mono text-[#e4beba]">/ -- Thiết bị</span>
+        <span id="kpiActiveDevices" class="text-[26px] font-bold text-[#4cd7f6] leading-none">--</span>
+        <span id="kpiTotalDevices" class="text-[12px] text-[#e4beba]">/ -- thiết bị</span>
       </div>
     </div>
 
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
-      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+      <span class="text-[11px] text-[#e4beba] flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#ff5451]">crisis_alert</span> Sự cố chưa xử lý
       </span>
       <div class="flex items-baseline gap-1.5 mt-2">
-        <span id="kpiPendingAlerts" class="text-[26px] font-bold font-mono text-[#ff5451] leading-none">--</span>
-        <span class="text-[12px] font-mono text-[#e4beba]">Cần can thiệp</span>
+        <span id="kpiPendingAlerts" class="text-[26px] font-bold text-[#ff5451] leading-none">--</span>
+        <span class="text-[12px] text-[#e4beba]">cần xử lý</span>
       </div>
     </div>
 
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
-      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+      <span class="text-[11px] text-[#e4beba] flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#ffb95f]">monitoring</span> Bản ghi môi trường
       </span>
       <div class="flex items-baseline gap-1.5 mt-2">
-        <span id="kpiTotalLogs" class="text-[26px] font-bold font-mono text-[#ffb95f] leading-none">--</span>
-        <span class="text-[12px] font-mono text-[#e4beba]">Lượt đo gần nhất</span>
+        <span id="kpiTotalLogs" class="text-[26px] font-bold text-[#ffb95f] leading-none">--</span>
+        <span class="text-[12px] text-[#e4beba]">lượt đo</span>
       </div>
     </div>
 
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
-      <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
+      <span class="text-[11px] text-[#e4beba] flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">manage_accounts</span> Cán bộ quản lý
       </span>
       <div class="flex items-baseline gap-1.5 mt-2">
-        <span id="kpiTotalUsers" class="text-[26px] font-bold font-mono text-[#4cd7f6] leading-none">--</span>
-        <span class="text-[12px] font-mono text-[#e4beba]">Người dùng</span>
+        <span id="kpiTotalUsers" class="text-[26px] font-bold text-[#4cd7f6] leading-none">--</span>
+        <span class="text-[12px] text-[#e4beba]">tài khoản</span>
       </div>
     </div>
   </section>
 
-  <!-- ==================== THANH CHỌN MỤC ==================== -->
-  <nav id="tabBar" class="flex items-center gap-2 flex-wrap font-mono text-[12px]">
+  <!-- thanh chọn mục -->
+  <nav id="tabBar" class="flex items-center gap-2 flex-wrap text-[12px]">
     <button type="button" data-action="tab" data-tab="monitor" class="tab-btn flex items-center gap-1.5 px-3.5 py-2 rounded-lg border transition-all">
       <span class="material-symbols-outlined text-[16px]">videocam</span><span>Giám sát trực tiếp</span>
     </button>
@@ -198,19 +196,19 @@
 
   <div data-tab-panel="monitor" class="flex flex-col gap-5">
 
-  <!-- ==================== SECTION 1: CAMERA PI & TRẠM GIÁM SÁT ==================== -->
+  <!-- camera Pi & trạm giám sát -->
   <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
-    <!-- CAMERA: chỉ hiển thị luồng MJPEG của Pi, khung lửa/khói do Pi (YOLOv11n) vẽ sẵn trong ảnh -->
-    <div id="cameraCard" class="lg:col-span-5 bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col justify-between gap-3 transition-all duration-300">
+    <!-- camera: chỉ hiển thị luồng MJPEG của Pi, khung lửa/khói do Pi (YOLOv11n) vẽ sẵn trong ảnh -->
+    <div id="cameraCard" class="lg:col-span-5 bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col justify-between gap-3 transition-all duration-300">
       <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">videocam</span>
-          <h2 class="text-[15px] font-bold text-white tracking-tight">Camera Pi — Nhận Diện Lửa / Khói</h2>
+          <h2 class="text-[15px] font-bold text-white">Camera Pi</h2>
         </div>
-        <div id="camStatusBadge" class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-[#1c1f29] text-[#8a8f9d] border border-[#31353f]">
+        <div id="camStatusBadge" class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold bg-[#1c1f29] text-[#8a8f9d] border border-[#31353f]">
           <span class="w-1.5 h-1.5 rounded-full bg-[#8a8f9d]"></span>
-          <span>CHƯA KẾT NỐI</span>
+          <span>Chưa kết nối</span>
         </div>
       </div>
 
@@ -223,32 +221,32 @@
           <div class="w-12 h-12 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[#4cd7f6]">
             <span class="material-symbols-outlined text-[28px]">videocam_off</span>
           </div>
-          <span id="cameraPlaceholderText" class="text-[12px] font-mono text-[#e4beba]">Chưa kết nối camera Pi</span>
-          <span class="text-[10.5px] font-mono text-[#8a8f9d]">Bấm "Kết nối camera Pi" bên dưới (cổng 5000, đường dẫn /video_feed)</span>
+          <span id="cameraPlaceholderText" class="text-[12px] text-[#e4beba]">Chưa kết nối camera Pi</span>
+          <span class="text-[10.5px] text-[#8a8f9d]">Bấm "Kết nối camera Pi" bên dưới (cổng 5000, đường dẫn /video_feed)</span>
         </div>
 
         <!-- Mất tín hiệu camera -->
         <div id="cameraLostOverlay" class="hidden absolute inset-0 z-20 bg-black/70 flex flex-col items-center justify-center text-center p-4 gap-1.5">
           <span class="material-symbols-outlined text-[32px] text-[#ff5451]">signal_disconnected</span>
-          <span class="text-[13px] font-bold font-mono text-[#ffdad6]">Mất tín hiệu camera</span>
-          <span id="cameraLostReason" class="text-[10.5px] font-mono text-[#e4beba]"></span>
-          <span class="text-[10.5px] font-mono text-[#8a8f9d]">Tự thử kết nối lại mỗi 5 giây</span>
+          <span class="text-[13px] font-bold text-[#ffdad6]">Mất tín hiệu camera</span>
+          <span id="cameraLostReason" class="text-[10.5px] text-[#e4beba]"></span>
+          <span class="text-[10.5px] text-[#8a8f9d]">Tự thử kết nối lại mỗi 5 giây</span>
         </div>
 
         <!-- Nhãn góc trên: nguồn luồng + model, FPS đo thật tại trình duyệt -->
         <div class="absolute top-2 left-2 z-30 flex items-center gap-1.5">
-          <span id="camSourceLabel" class="hidden text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-white border border-white/10 backdrop-blur"></span>
-          <span class="text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10 backdrop-blur">
+          <span id="camSourceLabel" class="hidden text-[9.5px] px-2 py-0.5 rounded bg-black/70 text-white border border-white/10"></span>
+          <span class="text-[9.5px] px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10">
             AI trên Pi: YOLOv11n
           </span>
         </div>
         <div class="absolute top-2 right-2 z-30 flex items-center gap-1.5">
-          <span id="camFpsBadge" class="hidden text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10 backdrop-blur" title="Số khung hình mới nhận được mỗi giây tại trình duyệt"></span>
+          <span id="camFpsBadge" class="hidden text-[9.5px] px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10" title="Số khung hình mới nhận được mỗi giây tại trình duyệt"></span>
         </div>
       </div>
 
       <!-- Trạng thái thật do Pi báo về (MQTT) và kết quả AI gần nhất trong CSDL -->
-      <div class="flex flex-col gap-1 text-[11px] font-mono">
+      <div class="flex flex-col gap-1 text-[11px]">
         <div id="piCameraStatus" class="text-[#8a8f9d]">Camera Pi: chưa có báo cáo trạng thái qua MQTT</div>
         <div id="aiStatusLine" class="text-[#8a8f9d]">AI trên Pi: đang tải...</div>
       </div>
@@ -256,11 +254,11 @@
       <!-- Thanh điều khiển Camera -->
       <div class="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-[#262a34]">
         <div class="flex items-center gap-1.5">
-          <button onclick="connectIpCamera()" class="px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] font-mono text-[#dfe2ef] flex items-center gap-1.5 transition-all">
+          <button onclick="connectIpCamera()" class="px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] text-[#dfe2ef] flex items-center gap-1.5 transition-all">
             <span class="material-symbols-outlined text-[15px] text-[#ffb95f]">settings_ethernet</span>
             <span>Kết nối camera Pi</span>
           </button>
-          <button id="btnCameraStop" onclick="stopCamera(true)" class="hidden px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] font-mono text-[#dfe2ef] flex items-center gap-1.5 transition-all">
+          <button id="btnCameraStop" onclick="stopCamera(true)" class="hidden px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] text-[#dfe2ef] flex items-center gap-1.5 transition-all">
             <span class="material-symbols-outlined text-[15px] text-[#8a8f9d]">stop_circle</span>
             <span>Ngắt</span>
           </button>
@@ -271,18 +269,18 @@
       </div>
     </div>
 
-    <!-- DANH SÁCH TRẠM GIÁM SÁT -->
-    <div class="lg:col-span-7 bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <!-- danh sách trạm -->
+    <div class="lg:col-span-7 bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col gap-3">
       <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">developer_board</span>
-          <h2 class="text-[15px] font-bold text-white tracking-tight">Danh Sách Trạm Giám Sát</h2>
+          <h2 class="text-[15px] font-bold text-white">Trạm giám sát</h2>
         </div>
-        <span class="text-[11px] font-mono text-[#e4beba]">Số đo mới nhất của từng thiết bị</span>
+        <span class="text-[11px] text-[#e4beba]">Số đo mới nhất của từng thiết bị</span>
       </div>
 
       <div id="devicesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-        <div class="col-span-full py-8 text-center text-[#e4beba] font-mono text-[13px] flex flex-col items-center justify-center gap-2">
+        <div class="col-span-full py-8 text-center text-[#e4beba] text-[13px] flex flex-col items-center justify-center gap-2">
           <div class="w-6 h-6 border-2 border-[#4cd7f6] border-t-transparent rounded-full animate-spin"></div>
           <span>Đang tải danh sách thiết bị...</span>
         </div>
@@ -291,18 +289,18 @@
 
   </section>
 
-  <!-- ==================== BIỂU ĐỒ NHIỆT ĐỘ / ĐỘ ẨM ==================== -->
-  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+  <!-- biểu đồ nhiệt độ / độ ẩm -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col gap-3">
     <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5 gap-3 flex-wrap">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-[#ffb95f] text-[20px]">show_chart</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Biểu Đồ Nhiệt Độ &amp; Độ Ẩm</h2>
+        <h2 class="text-[15px] font-bold text-white">Nhiệt độ, độ ẩm</h2>
       </div>
       <div class="flex items-center gap-2 flex-wrap">
-        <label class="text-[11px] font-mono text-[#e4beba]" for="envDeviceSelect">Trạm</label>
-        <select id="envDeviceSelect" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]"></select>
-        <label class="text-[11px] font-mono text-[#e4beba]" for="envSpanSelect">Khoảng</label>
-        <select id="envSpanSelect" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+        <label class="text-[11px] text-[#e4beba]" for="envDeviceSelect">Trạm</label>
+        <select id="envDeviceSelect" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]"></select>
+        <label class="text-[11px] text-[#e4beba]" for="envSpanSelect">Khoảng</label>
+        <select id="envSpanSelect" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
           <option value="30">30 phút</option>
           <option value="60" selected>1 giờ</option>
           <option value="180">3 giờ</option>
@@ -311,77 +309,76 @@
         </select>
       </div>
     </div>
-    <div class="flex items-center gap-4 flex-wrap text-[11px] font-mono text-[#e4beba]">
+    <div class="flex items-center gap-4 flex-wrap text-[11px] text-[#e4beba]">
       <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-[#ffb95f] inline-block"></span>Nhiệt độ (°C, trục trái)</span>
       <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-[#4cd7f6] inline-block"></span>Độ ẩm (%, trục phải)</span>
       <span class="flex items-center gap-1.5"><span class="w-4 border-t-2 border-dashed border-[#ff5451] inline-block"></span>Ngưỡng nguy hiểm 45 °C</span>
     </div>
     <div class="relative w-full h-64 bg-[#0a0d14] rounded-lg border border-[#262a34]">
       <canvas id="envChart" class="absolute inset-0 w-full h-full"></canvas>
-      <div id="envChartEmpty" class="absolute inset-0 flex items-center justify-center text-[12px] font-mono text-[#8a8f9d]">Đang tải số đo...</div>
+      <div id="envChartEmpty" class="absolute inset-0 flex items-center justify-center text-[12px] text-[#8a8f9d]">Đang tải số đo...</div>
     </div>
-    <div id="envChartInfo" class="text-[11px] font-mono text-[#8a8f9d]">—</div>
+    <div id="envChartInfo" class="text-[11px] text-[#8a8f9d]">—</div>
   </section>
 
-  <!-- ==================== SECTION 2: BẢNG CẢNH BÁO SỰ CỐ (ALERTHISTORY) ==================== -->
-  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+  <!-- bảng cảnh báo sự cố -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col gap-3">
     <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-[#ff5451] text-[20px]">warning</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Cảnh Báo Gần Đây</h2>
+        <h2 class="text-[15px] font-bold text-white">Cảnh báo gần đây</h2>
       </div>
-      <span class="text-[11px] font-mono text-[#e4beba]">20 cảnh báo mới nhất • Mức do Pi đánh giá • Người xác nhận là tài khoản đang đăng nhập</span>
+      <span class="text-[11px] text-[#e4beba]">20 cảnh báo mới nhất • Mức do Pi đánh giá • Người xác nhận là tài khoản đang đăng nhập</span>
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-left font-mono text-[12px]">
+      <table class="w-full text-left text-[12px]">
         <thead>
           <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
-            <th class="py-2.5 px-3">MÃ #ID</th>
-            <th class="py-2.5 px-3">THIẾT BỊ</th>
-            <th class="py-2.5 px-3">KHU VỰC</th>
-            <th class="py-2.5 px-3">LOẠI</th>
-            <th class="py-2.5 px-3">MỨC ĐỘ</th>
-            <th class="py-2.5 px-3">THỜI GIAN</th>
-            <th class="py-2.5 px-3">ẢNH</th>
-            <th class="py-2.5 px-3">SMS</th>
-            <th class="py-2.5 px-3">TRẠNG THÁI</th>
-            <th class="py-2.5 px-3">NGƯỜI XÁC NHẬN</th>
-            <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
+            <th class="py-2.5 px-3">Mã</th>
+            <th class="py-2.5 px-3">Thiết bị</th>
+            <th class="py-2.5 px-3">Khu vực</th>
+            <th class="py-2.5 px-3">Loại</th>
+            <th class="py-2.5 px-3">Mức độ</th>
+            <th class="py-2.5 px-3">Thời gian</th>
+            <th class="py-2.5 px-3">Ảnh</th>
+            <th class="py-2.5 px-3">Trạng thái</th>
+            <th class="py-2.5 px-3">Người xác nhận</th>
+            <th class="py-2.5 px-3 text-right">Tác vụ</th>
           </tr>
         </thead>
         <tbody id="alertsTableBody" class="divide-y divide-[#262a34]">
           <tr>
-            <td colspan="11" class="py-6 text-center text-[#e4beba]">Đang tải dữ liệu cảnh báo...</td>
+            <td colspan="10" class="py-6 text-center text-[#e4beba]">Đang tải dữ liệu cảnh báo...</td>
           </tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- ==================== SECTION 4: NHẬT KÝ ĐO MÔI TRƯỜNG (ENVIRONMENTLOGS) ==================== -->
-  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+  <!-- nhật ký đo môi trường -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col gap-3">
     <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-[#ffb95f] text-[20px]">table_chart</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Dữ Liệu Đo Môi Trường Gần Nhất</h2>
+        <h2 class="text-[15px] font-bold text-white">Số đo gần nhất</h2>
       </div>
-      <span class="text-[11px] font-mono text-[#e4beba]">20 lượt ghi gần nhất từ DHT11, MQ-2 và AI trên Pi</span>
+      <span class="text-[11px] text-[#e4beba]">20 lượt ghi gần nhất từ DHT11, MQ-2 và AI trên Pi</span>
     </div>
 
     <div class="overflow-x-auto max-h-80">
-      <table class="w-full text-left font-mono text-[12px]">
+      <table class="w-full text-left text-[12px]">
         <thead class="sticky top-0 bg-[#1c1f29] border-b border-[#31353f] z-10">
           <tr class="text-[#e4beba]">
-            <th class="py-2.5 px-3">LOG ID</th>
-            <th class="py-2.5 px-3">THIẾT BỊ</th>
-            <th class="py-2.5 px-3">NHIỆT ĐỘ</th>
-            <th class="py-2.5 px-3">ĐỘ ẨM</th>
-            <th class="py-2.5 px-3">KHÓI</th>
-            <th class="py-2.5 px-3">MỨC</th>
-            <th class="py-2.5 px-3">KẾT QUẢ AI</th>
-            <th class="py-2.5 px-3">ĐỘ TIN CẬY</th>
-            <th class="py-2.5 px-3">THỜI GIAN GHI</th>
+            <th class="py-2.5 px-3">Mã</th>
+            <th class="py-2.5 px-3">Thiết bị</th>
+            <th class="py-2.5 px-3">Nhiệt độ</th>
+            <th class="py-2.5 px-3">Độ ẩm</th>
+            <th class="py-2.5 px-3">Khói</th>
+            <th class="py-2.5 px-3">Mức</th>
+            <th class="py-2.5 px-3">Kết quả AI</th>
+            <th class="py-2.5 px-3">Độ tin cậy</th>
+            <th class="py-2.5 px-3">Thời gian ghi</th>
           </tr>
         </thead>
         <tbody id="logsTableBody" class="divide-y divide-[#262a34]">
@@ -397,25 +394,25 @@
 
   <div data-tab-panel="history" class="hidden flex flex-col gap-5">
 
-  <!-- ==================== TRA CỨU LỊCH SỬ CẢNH BÁO & THỐNG KÊ ==================== -->
-  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+  <!-- tra cứu lịch sử cảnh báo & thống kê -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col gap-3">
     <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5 gap-3 flex-wrap">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-[#ff5451] text-[20px]">manage_search</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Tra Cứu Lịch Sử Cảnh Báo</h2>
+        <h2 class="text-[15px] font-bold text-white">Lịch sử cảnh báo</h2>
       </div>
-      <span id="histInfo" class="text-[11px] font-mono text-[#e4beba]">Mặc định 7 ngày gần nhất</span>
+      <span id="histInfo" class="text-[11px] text-[#e4beba]">Mặc định 7 ngày gần nhất</span>
     </div>
 
-    <form id="historyForm" onsubmit="handleHistorySubmit(event)" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 items-end font-mono text-[11px]">
+    <form id="historyForm" onsubmit="handleHistorySubmit(event)" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 items-end text-[11px]">
       <label class="flex flex-col gap-1 text-[#e4beba]">Từ ngày
-        <input id="histFrom" type="date" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+        <input id="histFrom" type="date" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
       </label>
       <label class="flex flex-col gap-1 text-[#e4beba]">Đến ngày
-        <input id="histTo" type="date" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+        <input id="histTo" type="date" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
       </label>
       <label class="flex flex-col gap-1 text-[#e4beba]">Loại cảnh báo
-        <select id="histType" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+        <select id="histType" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
           <option value="">Tất cả</option>
           <option value="Fire">Lửa</option>
           <option value="Smoke">Khói</option>
@@ -424,7 +421,7 @@
         </select>
       </label>
       <label class="flex flex-col gap-1 text-[#e4beba]">Mức độ
-        <select id="histSeverity" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+        <select id="histSeverity" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
           <option value="">Tất cả</option>
           <option value="High">Mức 2 – Khẩn cấp</option>
           <option value="Medium">Mức 1 – Cảnh báo sớm</option>
@@ -432,7 +429,7 @@
         </select>
       </label>
       <label class="flex flex-col gap-1 text-[#e4beba]">Trạng thái
-        <select id="histStatus" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+        <select id="histStatus" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
           <option value="">Tất cả</option>
           <option value="pending">Chưa xử lý</option>
           <option value="done">Đã xác nhận</option>
@@ -448,16 +445,16 @@
       </div>
     </form>
 
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5 font-mono">
-      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">KẾT QUẢ LỌC</div><div id="histCountTotal" class="text-[20px] font-bold text-white">--</div></div>
-      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">LỬA</div><div id="histCountFire" class="text-[20px] font-bold text-[#ff5451]">--</div></div>
-      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">KHÓI</div><div id="histCountSmoke" class="text-[20px] font-bold text-[#ffb95f]">--</div></div>
-      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">NHIỆT ĐỘ CAO</div><div id="histCountTemp" class="text-[20px] font-bold text-[#f3a6ff]">--</div></div>
-      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">CHƯA XỬ LÝ</div><div id="histCountPending" class="text-[20px] font-bold text-[#ff5451]">--</div></div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">Kết quả lọc</div><div id="histCountTotal" class="text-[20px] font-bold text-white">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">Lửa</div><div id="histCountFire" class="text-[20px] font-bold text-[#ff5451]">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">Khói</div><div id="histCountSmoke" class="text-[20px] font-bold text-[#ffb95f]">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">Nhiệt độ cao</div><div id="histCountTemp" class="text-[20px] font-bold text-[#f3a6ff]">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">Chưa xử lý</div><div id="histCountPending" class="text-[20px] font-bold text-[#ff5451]">--</div></div>
     </div>
 
     <div class="flex flex-col gap-2">
-      <div class="flex items-center justify-between gap-2 flex-wrap text-[11px] font-mono text-[#e4beba]">
+      <div class="flex items-center justify-between gap-2 flex-wrap text-[11px] text-[#e4beba]">
         <span>Số cảnh báo mỗi ngày (mọi loại, trong khoảng ngày đã chọn)</span>
         <span class="flex items-center gap-3 flex-wrap">
           <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#ff5451] inline-block"></span>Lửa</span>
@@ -467,30 +464,29 @@
         </span>
       </div>
       <div id="histChart" class="h-44 p-2 rounded-lg bg-[#0a0d14] border border-[#262a34] flex items-end gap-1 overflow-hidden">
-        <div class="w-full self-center text-center text-[12px] font-mono text-[#8a8f9d]">Chưa tải dữ liệu</div>
+        <div class="w-full self-center text-center text-[12px] text-[#8a8f9d]">Chưa tải dữ liệu</div>
       </div>
-      <div id="histChartLabels" class="flex gap-1 px-2 text-[9.5px] font-mono text-[#8a8f9d]"></div>
+      <div id="histChartLabels" class="flex gap-1 px-2 text-[9.5px] text-[#8a8f9d]"></div>
     </div>
 
     <div class="overflow-x-auto max-h-[28rem]">
-      <table class="w-full text-left font-mono text-[12px]">
+      <table class="w-full text-left text-[12px]">
         <thead class="sticky top-0 bg-[#1c1f29] border-b border-[#31353f] z-10">
           <tr class="text-[#e4beba]">
-            <th class="py-2.5 px-3">MÃ #ID</th>
-            <th class="py-2.5 px-3">THIẾT BỊ</th>
-            <th class="py-2.5 px-3">KHU VỰC</th>
-            <th class="py-2.5 px-3">LOẠI</th>
-            <th class="py-2.5 px-3">MỨC ĐỘ</th>
-            <th class="py-2.5 px-3">THỜI GIAN</th>
-            <th class="py-2.5 px-3">ẢNH</th>
-            <th class="py-2.5 px-3">SMS</th>
-            <th class="py-2.5 px-3">TRẠNG THÁI</th>
-            <th class="py-2.5 px-3">NGƯỜI XÁC NHẬN</th>
-            <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
+            <th class="py-2.5 px-3">Mã</th>
+            <th class="py-2.5 px-3">Thiết bị</th>
+            <th class="py-2.5 px-3">Khu vực</th>
+            <th class="py-2.5 px-3">Loại</th>
+            <th class="py-2.5 px-3">Mức độ</th>
+            <th class="py-2.5 px-3">Thời gian</th>
+            <th class="py-2.5 px-3">Ảnh</th>
+            <th class="py-2.5 px-3">Trạng thái</th>
+            <th class="py-2.5 px-3">Người xác nhận</th>
+            <th class="py-2.5 px-3 text-right">Tác vụ</th>
           </tr>
         </thead>
         <tbody id="historyTableBody" class="divide-y divide-[#262a34]">
-          <tr><td colspan="11" class="py-6 text-center text-[#e4beba]">Chọn khoảng ngày rồi bấm Lọc.</td></tr>
+          <tr><td colspan="10" class="py-6 text-center text-[#e4beba]">Chọn khoảng ngày rồi bấm Lọc.</td></tr>
         </tbody>
       </table>
     </div>
@@ -500,34 +496,34 @@
 
   <div data-tab-panel="manage" class="hidden flex flex-col gap-5">
 
-  <!-- ==================== QUẢN LÝ TRẠM GIÁM SÁT (DEVICES, CHỈ ADMIN) ==================== -->
-  <section class="admin-only hidden bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+  <!-- quản lý trạm giám sát -->
+  <section class="admin-only hidden bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col gap-3">
     <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5 gap-3 flex-wrap">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">settings_input_antenna</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Quản Lý Trạm Giám Sát</h2>
+        <h2 class="text-[15px] font-bold text-white">Quản lý trạm</h2>
       </div>
       <div class="flex items-center gap-2">
-        <span id="deviceMgmtNote" class="text-[11px] font-mono text-[#e4beba]">Chỉ quản trị viên được thêm, sửa, xoá trạm</span>
-        <button type="button" onclick="openDeviceModal(null)" class="admin-only hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-mono font-bold transition-all">
+        <span id="deviceMgmtNote" class="text-[11px] text-[#e4beba]">Chỉ quản trị viên được thêm, sửa, xoá trạm</span>
+        <button type="button" onclick="openDeviceModal(null)" class="admin-only hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-bold transition-all">
           <span class="material-symbols-outlined text-[15px]">add_circle</span>
-          <span>+ Thêm Trạm Mới</span>
+          <span>+ Thêm trạm</span>
         </button>
       </div>
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-left font-mono text-[12px]">
+      <table class="w-full text-left text-[12px]">
         <thead>
           <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
-            <th class="py-2.5 px-3">MÃ TRẠM</th>
-            <th class="py-2.5 px-3">TÊN TRẠM</th>
-            <th class="py-2.5 px-3">KHU VỰC</th>
-            <th class="py-2.5 px-3">LOẠI THIẾT BỊ</th>
-            <th class="py-2.5 px-3">ĐỊA CHỈ IP</th>
-            <th class="py-2.5 px-3">TRẠNG THÁI</th>
-            <th class="py-2.5 px-3">SỐ ĐO CUỐI</th>
-            <th class="admin-only hidden py-2.5 px-3 text-right">TÁC VỤ</th>
+            <th class="py-2.5 px-3">Mã trạm</th>
+            <th class="py-2.5 px-3">Tên trạm</th>
+            <th class="py-2.5 px-3">Khu vực</th>
+            <th class="py-2.5 px-3">Loại thiết bị</th>
+            <th class="py-2.5 px-3">Địa chỉ IP</th>
+            <th class="py-2.5 px-3">Trạng thái</th>
+            <th class="py-2.5 px-3">Số đo cuối</th>
+            <th class="admin-only hidden py-2.5 px-3 text-right">Tác vụ</th>
           </tr>
         </thead>
         <tbody id="deviceMgmtBody" class="divide-y divide-[#262a34]">
@@ -537,34 +533,34 @@
     </div>
   </section>
 
-  <!-- ==================== SECTION 3: CÁN BỘ & NGƯỜI DÙNG (USERS) ==================== -->
-  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+  <!-- cán bộ & người dùng -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col gap-3">
     <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">group</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Cán Bộ Trực Ban & Người Nhận SMS Cảnh Báo</h2>
+        <h2 class="text-[15px] font-bold text-white">Cán bộ trực</h2>
       </div>
       <div class="flex items-center gap-2">
-        <span class="admin-only hidden text-[11px] font-mono text-[#e4beba] md:inline">Quản lý tài khoản và số điện thoại nhận SMS</span>
-        <button onclick="openRegisterModal()" class="admin-only hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-mono font-bold transition-all">
+        <span class="admin-only hidden text-[11px] text-[#e4beba] md:inline">Tài khoản đăng nhập của cán bộ</span>
+        <button onclick="openRegisterModal()" class="admin-only hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-bold transition-all">
           <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span>+ Đăng Ký Cán Bộ Mới</span>
+          <span>+ Thêm cán bộ</span>
         </button>
       </div>
     </div>
 
     <div class="overflow-x-auto">
-      <table class="w-full text-left font-mono text-[12px]">
+      <table class="w-full text-left text-[12px]">
         <thead>
           <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
-            <th class="py-2.5 px-3">MÃ</th>
-            <th class="py-2.5 px-3">HỌ VÀ TÊN</th>
-            <th class="py-2.5 px-3">TÊN ĐĂNG NHẬP</th>
-            <th class="py-2.5 px-3">VAI TRÒ</th>
-            <th class="admin-only hidden py-2.5 px-3">SỐ ĐIỆN THOẠI (NHẬN SMS)</th>
-            <th class="admin-only hidden py-2.5 px-3">EMAIL LIÊN HỆ</th>
-            <th class="py-2.5 px-3">NGÀY ĐĂNG KÝ</th>
-            <th class="admin-only hidden py-2.5 px-3 text-right">TÁC VỤ</th>
+            <th class="py-2.5 px-3">Mã</th>
+            <th class="py-2.5 px-3">Họ và tên</th>
+            <th class="py-2.5 px-3">Tên đăng nhập</th>
+            <th class="py-2.5 px-3">Vai trò</th>
+            <th class="admin-only hidden py-2.5 px-3">Số điện thoại</th>
+            <th class="admin-only hidden py-2.5 px-3">Email liên hệ</th>
+            <th class="py-2.5 px-3">Ngày đăng ký</th>
+            <th class="admin-only hidden py-2.5 px-3 text-right">Tác vụ</th>
           </tr>
         </thead>
         <tbody id="usersTableBody" class="divide-y divide-[#262a34]">
@@ -579,52 +575,52 @@
   </div>
 
   </div>
-  <!-- ==================== HẾT DASHBOARD ==================== -->
+  <!-- hết dashboard -->
 
-  <!-- ==================== MODAL ĐĂNG KÝ CÁN BỘ (CHỈ ADMIN) ==================== -->
-  <div id="registerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
-    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4 relative">
+  <!-- modal đăng ký cán bộ -->
+  <div id="registerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80-md p-4 transition-all">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 flex flex-col gap-4 relative">
       <button onclick="closeRegisterModal()" class="absolute top-4 right-4 text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all" title="Đóng">
         <span class="material-symbols-outlined text-[20px]">close</span>
       </button>
 
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-[#4cd7f6] flex items-center justify-center text-[#003640] font-bold shadow-md">
+        <div class="w-10 h-10 rounded-xl bg-[#4cd7f6] flex items-center justify-center text-[#003640] font-bold">
           <span class="material-symbols-outlined text-[24px]">person_add</span>
         </div>
         <div>
-          <h3 class="text-[17px] font-bold text-white tracking-tight">Đăng Ký Cán Bộ Mới</h3>
-          <p class="text-[11px] font-mono text-[#8a8f9d]">Chỉ quản trị viên được tạo tài khoản và chọn vai trò</p>
+          <h3 class="text-[17px] font-bold text-white">Thêm cán bộ</h3>
+          <p class="text-[11px] text-[#8a8f9d]">Chỉ quản trị viên được tạo tài khoản và chọn vai trò</p>
         </div>
       </div>
 
       <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="flex flex-col gap-3" autocomplete="off">
-        <div id="regAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+        <div id="regAlert" class="hidden p-2.5 rounded-lg text-[11px]"></div>
 
         <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label for="regUsername" class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập *:</label>
-            <input id="regUsername" type="text" required maxlength="50" placeholder="user_moi" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label for="regUsername" class="block text-[11px] text-[#e4beba] mb-1">Tên đăng nhập *:</label>
+            <input id="regUsername" type="text" required maxlength="50" placeholder="user_moi" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
           </div>
           <div>
-            <label for="regPassword" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu * (≥ 6 ký tự):</label>
-            <input id="regPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label for="regPassword" class="block text-[11px] text-[#e4beba] mb-1">Mật khẩu * (≥ 6 ký tự):</label>
+            <input id="regPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
           </div>
         </div>
 
         <div>
-          <label for="regFullName" class="block text-[11px] font-mono text-[#e4beba] mb-1">Họ và tên cán bộ *:</label>
-          <input id="regFullName" type="text" required maxlength="100" placeholder="Ví dụ: Lê Hoàng Nam" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label for="regFullName" class="block text-[11px] text-[#e4beba] mb-1">Họ và tên cán bộ *:</label>
+          <input id="regFullName" type="text" required maxlength="100" placeholder="Ví dụ: Lê Hoàng Nam" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
         </div>
 
         <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label for="regPhone" class="block text-[11px] font-mono text-[#e4beba] mb-1">Số ĐT (Nhận SMS):</label>
-            <input id="regPhone" type="tel" maxlength="15" placeholder="09xxxxxxxx" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label for="regPhone" class="block text-[11px] text-[#e4beba] mb-1">Số điện thoại:</label>
+            <input id="regPhone" type="tel" maxlength="15" placeholder="09xxxxxxxx" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
           </div>
           <div>
-            <label for="regRole" class="block text-[11px] font-mono text-[#e4beba] mb-1">Vai trò:</label>
-            <select id="regRole" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label for="regRole" class="block text-[11px] text-[#e4beba] mb-1">Vai trò:</label>
+            <select id="regRole" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
               <option value="User">Giám sát viên</option>
               <option value="Admin">Quản trị viên</option>
             </select>
@@ -632,54 +628,54 @@
         </div>
 
         <div>
-          <label for="regEmail" class="block text-[11px] font-mono text-[#e4beba] mb-1">Email liên hệ:</label>
-          <input id="regEmail" type="email" maxlength="100" placeholder="canbo@smartfire.vn" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label for="regEmail" class="block text-[11px] text-[#e4beba] mb-1">Email liên hệ:</label>
+          <input id="regEmail" type="email" maxlength="100" placeholder="canbo@smartfire.vn" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
         </div>
 
-        <button type="submit" id="btnRegSubmit" class="w-full py-2.5 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg mt-1">
+        <button type="submit" id="btnRegSubmit" class="w-full py-2.5 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 mt-1">
           <span class="material-symbols-outlined text-[18px]">person_add</span>
-          <span>Tạo Tài Khoản</span>
+          <span>Tạo tài khoản</span>
         </button>
       </form>
     </div>
   </div>
 
-  <!-- ==================== MODAL ĐỔI MẬT KHẨU ==================== -->
-  <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 relative">
+  <!-- modal đổi mật khẩu -->
+  <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80-md p-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4 relative">
       <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all" title="Đóng">
         <span class="material-symbols-outlined text-[20px]">close</span>
       </button>
-      <h3 class="text-[17px] font-bold text-white tracking-tight">Đổi Mật Khẩu</h3>
+      <h3 class="text-[17px] font-bold text-white">Đổi mật khẩu</h3>
       <form id="passwordForm" onsubmit="handlePasswordSubmit(event)" class="flex flex-col gap-3">
-        <div id="pwdAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+        <div id="pwdAlert" class="hidden p-2.5 rounded-lg text-[11px]"></div>
         <div>
-          <label for="pwdCurrent" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu hiện tại:</label>
-          <input id="pwdCurrent" type="password" required autocomplete="current-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label for="pwdCurrent" class="block text-[11px] text-[#e4beba] mb-1">Mật khẩu hiện tại:</label>
+          <input id="pwdCurrent" type="password" required autocomplete="current-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
         </div>
         <div>
-          <label for="pwdNew" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu mới (≥ 6 ký tự):</label>
-          <input id="pwdNew" type="password" required minlength="6" autocomplete="new-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label for="pwdNew" class="block text-[11px] text-[#e4beba] mb-1">Mật khẩu mới (≥ 6 ký tự):</label>
+          <input id="pwdNew" type="password" required minlength="6" autocomplete="new-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
         </div>
         <div>
-          <label for="pwdConfirm" class="block text-[11px] font-mono text-[#e4beba] mb-1">Nhập lại mật khẩu mới:</label>
-          <input id="pwdConfirm" type="password" required minlength="6" autocomplete="new-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label for="pwdConfirm" class="block text-[11px] text-[#e4beba] mb-1">Nhập lại mật khẩu mới:</label>
+          <input id="pwdConfirm" type="password" required minlength="6" autocomplete="new-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] text-white outline-none transition-all">
         </div>
-        <button type="submit" id="btnPwdSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold font-mono rounded-xl text-[13px] transition-all">Lưu mật khẩu mới</button>
+        <button type="submit" id="btnPwdSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold rounded-xl text-[13px] transition-all">Lưu mật khẩu mới</button>
       </form>
     </div>
   </div>
 
-  <!-- ==================== MODAL XEM ẢNH BẰNG CHỨNG ==================== -->
-  <div id="snapshotModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-3xl p-4 shadow-2xl flex flex-col gap-3 relative">
+  <!-- modal xem ảnh bằng chứng -->
+  <div id="snapshotModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85-md p-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-3xl p-4 flex flex-col gap-3 relative">
       <div class="flex items-center justify-between gap-2">
         <div>
-          <h3 id="snapshotTitle" class="text-[15px] font-bold text-white tracking-tight">Ảnh bằng chứng</h3>
-          <p id="snapshotSubtitle" class="text-[11px] font-mono text-[#8a8f9d]"></p>
+          <h3 id="snapshotTitle" class="text-[15px] font-bold text-white">Ảnh bằng chứng</h3>
+          <p id="snapshotSubtitle" class="text-[11px] text-[#8a8f9d]"></p>
         </div>
         <div class="flex items-center gap-2">
-          <a id="snapshotDownload" href="#" download class="px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] font-mono text-[#dfe2ef] flex items-center gap-1.5 transition-all">
+          <a id="snapshotDownload" href="#" download class="px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] text-[#dfe2ef] flex items-center gap-1.5 transition-all">
             <span class="material-symbols-outlined text-[15px]">download</span>
             <span>Tải ảnh</span>
           </a>
@@ -690,40 +686,40 @@
       </div>
       <div class="relative w-full bg-[#0a0d14] rounded-lg border border-[#262a34] flex items-center justify-center min-h-[240px]">
         <img id="snapshotImg" class="max-w-full max-h-[70vh] object-contain" alt="Ảnh bằng chứng do Pi chụp">
-        <span id="snapshotError" class="hidden absolute text-[12px] font-mono text-[#ffdad6]">Không tải được ảnh.</span>
+        <span id="snapshotError" class="hidden absolute text-[12px] text-[#ffdad6]">Không tải được ảnh.</span>
       </div>
     </div>
   </div>
 
-  <!-- ==================== MODAL THÊM / SỬA TRẠM (CHỈ ADMIN) ==================== -->
-  <div id="deviceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col gap-3">
+  <!-- modal thêm / sửa trạm -->
+  <div id="deviceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80-md p-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-lg p-5 flex flex-col gap-3">
       <div class="flex items-center justify-between">
-        <h3 id="devModalTitle" class="text-[15px] font-bold text-white tracking-tight">Thêm trạm giám sát</h3>
+        <h3 id="devModalTitle" class="text-[15px] font-bold text-white">Thêm trạm giám sát</h3>
         <button type="button" onclick="closeDeviceModal()" class="text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all" title="Đóng">
           <span class="material-symbols-outlined text-[20px]">close</span>
         </button>
       </div>
-      <div id="devAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
-      <form id="deviceForm" onsubmit="handleDeviceSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[11px] text-[#e4beba]">
+      <div id="devAlert" class="hidden p-2.5 rounded-lg text-[11px]"></div>
+      <form id="deviceForm" onsubmit="handleDeviceSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] text-[#e4beba]">
         <label class="flex flex-col gap-1">Mã trạm (DEVICE_ID trên Pi)
-          <input id="devId" type="text" required maxlength="20" pattern="[A-Za-z0-9_\-]+" placeholder="PI-01" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+          <input id="devId" type="text" required maxlength="20" pattern="[A-Za-z0-9_\-]+" placeholder="PI-01" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[#4cd7f6]">
         </label>
         <label class="flex flex-col gap-1">Tên trạm
-          <input id="devName" type="text" required maxlength="100" placeholder="Pi Kho A" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+          <input id="devName" type="text" required maxlength="100" placeholder="Pi Kho A" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[#4cd7f6]">
         </label>
         <label class="flex flex-col gap-1">Khu vực
-          <input id="devZone" type="text" required maxlength="100" list="devZoneList" placeholder="Kho hàng A" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+          <input id="devZone" type="text" required maxlength="100" list="devZoneList" placeholder="Kho hàng A" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[#4cd7f6]">
           <datalist id="devZoneList"></datalist>
         </label>
         <label class="flex flex-col gap-1">Loại thiết bị
-          <input id="devType" type="text" maxlength="50" placeholder="RaspberryPi-5" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+          <input id="devType" type="text" maxlength="50" placeholder="RaspberryPi-5" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[#4cd7f6]">
         </label>
         <label class="flex flex-col gap-1">Địa chỉ IP (để trống nếu dùng DHCP)
-          <input id="devIp" type="text" maxlength="15" placeholder="192.168.1.101" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+          <input id="devIp" type="text" maxlength="15" placeholder="192.168.1.101" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[#4cd7f6]">
         </label>
         <label class="flex flex-col gap-1">Trạng thái
-          <select id="devStatus" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+          <select id="devStatus" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] text-white focus:outline-none focus:border-[#4cd7f6]">
             <option value="Active">Hoạt động</option>
             <option value="Inactive">Ngừng hoạt động</option>
             <option value="Maintenance">Bảo trì</option>
@@ -740,13 +736,11 @@
   <!-- Toast notification -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <!-- JS logic -->
   <script>
     'use strict';
 
-    // ========================================================
-    // TIỆN ÍCH CHUNG
-    // ========================================================
+    // --- tiện ích chung ---
     const el = (id) => document.getElementById(id);
 
     // Mọi chuỗi lấy từ CSDL / người dùng đều phải qua hàm này trước khi đưa vào innerHTML (chống XSS)
@@ -778,7 +772,7 @@
     // Hiển thị tiếng Việt, giá trị trong CSDL giữ nguyên
     const SEVERITY_TEXT = { High: 'Mức 2 – Khẩn cấp', Medium: 'Mức 1 – Cảnh báo sớm', Low: 'Thấp' };
     const ALERT_TYPE_TEXT = { Fire: 'Lửa', Smoke: 'Khói', HighTemperature: 'Nhiệt độ cao', HighGas: 'Khí gas cao' };
-    const DEVICE_STATUS_TEXT = { Active: 'HOẠT ĐỘNG', Inactive: 'NGỪNG HOẠT ĐỘNG', Maintenance: 'BẢO TRÌ' };
+    const DEVICE_STATUS_TEXT = { Active: 'Hoạt động', Inactive: 'Ngừng hoạt động', Maintenance: 'Bảo trì' };
     const ROLE_TEXT = { Admin: 'Quản trị viên', User: 'Giám sát viên' };
     const LEVEL_TEXT = ['Bình thường', 'Mức 1', 'Mức 2'];
 
@@ -811,7 +805,7 @@
         success: 'bg-[#181b25] border-[#4cd7f6] text-[#4cd7f6]',
         error: 'bg-[#93000a] border-[#ff5451] text-[#ffdad6]'
       };
-      toast.className = `p-3 rounded-lg border shadow-xl text-[12px] font-mono flex items-center gap-2 pointer-events-auto transition-all duration-300 ${colors[type] || colors.info}`;
+      toast.className = `p-3 rounded-lg border shadow-xl text-[12px] flex items-center gap-2 pointer-events-auto transition-all duration-300 ${colors[type] || colors.info}`;
       const icon = document.createElement('span');
       icon.className = 'material-symbols-outlined text-[16px]';
       icon.textContent = type === 'error' ? 'error' : (type === 'success' ? 'check_circle' : 'info');
@@ -822,9 +816,7 @@
       setTimeout(() => { toast.remove(); }, 4000);
     }
 
-    // ========================================================
-    // GỌI WEB API (cookie đăng nhập gửi kèm tự động, 401 -> về màn hình đăng nhập)
-    // ========================================================
+    // --- gọi API (cookie gửi kèm, 401 thì về màn hình đăng nhập) ---
     async function api(url, options = {}) {
       const headers = { 'Accept': 'application/json' };
       if (options.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -848,9 +840,7 @@
       return { ok: res.ok, status: res.status, body: body || {} };
     }
 
-    // ========================================================
-    // ĐĂNG NHẬP / ĐĂNG XUẤT
-    // ========================================================
+    // --- đăng nhập / đăng xuất ---
     let currentUser = null;
     let lastData = null;
     let pollTimer = null;
@@ -866,11 +856,11 @@
       const box = el('loginAlert');
       if (message) {
         box.className = isError
-          ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
-          : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+          ? 'p-2.5 rounded-lg text-[11px] bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+          : 'p-2.5 rounded-lg text-[11px] bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
         box.textContent = message;
       } else {
-        box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono';
+        box.className = 'hidden p-2.5 rounded-lg text-[11px]';
         box.textContent = '';
       }
       el('loginPassword').value = '';
@@ -971,9 +961,7 @@
       }
     });
 
-    // ========================================================
-    // ÂM THANH BÁO ĐỘNG (Web Audio API, không cần file âm thanh)
-    // ========================================================
+    // --- âm thanh báo động (Web Audio, không cần file âm thanh) ---
     const sound = { ctx: null, enabled: storageGet('smartfire_sound') !== 'off' };
 
     function unlockAudio() {
@@ -1057,9 +1045,7 @@
       showToast(`Cảnh báo mới: ${severityText(top.severity)} – ${alertTypeText(top.alertType)} tại ${top.deviceName || top.deviceId}`, 'error');
     }
 
-    // ========================================================
-    // DỮ LIỆU DASHBOARD
-    // ========================================================
+    // --- dữ liệu dashboard ---
     async function fetchDashboardData(showNotify = false) {
       if (!currentUser || dashLoading) return;
       dashLoading = true;
@@ -1098,15 +1084,13 @@
       }
     }
 
-    // ========================================================
-    // QUẢN LÝ CÁN BỘ (CHỈ ADMIN)
-    // ========================================================
+    // --- quản lý cán bộ (chỉ admin) ---
     function setRegAlert(message, isError) {
       const box = el('regAlert');
-      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono'; box.textContent = ''; return; }
+      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px]'; box.textContent = ''; return; }
       box.className = isError
-        ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
-        : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+        ? 'p-2.5 rounded-lg text-[11px] bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+        : 'p-2.5 rounded-lg text-[11px] bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
       box.textContent = message;
     }
 
@@ -1193,15 +1177,13 @@
       else if (btn.dataset.action === 'delete-user') confirmDeleteUser(id);
     });
 
-    // ========================================================
-    // ĐỔI MẬT KHẨU
-    // ========================================================
+    // --- đổi mật khẩu ---
     function setPwdAlert(message, isError) {
       const box = el('pwdAlert');
-      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono'; box.textContent = ''; return; }
+      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px]'; box.textContent = ''; return; }
       box.className = isError
-        ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
-        : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+        ? 'p-2.5 rounded-lg text-[11px] bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+        : 'p-2.5 rounded-lg text-[11px] bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
       box.textContent = message;
     }
 
@@ -1237,14 +1219,12 @@
       }
     }
 
-    // ========================================================
-    // XEM ẢNH BẰNG CHỨNG (ảnh do Pi chụp, lưu trong AlertHistory)
-    // ========================================================
+    // --- xem ảnh bằng chứng (Pi chụp, lưu trong AlertHistory) ---
     function openSnapshotModal(alertId) {
       const a = (lastData && lastData.alerts ? lastData.alerts.find(x => toInt(x.alertId) === alertId) : null)
         || hist.rows.find(x => toInt(x.alertId) === alertId) || null;
       const url = `/api/alerts/${alertId}/snapshot`;
-      el('snapshotTitle').textContent = `Ảnh bằng chứng — cảnh báo #${alertId}`;
+      el('snapshotTitle').textContent = `Ảnh bằng chứng cảnh báo #${alertId}`;
       el('snapshotSubtitle').textContent = a
         ? `${a.deviceId} (${a.deviceName}) • ${alertTypeText(a.alertType)} • ${severityText(a.severity)} • ${fmtDateTime(a.alertTime)}`
         : '';
@@ -1363,12 +1343,12 @@
       const fps = el('camFpsBadge');
 
       const badgeStyles = {
-        off: ['bg-[#1c1f29] text-[#8a8f9d] border-[#31353f]', 'bg-[#8a8f9d]', 'CHƯA KẾT NỐI'],
-        connecting: ['bg-[#ee9800]/20 text-[#ffb95f] border-[#ffb95f]/40', 'bg-[#ffb95f] animate-pulse', 'ĐANG KẾT NỐI'],
-        live: ['bg-[#009eb9]/20 text-[#4cd7f6] border-[#4cd7f6]/30', 'bg-[#4cd7f6] animate-pulse', 'TRỰC TIẾP'],
-        lost: ['bg-[#93000a] text-[#ffdad6] border-[#ff5451]', 'bg-[#ff5451] animate-ping', 'MẤT TÍN HIỆU']
+        off: ['bg-[#1c1f29] text-[#8a8f9d] border-[#31353f]', 'bg-[#8a8f9d]', 'Chưa kết nối'],
+        connecting: ['bg-[#ee9800]/20 text-[#ffb95f] border-[#ffb95f]/40', 'bg-[#ffb95f]', 'Đang kết nối'],
+        live: ['bg-[#009eb9]/20 text-[#4cd7f6] border-[#4cd7f6]/30', 'bg-[#4cd7f6]', 'Trực tiếp'],
+        lost: ['bg-[#93000a] text-[#ffdad6] border-[#ff5451]', 'bg-[#ff5451]', 'Mất tín hiệu']
       }[state];
-      badge.className = `flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${badgeStyles[0]}`;
+      badge.className = `flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold border ${badgeStyles[0]}`;
       badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${badgeStyles[1]}"></span><span>${badgeStyles[2]}</span>`;
 
       placeholder.classList.toggle('hidden', state === 'live' || state === 'lost');
@@ -1545,7 +1525,7 @@
         const a = document.createElement('a');
         const url = URL.createObjectURL(new Blob([cam.lastFrame], { type: 'image/jpeg' }));
         a.href = url;
-        a.download = `FireGuard_camera_${stamp}.jpg`;
+        a.download = `camera_${stamp}.jpg`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         showToast('Đã lưu khung hình hiện tại của camera Pi.', 'success');
@@ -1559,7 +1539,7 @@
         canvas.getContext('2d').drawImage(img, 0, 0);
         const a = document.createElement('a');
         a.href = canvas.toDataURL('image/jpeg', 0.92);
-        a.download = `FireGuard_camera_${stamp}.jpg`;
+        a.download = `camera_${stamp}.jpg`;
         a.click();
         showToast('Đã lưu khung hình hiện tại của camera Pi.', 'success');
       } catch (e) {
@@ -1567,9 +1547,7 @@
       }
     }
 
-    // ========================================================
-    // ĐỒNG BỘ DỮ LIỆU TỪ CSDL VÀO GIAO DIỆN (REST + SignalR)
-    // ========================================================
+    // --- đổ dữ liệu từ CSDL vào giao diện (REST + SignalR) ---
     function tempCell(value, recordedAt, big) {
       const v = fmtNumber(value);
       if (v === null) {
@@ -1593,27 +1571,27 @@
 
     function smokeText(level, detected) {
       const lv = fmtNumber(level, 0);
-      return (lv !== null ? lv + '% · ' : '') + (detected ? 'CÓ KHÓI' : 'Không');
+      return detected ? 'Có khói' : 'Không';
     }
 
     function renderStatusBadges(data) {
       const dbBadge = el('dbStatusBadge');
       if (data.isConnected) {
         dbBadge.className = 'flex items-center gap-1.5 text-[#4cd7f6]';
-        dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6] animate-pulse"></span> CSDL: TRỰC TUYẾN';
+        dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> CSDL: đã kết nối';
       } else {
         dbBadge.className = 'flex items-center gap-1.5 text-[#ff5451]';
-        dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ff5451]"></span> CSDL: MẤT KẾT NỐI';
+        dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ff5451]"></span> CSDL: mất kết nối';
       }
 
       const mqttBadge = el('mqttStatusBadge');
       if (data.mqttConnected) {
         mqttBadge.className = 'flex items-center gap-1.5 text-[#4cd7f6]';
-        mqttBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> MQTT: ĐÃ KẾT NỐI';
+        mqttBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> MQTT: đã kết nối';
         mqttBadge.title = '';
       } else {
         mqttBadge.className = 'flex items-center gap-1.5 text-[#ffb95f]';
-        mqttBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ffb95f] animate-pulse"></span> MQTT: MẤT KẾT NỐI (đang thử lại)';
+        mqttBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ffb95f]"></span> MQTT: mất kết nối, đang thử lại';
         mqttBadge.title = data.mqttError || '';
       }
 
@@ -1623,14 +1601,14 @@
       const safetyBadge = el('systemSafetyBadge');
       const pending = toInt(data.kpis && data.kpis.pendingAlerts);
       if (!data.isConnected) {
-        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ee9800]/20 text-[#ffb95f] border border-[#ffb95f]/40 text-[12px] font-mono font-bold';
-        safetyBadge.innerHTML = '<span class="material-symbols-outlined text-[16px]">help</span> HỆ THỐNG: KHÔNG RÕ (LỖI CSDL)';
+        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ee9800]/20 text-[#ffb95f] border border-[#ffb95f]/40 text-[12px] font-bold';
+        safetyBadge.innerHTML = '<span class="material-symbols-outlined text-[16px]">help</span> Không đọc được CSDL';
       } else if (pending > 0) {
-        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#93000a] text-[#ffdad6] border border-[#ff5451] text-[12px] font-mono font-bold animate-pulse';
-        safetyBadge.innerHTML = `<span class="material-symbols-outlined text-[16px]">warning</span> BÁO ĐỘNG: CÓ ${pending} SỰ CỐ CẦN XỬ LÝ!`;
+        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#93000a] text-[#ffdad6] border border-[#ff5451] text-[12px] font-bold';
+        safetyBadge.innerHTML = `<span class="material-symbols-outlined text-[16px]">warning</span> ${pending} cảnh báo chưa xử lý`;
       } else {
-        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/40 text-[12px] font-mono font-bold';
-        safetyBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> HỆ THỐNG: AN TOÀN';
+        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/40 text-[12px] font-bold';
+        safetyBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> Bình thường';
       }
     }
 
@@ -1650,10 +1628,10 @@
           const p = pis.find(x => x.deviceId === id);
           const c = cams.find(x => x.deviceId === id);
           const bits = [];
-          if (p) { bits.push(p.online ? 'Pi trực tuyến' : 'PI NGOẠI TUYẾN'); if (!p.online) anyBad = true; }
+          if (p) { bits.push(p.online ? 'Pi trực tuyến' : 'Pi mất kết nối'); if (!p.online) anyBad = true; }
           // Pi ngoại tuyến thì trạng thái camera cũ không còn ý nghĩa
           if (c && (!p || p.online)) {
-            bits.push(c.cameraOk === true ? 'camera hoạt động' : (c.cameraOk === false ? 'CAMERA MẤT TÍN HIỆU' : 'camera không rõ'));
+            bits.push(c.cameraOk === true ? 'camera hoạt động' : (c.cameraOk === false ? 'mất tín hiệu camera' : 'camera không rõ'));
             if (c.cameraOk === false) anyBad = true;
             if (c.cameraSmoke) bits.push('AI thấy khói');
           }
@@ -1668,15 +1646,14 @@
       const card = el('cameraCard');
       const danger = (data.devices || []).some(d => toInt(d.alertLevel) >= 2);
       card.classList.toggle('border-[#ff5451]', danger);
-      card.classList.toggle('shadow-[0_0_25px_rgba(255,84,81,0.25)]', danger);
-      if (fireDevs.length === 0) {
+            if (fireDevs.length === 0) {
         aiLine.className = 'text-[#8a8f9d]';
         aiLine.textContent = 'AI trên Pi (bản ghi mới nhất): không phát hiện lửa';
       } else {
         aiLine.className = 'text-[#ff5451] font-bold';
         aiLine.textContent = 'AI trên Pi phát hiện lửa: ' + fireDevs.map(d => {
           const conf = fmtNumber(d.confidenceScore);
-          return `${d.deviceId} (${d.deviceName})${conf !== null ? ' – độ tin cậy ' + conf + '%' : ''}`;
+          return `${d.deviceId} (${d.deviceName})${conf !== null ? ', độ tin cậy ' + conf + '%' : ''}`;
         }).join(' | ');
       }
     }
@@ -1692,13 +1669,13 @@
         const id = toInt(u.userId);
         const isMe = currentUser && currentUser.userId === id;
         const roleBadge = u.role === 'Admin'
-          ? '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] border border-[#ff5451]/30">QUẢN TRỊ VIÊN</span>'
-          : '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] font-bold text-[10px] border border-[#4cd7f6]/30">GIÁM SÁT VIÊN</span>';
+          ? '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] border border-[#ff5451]/30">Quản trị viên</span>'
+          : '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] font-bold text-[10px] border border-[#4cd7f6]/30">Giám sát viên</span>';
         const name = String(u.fullName || '');
         const initial = (name.trim().split(/\s+/).pop() || '?').charAt(0).toUpperCase();
         const actionCell = !admin ? '' : `<td class="py-2.5 px-3 text-right">${isMe
-          ? '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] font-bold border border-[#4cd7f6]/30">BẠN</span>'
-          : `<button data-action="delete-user" data-id="${id}" class="px-2 py-1 rounded bg-[#ff5451]/10 hover:bg-[#ff5451]/20 text-[#ff5451] text-[10.5px] transition-all font-mono border border-[#ff5451]/30">Xóa</button>`}</td>`;
+          ? '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] font-bold border border-[#4cd7f6]/30">Bạn</span>'
+          : `<button data-action="delete-user" data-id="${id}" class="px-2 py-1 rounded bg-[#ff5451]/10 hover:bg-[#ff5451]/20 text-[#ff5451] text-[10.5px] transition-all border border-[#ff5451]/30">Xóa</button>`}</td>`;
         const contactCells = !admin ? '' : `
             <td class="py-2.5 px-3 text-[#ffb95f] font-bold">${escapeHtml(u.phoneNumber) || 'Chưa cài đặt'}</td>
             <td class="py-2.5 px-3 text-[#e4beba]">${escapeHtml(u.email) || '—'}</td>`;
@@ -1709,7 +1686,7 @@
               <div class="flex items-center gap-2">
                 <div class="w-6 h-6 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[10px] text-[#4cd7f6] font-bold">${escapeHtml(initial)}</div>
                 <span>${escapeHtml(name)}</span>
-                ${isMe ? '<span class="text-[9px] font-mono text-[#4cd7f6] ml-1">(Đang đăng nhập)</span>' : ''}
+                ${isMe ? '<span class="text-[9px] text-[#4cd7f6] ml-1">(Đang đăng nhập)</span>' : ''}
               </div>
             </td>
             <td class="py-2.5 px-3 text-[#e4beba]">${escapeHtml(u.username)}</td>
@@ -1723,7 +1700,7 @@
     function renderDevices(devices) {
       const box = el('devicesContainer');
       if (!devices || devices.length === 0) {
-        box.innerHTML = '<div class="col-span-full py-6 text-center text-[#e4beba] font-mono">Hiện chưa có thiết bị nào.</div>';
+        box.innerHTML = '<div class="col-span-full py-6 text-center text-[#e4beba]">Hiện chưa có thiết bị nào.</div>';
         return;
       }
       box.innerHTML = devices.map(d => {
@@ -1731,7 +1708,7 @@
         const isDanger = level >= 2;
         const isWarn = level === 1;
         const cardBorder = isDanger
-          ? 'border-[#ff5451] bg-[#ff5451]/5 shadow-[0_0_15px_rgba(255,84,81,0.2)]'
+          ? 'border-[#ff5451] bg-[#ff5451]/5'
           : (isWarn ? 'border-[#ffb95f]/60 bg-[#ffb95f]/5' : 'border-[#262a34] bg-[#181b25]');
         const statusText = DEVICE_STATUS_TEXT[d.status] || String(d.status || '');
         const statusBadge = d.status === 'Active'
@@ -1749,14 +1726,14 @@
           <div class="rounded-xl border ${cardBorder} p-3.5 flex flex-col justify-between transition-all">
             <div class="flex items-start justify-between gap-2">
               <div>
-                <span class="text-[11px] font-mono font-bold text-[#4cd7f6]">${escapeHtml(d.deviceId)}</span>
+                <span class="text-[11px] font-bold text-[#4cd7f6]">${escapeHtml(d.deviceId)}</span>
                 <h3 class="text-[14px] font-bold text-white mt-0.5">${escapeHtml(d.deviceName)}</h3>
-                <span class="text-[11px] text-[#e4beba] font-mono">${escapeHtml(d.zoneName)} • ${escapeHtml(d.deviceType)}</span>
+                <span class="text-[11px] text-[#e4beba]">${escapeHtml(d.zoneName)} • ${escapeHtml(d.deviceType)}</span>
               </div>
               <div class="flex flex-col items-end gap-1">${statusBadge}${levelBadge}</div>
             </div>
 
-            <div class="grid grid-cols-3 gap-2 my-3 p-2 rounded-lg bg-[#1c1f29] border border-[#262a34] text-center font-mono">
+            <div class="grid grid-cols-3 gap-2 my-3 p-2 rounded-lg bg-[#1c1f29] border border-[#262a34] text-center">
               <div>
                 <div class="text-[10px] text-[#e4beba]">Nhiệt độ</div>
                 <div>${tempCell(d.temperature, d.recordedAt, true)}</div>
@@ -1771,7 +1748,7 @@
               </div>
             </div>
 
-            <div class="flex items-center justify-between gap-2 text-[11px] font-mono text-[#e4beba] pt-1 border-t border-[#262a34] flex-wrap">
+            <div class="flex items-center justify-between gap-2 text-[11px] text-[#e4beba] pt-1 border-t border-[#262a34] flex-wrap">
               <span>IP: ${escapeHtml(d.ipAddress) || 'DHCP'} • Cập nhật: ${escapeHtml(fmtDateTime(d.recordedAt))}</span>
               <span class="${d.aiResult ? 'text-[#ff5451] font-bold' : 'text-[#4cd7f6]'}">${aiText}</span>
             </div>
@@ -1779,7 +1756,7 @@
       }).join('');
     }
 
-    // Một dòng cảnh báo (dùng chung cho bảng "Cảnh báo gần đây" và bảng lịch sử, 11 cột)
+    // Một dòng cảnh báo (dùng chung cho bảng "Cảnh báo gần đây" và bảng lịch sử, 10 cột)
     function alertRowHtml(a) {
       const id = toInt(a.alertId);
       const isHigh = a.severity === 'High';
@@ -1787,8 +1764,8 @@
         ? `<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px] whitespace-nowrap">${escapeHtml(severityText(a.severity))}</span>`
         : `<span class="px-2 py-0.5 rounded bg-[#ee9800]/20 text-[#ffb95f] font-bold text-[10px] whitespace-nowrap">${escapeHtml(severityText(a.severity))}</span>`;
       const statusBadge = a.acknowledged
-        ? '<span class="px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] font-bold text-[10px] whitespace-nowrap">ĐÃ XÁC NHẬN</span>'
-        : '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] animate-pulse whitespace-nowrap">CHƯA XỬ LÝ</span>';
+        ? '<span class="px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] font-bold text-[10px] whitespace-nowrap">Đã xác nhận</span>'
+        : '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] whitespace-nowrap">Chưa xử lý</span>';
       const actionBtn = a.acknowledged
         ? '<span class="text-[11px] text-[#e4beba]">Đã đóng</span>'
         : `<button data-action="ack" data-id="${id}" class="px-2.5 py-1 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold rounded text-[11px] transition-all whitespace-nowrap">Xác nhận đã xử lý</button>`;
@@ -1809,7 +1786,6 @@
             <td class="py-2.5 px-3">${sevBadge}</td>
             <td class="py-2.5 px-3 text-[#e4beba] whitespace-nowrap">${escapeHtml(fmtDateTime(a.alertTime))}</td>
             <td class="py-2.5 px-3">${snapBtn}</td>
-            <td class="py-2.5 px-3 whitespace-nowrap">${a.smsSent ? '<span class="text-[#4cd7f6]">✓ Đã gửi</span>' : '<span class="text-[#e4beba]">Chưa gửi</span>'}</td>
             <td class="py-2.5 px-3">${statusBadge}</td>
             <td class="py-2.5 px-3">${ackBy}</td>
             <td class="py-2.5 px-3 text-right">${actionBtn}</td>
@@ -1819,7 +1795,7 @@
     function renderAlerts(alerts) {
       const body = el('alertsTableBody');
       if (!alerts || alerts.length === 0) {
-        body.innerHTML = '<tr><td colspan="11" class="py-4 text-center text-[#4cd7f6]">Không có cảnh báo nào.</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" class="py-4 text-center text-[#4cd7f6]">Không có cảnh báo nào.</td></tr>';
         return;
       }
       body.innerHTML = alerts.map(alertRowHtml).join('');
@@ -1834,8 +1810,8 @@
       body.innerHTML = logs.map(l => {
         const level = toInt(l.alertLevel);
         const aiBadge = l.aiResult
-          ? '<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">CÓ LỬA</span>'
-          : '<span class="px-2 py-0.5 rounded bg-[#1c1f29] text-[#4cd7f6] text-[10px]">KHÔNG</span>';
+          ? '<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">Có lửa</span>'
+          : '<span class="px-2 py-0.5 rounded bg-[#1c1f29] text-[#4cd7f6] text-[10px]">Không</span>';
         const levelClass = level >= 2 ? 'text-[#ff5451] font-bold' : (level === 1 ? 'text-[#ffb95f] font-bold' : 'text-[#e4beba]');
         const conf = fmtNumber(l.confidenceScore);
         return `
@@ -1853,9 +1829,7 @@
       }).join('');
     }
 
-    // ========================================================
-    // CHUYỂN MỤC (Giám sát trực tiếp / Lịch sử & thống kê / Trạm & cán bộ)
-    // ========================================================
+    // --- chuyển tab ---
     const TAB_ON = ['bg-[#4cd7f6]/15', 'border-[#4cd7f6]/40', 'text-[#4cd7f6]', 'font-bold'];
     const TAB_OFF = ['bg-[#1c1f29]', 'border-[#31353f]', 'text-[#dfe2ef]', 'hover:bg-[#262a34]'];
     let currentTab = 'monitor';
@@ -1875,9 +1849,7 @@
       if (name === 'history' && !hist.loaded && !hist.loading) loadHistory(false);
     }
 
-    // ========================================================
-    // LỊCH SỬ CẢNH BÁO, THỐNG KÊ THEO NGÀY, XUẤT CSV
-    // ========================================================
+    // --- lịch sử cảnh báo, thống kê theo ngày, xuất CSV ---
     const hist = { rows: [], stats: [], from: '', to: '', limited: false, loaded: false, loading: false };
     const STAT_COLORS = { Fire: 'bg-[#ff5451]', Smoke: 'bg-[#ffb95f]', HighTemperature: 'bg-[#f3a6ff]', Other: 'bg-[#8a8f9d]' };
 
@@ -1968,7 +1940,7 @@
       el('btnHistCsv').disabled = rows.length === 0;
 
       el('historyTableBody').innerHTML = rows.length === 0
-        ? '<tr><td colspan="11" class="py-6 text-center text-[#4cd7f6]">Không có cảnh báo nào khớp bộ lọc.</td></tr>'
+        ? '<tr><td colspan="10" class="py-6 text-center text-[#4cd7f6]">Không có cảnh báo nào khớp bộ lọc.</td></tr>'
         : rows.map(alertRowHtml).join('');
 
       renderHistoryChart();
@@ -1999,7 +1971,7 @@
       }
       const max = Math.max(1, ...days.map(x => x.total));
       if (days.every(x => x.total === 0)) {
-        chart.innerHTML = '<div class="w-full self-center text-center text-[12px] font-mono text-[#8a8f9d]">Không có cảnh báo nào trong khoảng ngày này</div>';
+        chart.innerHTML = '<div class="w-full self-center text-center text-[12px] text-[#8a8f9d]">Không có cảnh báo nào trong khoảng ngày này</div>';
         labels.innerHTML = '';
         return;
       }
@@ -2014,7 +1986,7 @@
         const tip = `${x.label}: ${x.total} cảnh báo (Lửa ${x.c.Fire}, Khói ${x.c.Smoke}, Nhiệt độ cao ${x.c.HighTemperature}, Khác ${x.c.Other})`;
         return `
           <div class="flex-1 min-w-0 h-full flex flex-col justify-end items-center gap-0.5" title="${escapeHtml(tip)}">
-            ${showCount && x.total > 0 ? `<span class="text-[9.5px] font-mono font-bold text-[#ffb95f] leading-none">${x.total}</span>` : ''}
+            ${showCount && x.total > 0 ? `<span class="text-[9.5px] font-bold text-[#ffb95f] leading-none">${x.total}</span>` : ''}
             <div class="w-full max-w-[28px] flex flex-col-reverse rounded-t overflow-hidden hover:brightness-125 transition-all" style="height:${pct}%">${segs}</div>
           </div>`;
       }).join('');
@@ -2037,7 +2009,7 @@
         return;
       }
       const header = ['Mã cảnh báo', 'Thời gian', 'Mã thiết bị', 'Tên thiết bị', 'Khu vực', 'Loại cảnh báo', 'Mức độ',
-        'Trạng thái', 'Người xác nhận', 'Thời điểm xác nhận', 'SMS', 'Có ảnh'];
+        'Trạng thái', 'Người xác nhận', 'Thời điểm xác nhận', 'Có ảnh'];
       const lines = hist.rows.map(a => [
         toInt(a.alertId),
         fmtSortable(a.alertTime),
@@ -2049,7 +2021,6 @@
         a.acknowledged ? 'Đã xác nhận' : 'Chưa xử lý',
         a.acknowledgedByName || '',
         fmtSortable(a.acknowledgedAt),
-        a.smsSent ? 'Đã gửi' : 'Chưa gửi',
         a.hasSnapshot ? 'Có' : 'Không'
       ].map(csvCell).join(','));
 
@@ -2066,9 +2037,7 @@
       showToast(`Đã xuất ${hist.rows.length} dòng ra file CSV.`, 'success');
     }
 
-    // ========================================================
-    // QUẢN LÝ TRẠM GIÁM SÁT (CHỈ ADMIN)
-    // ========================================================
+    // --- quản lý trạm giám sát (chỉ admin) ---
     let deviceEditId = null;
 
     function deviceStatusBadge(status) {
@@ -2088,7 +2057,7 @@
       el('devZoneList').replaceChildren(...zones.map(z => new Option(z, z)));
 
       if (list.length === 0) {
-        body.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-[#e4beba]">Chưa có trạm nào. Bấm "+ Thêm Trạm Mới".</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-[#e4beba]">Chưa có trạm nào. Bấm "+ Thêm trạm".</td></tr>';
         return;
       }
       body.innerHTML = list.map(d => {
@@ -2112,10 +2081,10 @@
 
     function setDevAlert(message, isError) {
       const box = el('devAlert');
-      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono'; box.textContent = ''; return; }
+      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px]'; box.textContent = ''; return; }
       box.className = isError
-        ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
-        : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+        ? 'p-2.5 rounded-lg text-[11px] bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+        : 'p-2.5 rounded-lg text-[11px] bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
       box.textContent = message;
     }
 
@@ -2438,9 +2407,7 @@
       envResizeTimer = setTimeout(drawEnvChart, 150);
     });
 
-    // ========================================================
-    // CHIP CAMERA TRÊN THANH TIÊU ĐỀ: luồng tại trình duyệt + camera_ok do Pi báo qua MQTT
-    // ========================================================
+    // --- trạng thái camera trên thanh tiêu đề ---
     function renderCamChip() {
       const chip = el('camChip');
       if (!chip) return;
@@ -2451,18 +2418,18 @@
       const okCount = cams.filter(c => c.cameraOk === true && online(c.deviceId)).length;
 
       let tone = 'gray';
-      let text = 'CAMERA: CHƯA KẾT NỐI';
-      if (broken.length > 0) { tone = 'red'; text = 'CAMERA: PI BÁO MẤT TÍN HIỆU (' + broken.join(', ') + ')'; }
-      else if (cam.state === 'live') { tone = 'cyan'; text = 'CAMERA: TRỰC TIẾP'; }
-      else if (cam.state === 'lost') { tone = 'red'; text = 'CAMERA: MẤT TÍN HIỆU'; }
-      else if (cam.state === 'connecting') { tone = 'amber'; text = 'CAMERA: ĐANG KẾT NỐI'; }
-      else if (okCount > 0) { tone = 'cyan'; text = 'CAMERA: PI BÁO HOẠT ĐỘNG'; }
+      let text = 'Camera: chưa kết nối';
+      if (broken.length > 0) { tone = 'red'; text = 'Camera: Pi báo mất tín hiệu (' + broken.join(', ') + ')'; }
+      else if (cam.state === 'live') { tone = 'cyan'; text = 'Camera: trực tiếp'; }
+      else if (cam.state === 'lost') { tone = 'red'; text = 'Camera: mất tín hiệu'; }
+      else if (cam.state === 'connecting') { tone = 'amber'; text = 'Camera: đang kết nối'; }
+      else if (okCount > 0) { tone = 'cyan'; text = 'Camera: Pi báo hoạt động'; }
 
       const styles = {
         gray: ['text-[#8a8f9d]', 'bg-[#8a8f9d]'],
         cyan: ['text-[#4cd7f6]', 'bg-[#4cd7f6]'],
-        amber: ['text-[#ffb95f]', 'bg-[#ffb95f] animate-pulse'],
-        red: ['text-[#ff5451] font-bold', 'bg-[#ff5451] animate-pulse']
+        amber: ['text-[#ffb95f]', 'bg-[#ffb95f]'],
+        red: ['text-[#ff5451] font-bold', 'bg-[#ff5451]']
       }[tone];
       chip.className = `flex items-center gap-1.5 ${styles[0]}`;
       chip.innerHTML = `<span class="w-2 h-2 rounded-full ${styles[1]}"></span> ${escapeHtml(text)}`;
@@ -2476,11 +2443,11 @@
       renderStatusBadges(data);
       renderCameraInfo(data);
 
-      el('kpiActiveDevices').textContent = String(toInt(kpis.activeDevices)).padStart(2, '0');
-      el('kpiTotalDevices').textContent = `/ ${String(toInt(kpis.totalDevices)).padStart(2, '0')} Thiết bị`;
-      el('kpiPendingAlerts').textContent = String(toInt(kpis.pendingAlerts)).padStart(2, '0');
+      el('kpiActiveDevices').textContent = toInt(kpis.activeDevices);
+      el('kpiTotalDevices').textContent = `/ ${toInt(kpis.totalDevices)} thiết bị`;
+      el('kpiPendingAlerts').textContent = toInt(kpis.pendingAlerts);
       el('kpiTotalLogs').textContent = String(toInt(kpis.totalLogs));
-      el('kpiTotalUsers').textContent = String(toInt(kpis.totalUsers)).padStart(2, '0');
+      el('kpiTotalUsers').textContent = toInt(kpis.totalUsers);
 
       // Lỗi CSDL: giữ nguyên bảng đang hiện (số cũ) thay vì xoá trắng, banner đỏ đã báo lỗi
       if (!data.isConnected && (!data.devices || data.devices.length === 0)) return;

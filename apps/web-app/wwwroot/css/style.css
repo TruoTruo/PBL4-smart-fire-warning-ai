@@ -1,22 +1,15 @@
-@import url("../lib/fonts/fonts.css");   /* font đặt sẵn trong wwwroot/lib/fonts, không cần Internet */
+@import url("../lib/fonts/fonts.css");   /* icon Material Symbols, đặt sẵn trong wwwroot/lib/fonts */
 
-@layer base {
-  html, body {
-    margin: 0;
-    padding: 0;
-  }
-  body {
-    overscroll-behavior: none;
-  }
-  main > :first-child {
-    margin-top: 0 !important;
-  }
-  main > :last-child {
-    margin-bottom: 0 !important;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  overscroll-behavior: none;
+  font-variant-numeric: tabular-nums;   /* số thẳng cột khi cập nhật liên tục */
 }
 
-/* Custom Scrollbars */
+/* thanh cuộn tối cho hợp nền */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -28,31 +21,3 @@
   background: #31353f;
   border-radius: 3px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #5b403e;
-}
-
-/* CAD floorplan grid */
-.cad-grid {
-  background-size: 24px 24px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-}
-
-/* Glowing laser / emergency effect */
-.laser-glow {
-  box-shadow: 0 0 15px rgba(255, 84, 81, 0.45);
-}
-
-/* Amber warning pulse */
-.pulse-amber {
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 0.3; }
-  100% { transform: scale(0.95); opacity: 0.8; }
-}
-
