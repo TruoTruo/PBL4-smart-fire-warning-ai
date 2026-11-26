@@ -2,7 +2,7 @@
 -- schema.sql (MySQL 8.0+)
 -- Hệ thống giám sát & cảnh báo sớm nguy cơ cháy nổ thông minh
 -- Nguồn chân lý duy nhất cho cấu trúc DB — mọi module (iot-edge,
--- desktop-app) phải tham chiếu đúng theo tên bảng/cột tại đây.
+-- web-app) phải tham chiếu đúng theo tên bảng/cột tại đây.
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS SmartFireDB
@@ -16,7 +16,7 @@ USE SmartFireDB;
 CREATE TABLE Users (
     UserId          INT AUTO_INCREMENT PRIMARY KEY,
     Username        VARCHAR(50)     NOT NULL UNIQUE,
-    PasswordHash    VARCHAR(255)    NOT NULL,          -- lưu hash (bcrypt), không lưu plain text
+    PasswordHash    VARCHAR(255)    NOT NULL,          -- lưu hash PBKDF2-SHA256 (pbkdf2$<vòng>$<salt>$<hash>), không lưu plain text
     FullName        VARCHAR(100)    NOT NULL,
     PhoneNumber     VARCHAR(15)     NULL,              -- dùng để nhận SMS cảnh báo
     Email           VARCHAR(100)    NULL,
@@ -62,15 +62,16 @@ CREATE TABLE EnvironmentLogs (
     DeviceId            VARCHAR(20)     NOT NULL,
     Temperature         DECIMAL(5,2)    NULL,           -- độ C, từ DHT11
     Humidity            DECIMAL(5,2)    NULL,           -- %, từ DHT11
-    SmokeDetected       BOOLEAN         NOT NULL DEFAULT FALSE,  -- MQ-2 (ngõ ra số): 1 = có khói, 0 = không
+    SmokeDetected       BOOLEAN         NOT NULL DEFAULT FALSE,  -- 1 = có khói (MQ-2 ngõ ra số HOẶC camera thấy khói), 0 = không
     SmokeLevel          DECIMAL(5,2)    NULL,                    -- mức khói/gas (% thang đo MQ-2) từ ADC; NULL nếu chỉ đọc chân DO
     AlertLevel          TINYINT         NOT NULL DEFAULT 0,      -- Pi tự tính: 0 bình thường, 1 cảnh báo sớm, 2 báo cháy
-    AiResult            BOOLEAN         NOT NULL DEFAULT FALSE,  -- YOLOv8 phát hiện lửa/khói
+    AiResult            BOOLEAN         NOT NULL DEFAULT FALSE,  -- YOLOv11n phát hiện lửa
     ConfidenceScore     DECIMAL(5,2)    NULL,           -- % độ tin cậy của model AI
     RecordedAt          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT FK_EnvironmentLogs_Devices FOREIGN KEY (DeviceId)
         REFERENCES Devices(DeviceId) ON DELETE CASCADE,
-    INDEX IX_EnvironmentLogs_Device_Time (DeviceId, RecordedAt DESC)
+    INDEX IX_EnvironmentLogs_Device_Time (DeviceId, RecordedAt DESC),
+    INDEX IX_EnvironmentLogs_Time (RecordedAt DESC)          -- lọc/sắp theo thời gian cho mọi thiết bị
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
@@ -86,7 +87,7 @@ CREATE TABLE AlertHistory (
     SnapshotBase64          MEDIUMTEXT      NULL,       -- ảnh bằng chứng JPEG (Base64) do Pi gửi kèm khi có cảnh báo
     AlertTime               DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     SmsSent                 BOOLEAN         NOT NULL DEFAULT FALSE,
-    Acknowledged            BOOLEAN         NOT NULL DEFAULT FALSE,  -- đã xem/xác nhận trên desktop-app
+    Acknowledged            BOOLEAN         NOT NULL DEFAULT FALSE,  -- đã xem/xác nhận trên web-app
     AcknowledgedByUserId    INT             NULL,
     AcknowledgedAt          DATETIME        NULL,
     CONSTRAINT FK_AlertHistory_Devices FOREIGN KEY (DeviceId)
@@ -96,5 +97,6 @@ CREATE TABLE AlertHistory (
     CONSTRAINT FK_AlertHistory_Users FOREIGN KEY (AcknowledgedByUserId)
         REFERENCES Users(UserId) ON DELETE SET NULL,
     CONSTRAINT CK_AlertHistory_Severity CHECK (Severity IN ('Low', 'Medium', 'High')),
-    INDEX IX_AlertHistory_Device_Time (DeviceId, AlertTime DESC)
+    INDEX IX_AlertHistory_Device_Time (DeviceId, AlertTime DESC),
+    INDEX IX_AlertHistory_Time (AlertTime DESC)              -- lịch sử/thống kê theo ngày cho mọi thiết bị
 ) ENGINE=InnoDB;

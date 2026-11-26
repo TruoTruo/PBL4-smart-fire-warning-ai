@@ -1,14 +1,35 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
 jobs:
-  python-lint:
+  python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Lint ai-vision & iot-edge
-        run: |
-          pip install flake8
-          flake8 apps/ai-vision/src apps/iot-edge/src --max-line-length=120 || true
+      - name: Cài thư viện kiểm tra
+        run: pip install flake8 pytest numpy pillow pyyaml
+      - name: Lỗi cú pháp và tên chưa khai báo (ai-vision, iot-edge)
+        run: flake8 apps/ai-vision apps/iot-edge --select=E9,F63,F7,F82 --show-source
+      - name: Kiểm thử bộ đánh giá AI
+        run: python -m pytest apps/ai-vision/tests -q
+
+  dotnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - name: Build mqtt-subscriber
+        run: dotnet build services/database-network/mqtt-subscriber/MqttSubscriber.csproj -c Release
+      - name: Build web-app
+        run: dotnet build apps/web-app/SmartFireWeb.csproj -c Release
+

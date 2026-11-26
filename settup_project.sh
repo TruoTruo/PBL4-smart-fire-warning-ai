@@ -66,8 +66,8 @@ cat > apps/ai-vision/README.md <<'EOF'
 Phụ trách: Bùi Đình Phước Nguyên
 
 ## Nhiệm vụ
-- Thu thập & gán nhãn dataset (Roboflow Fire & Smoke + negative dataset tự thu thập)
-- Huấn luyện YOLOv8, export .pt / .onnx tối ưu cho ARM (Raspberry Pi 5)
+- Chuẩn bị dataset D-Fire (smoke/fire), kiểm tra rò rỉ dữ liệu giữa train/val/test
+- Huấn luyện YOLOv11n, đánh giá mAP/P/R, xuất mô hình cho Raspberry Pi 5
 - Xử lý nhiễu quang học (đèn LED, phản quang, áo cam/đỏ)
 
 ## Cách chạy
@@ -75,7 +75,7 @@ Phụ trách: Bùi Đình Phước Nguyên
 cd apps/ai-vision
 pip install -r requirements.txt
 python src/train.py        # huấn luyện
-python src/detect.py        # inference realtime
+python src/evaluate.py     # đánh giá trên tập test
 ```
 
 ## Cấu trúc

@@ -3,7 +3,7 @@
 ## Branch
 - `main` — bản ổn định, chỉ merge từ `develop` sau khi review
 - `develop` — nhánh tích hợp chung
-- `feature/ai-vision`, `feature/iot-edge`, `feature/database-network`, `feature/desktop-app` — mỗi thành viên làm việc trên nhánh của mình, chỉ commit vào thư mục module tương ứng (+ docs/ nếu cần)
+- `feature/ai-vision`, `feature/iot-edge`, `feature/database-network`, `feature/web-app` — mỗi thành viên làm việc trên nhánh của mình, chỉ commit vào thư mục module tương ứng (+ docs/ nếu cần)
 
 ## Quy trình
 1. Checkout nhánh feature của bạn, kéo mới nhất từ `develop`

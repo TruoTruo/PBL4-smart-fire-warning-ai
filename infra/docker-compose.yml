@@ -1,7 +1,8 @@
 # ============================================================
 # docker-compose.yml
-# Hạ tầng chạy local/demo: MySQL + MQTT Broker
-# Chạy: docker compose up -d
+# Hạ tầng chạy local/demo: MySQL + MQTT Broker + mqtt-subscriber (ghi dữ liệu Pi vào MySQL)
+# Chạy (trong thư mục infra): docker compose up -d --build
+# Xem log subscriber:         docker compose logs -f mqtt-subscriber
 # ============================================================
 
 services:
@@ -15,6 +16,13 @@ services:
       - ../services/database-network/mqtt-broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
       - mosquitto-data:/mosquitto/data
       - mosquitto-log:/mosquitto/log
+    healthcheck:
+      # gửi thử 1 bản tin rỗng: thành công nghĩa là broker đã nhận kết nối
+      test: ["CMD-SHELL", "mosquitto_pub -h 127.0.0.1 -p 1883 -t smartfire/healthcheck -n -q 0 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   mysql-db:
     image: mysql:8.0
@@ -23,17 +31,45 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "YourStrong@Passw0rd"
       MYSQL_DATABASE: "SmartFireDB"
+      # NOW() của MySQL theo giờ Việt Nam (mặc định trong Docker là UTC)
+      TZ: "Asia/Ho_Chi_Minh"
     ports:
       # Máy host dùng cổng 3307 (tránh đụng XAMPP/MySQL 3306), trong container MySQL vẫn nghe 3306.
       # Các app kết nối: Server=localhost;Port=3307;... (xem appsettings.json)
       - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      # Tự động chạy schema + seed khi container khởi tạo lần đầu
-      # (DB tạo mới từ schema.sql đã có đủ cột của 002/003/004, KHÔNG cần chạy các file migration đó)
+      # Tự động chạy schema + seed + stored procedure khi container khởi tạo lần đầu (volume mysql-data trống)
+      # (DB tạo mới từ schema.sql đã có đủ cột/chỉ mục của 002 -> 005, KHÔNG cần chạy các file migration đó)
       - ../services/database-network/sql/migrations/schema.sql:/docker-entrypoint-initdb.d/1_schema.sql
       - ../services/database-network/sql/migrations/seed.sql:/docker-entrypoint-initdb.d/2_seed.sql
       - ../services/database-network/sql/migrations/stored_procedures.sql:/docker-entrypoint-initdb.d/3_stored_procedures.sql
+    healthcheck:
+      # hỏi qua TCP 127.0.0.1: lúc đang chạy các file khởi tạo MySQL chưa mở TCP, nên chỉ "healthy" khi đã khởi tạo xong
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  mqtt-subscriber:
+    build:
+      context: ../services/database-network/mqtt-subscriber
+    image: smartfire-mqtt-subscriber
+    container_name: smartfire-subscriber
+    restart: unless-stopped
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+      mqtt-broker:
+        condition: service_healthy
+    environment:
+      # Ghi đè appsettings.json: trong mạng compose gọi nhau bằng tên service
+      MqttBroker__Host: "mqtt-broker"
+      MqttBroker__Port: "1883"
+      Database__ConnectionString: "Server=mysql-db;Port=3306;Database=SmartFireDB;Uid=root;Pwd=YourStrong@Passw0rd;CharSet=utf8mb4;"
+      # RecordedAt/AlertTime lấy giờ của subscriber: để cùng giờ Việt Nam với MySQL và máy Windows
+      TZ: "Asia/Ho_Chi_Minh"
 
 volumes:
   mysql-data:

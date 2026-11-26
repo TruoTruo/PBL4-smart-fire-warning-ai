@@ -35,13 +35,16 @@ Table EnvironmentLogs {
   DeviceId varchar(20) [not null, ref: > Devices.DeviceId]
   Temperature decimal(5,2) [note: 'độ C, từ DHT11']
   Humidity decimal(5,2) [note: '%, từ DHT11']
-  GasPpm decimal(6,2) [note: 'ppm, từ MQ-2']
-  AiResult boolean [not null, default: false, note: 'YOLOv8 phát hiện lửa/khói']
-  ConfidenceScore decimal(5,2)
+  SmokeDetected boolean [not null, default: false, note: 'MQ-2 (ngõ ra số) HOẶC camera thấy khói']
+  SmokeLevel decimal(5,2) [note: 'mức khói từ ADC; NULL khi chỉ đọc chân DO']
+  AlertLevel tinyint [not null, default: 0, note: '0 bình thường, 1 cảnh báo sớm, 2 báo cháy (Pi tính)']
+  AiResult boolean [not null, default: false, note: 'YOLOv11n phát hiện lửa']
+  ConfidenceScore decimal(5,2) [note: '% độ tin cậy của box lửa']
   RecordedAt datetime [not null, default: `now()`]
 
   Indexes {
     (DeviceId, RecordedAt) [name: 'IX_EnvironmentLogs_Device_Time']
+    RecordedAt [name: 'IX_EnvironmentLogs_Time']
   }
 }
 
@@ -51,6 +54,7 @@ Table AlertHistory {
   LogId bigint [ref: > EnvironmentLogs.LogId, note: 'log gốc kích hoạt cảnh báo']
   AlertType varchar(50) [not null, note: 'Fire | Smoke | HighTemperature | HighGas']
   Severity varchar(20) [not null, default: 'Medium', note: 'Low | Medium | High']
+  SnapshotBase64 mediumtext [note: 'ảnh bằng chứng JPEG (Base64) do Pi gửi']
   AlertTime datetime [not null, default: `now()`]
   SmsSent boolean [not null, default: false]
   Acknowledged boolean [not null, default: false]
@@ -59,5 +63,6 @@ Table AlertHistory {
 
   Indexes {
     (DeviceId, AlertTime) [name: 'IX_AlertHistory_Device_Time']
+    AlertTime [name: 'IX_AlertHistory_Time']
   }
 }

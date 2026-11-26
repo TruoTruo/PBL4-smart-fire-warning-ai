@@ -1,0 +1,3 @@
+# Đúng phiên bản đã dùng để huấn luyện models/best.pt (kèm torch, numpy, pillow, opencv, matplotlib, pyyaml)
+ultralytics==8.4.143
+pytest
