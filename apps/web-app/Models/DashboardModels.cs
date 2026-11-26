@@ -1,4 +1,4 @@
-﻿namespace SmartFireApp.Models;
+﻿namespace SmartFireWeb.Models;
 
 public sealed record UserModel(
     int UserId,
@@ -16,8 +16,8 @@ public sealed record DeviceCardModel(
     string DeviceType,
     string Status,
     string? IpAddress,
-    double Temperature,
-    double Humidity,
+    double? Temperature,          // null = DHT11 lỗi (mất cảm biến) hoặc chưa có số đo
+    double? Humidity,
     bool SmokeDetected,
     double? SmokeLevel,
     int AlertLevel,
@@ -35,14 +35,16 @@ public sealed record AlertModel(
     DateTime AlertTime,
     bool SmsSent,
     bool Acknowledged,
-    string? SnapshotBase64 = null);
+    bool HasSnapshot = false,           // có ảnh bằng chứng; ảnh tải riêng theo AlertId (không kéo Base64 mỗi lần quét)
+    string? AcknowledgedByName = null,  // cán bộ đã xác nhận
+    DateTime? AcknowledgedAt = null);
 
 public sealed record EnvironmentLogModel(
     long LogId,
     string DeviceId,
     string DeviceName,
-    double Temperature,
-    double Humidity,
+    double? Temperature,          // null = DHT11 lỗi lúc ghi
+    double? Humidity,
     bool SmokeDetected,
     double? SmokeLevel,
     int AlertLevel,
@@ -65,20 +67,36 @@ public sealed record RealDashboardData(
     IReadOnlyList<DeviceCardModel> Devices,
     IReadOnlyList<AlertModel> Alerts,
     IReadOnlyList<EnvironmentLogModel> Logs,
-    bool IsConnected);
+    bool IsConnected,
+    string? Error = null);        // thông báo lỗi CSDL khi IsConnected = false
 
 // Backward compatibility models
 public sealed record SensorReading(
     string DeviceId,
     string ZoneName,
-    double Temperature,
-    double Humidity,
+    double? Temperature,          // null = DHT11 lỗi
+    double? Humidity,
     bool SmokeDetected,
     bool AiDetected,
     DateTime Timestamp,
     double? ConfidenceScore = null,
     int AlertLevel = 0,
-    double? SmokeLevel = null);
+    double? SmokeLevel = null,
+    bool? CameraOk = null,        // Pi gửi "camera_ok"; null = bản Pi cũ chưa gửi
+    bool? CameraSmoke = null);    // Pi gửi "khoi_camera": camera AI thấy khói
+
+/// <summary>Pi trực tuyến / ngoại tuyến theo topic giữ lại (retained) pbl4/status/{DeviceId}.</summary>
+public sealed record PiStatusInfo(
+    string DeviceId,
+    bool Online,
+    DateTime UpdatedAt);
+
+/// <summary>Trạng thái camera mới nhất mà Pi báo qua MQTT.</summary>
+public sealed record CameraStatusInfo(
+    string DeviceId,
+    bool? CameraOk,
+    bool? CameraSmoke,
+    DateTime UpdatedAt);
 
 public sealed record AlertRecord(
     long AlertId,
@@ -98,3 +116,6 @@ public sealed record KpiSnapshot(
     int ResponseMs);
 
 public sealed record AlertStatItem(string DateLabel, string AlertType, int Count);
+
+/// <summary>Một điểm trên biểu đồ nhiệt độ / độ ẩm (null = DHT11 lỗi lúc đo).</summary>
+public sealed record EnvironmentPoint(DateTime RecordedAt, double? Temperature, double? Humidity, int AlertLevel);

@@ -1,9 +1,9 @@
 using System.Text.Json;
 
-namespace SmartFireApp.Services;
+namespace SmartFireWeb.Services;
 
 /// <summary>
-/// Cấu hình chung cho desktop-app và web-app, dùng ĐÚNG các khóa của mqtt-subscriber:
+/// Cấu hình của web-app, dùng ĐÚNG các khóa của mqtt-subscriber:
 ///   MqttBroker:Host, MqttBroker:Port, Database:ConnectionString
 ///
 /// Thứ tự đọc (nguồn sau ghi đè nguồn trước):

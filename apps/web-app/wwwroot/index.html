@@ -5,11 +5,62 @@
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <title>FireGuard IoT — Giám Sát Cảnh Báo Cháy Thông Minh</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="lib/tailwindcss/tailwindcss-3.4.17.js"></script>
   <script src="js/tailwind-config.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.7/signalr.min.js"></script>
+  <script src="lib/signalr/signalr-8.0.7.min.js"></script>
 </head>
-<body class="bg-[#0f131c] text-[#dfe2ef] font-sans antialiased min-h-screen p-4 lg:p-6 flex flex-col gap-5">
+<body class="bg-[#0f131c] text-[#dfe2ef] font-sans antialiased min-h-screen">
+
+  <!-- ==================== ĐANG KIỂM TRA PHIÊN ĐĂNG NHẬP ==================== -->
+  <div id="bootScreen" class="min-h-screen flex items-center justify-center gap-2 text-[#e4beba] font-mono text-[13px]">
+    <div class="w-5 h-5 border-2 border-[#4cd7f6] border-t-transparent rounded-full animate-spin"></div>
+    <span>Đang kiểm tra phiên đăng nhập...</span>
+  </div>
+
+  <!-- ==================== MÀN HÌNH ĐĂNG NHẬP ==================== -->
+  <div id="loginScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold shadow-md">
+          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+        </div>
+        <div>
+          <h1 class="text-[17px] font-bold text-white tracking-tight">FireGuard IoT — Đăng Nhập</h1>
+          <p class="text-[11px] font-mono text-[#8a8f9d]">Hệ thống giám sát cảnh báo cháy · PBL4</p>
+        </div>
+      </div>
+
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="flex flex-col gap-3.5" autocomplete="on">
+        <div id="loginAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+
+        <div>
+          <label for="loginUsername" class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập:</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">person</span>
+            <input id="loginUsername" type="text" required autocomplete="username" placeholder="Tên đăng nhập" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label for="loginPassword" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu:</label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">lock</span>
+            <input id="loginPassword" type="password" required autocomplete="current-password" placeholder="Nhập mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
+          </div>
+        </div>
+
+        <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg">
+          <span class="material-symbols-outlined text-[18px]">login</span>
+          <span>Đăng Nhập Hệ Thống</span>
+        </button>
+      </form>
+
+      <p class="text-[10.5px] font-mono text-[#8a8f9d]">Tài khoản do quản trị viên cấp. Quên mật khẩu thì liên hệ quản trị viên.</p>
+    </div>
+  </div>
+
+  <!-- ==================== DASHBOARD (CHỈ HIỆN SAU KHI ĐĂNG NHẬP) ==================== -->
+  <div id="appRoot" class="hidden min-h-screen p-4 lg:p-6 flex flex-col gap-5">
 
   <!-- ==================== HEADER ==================== -->
   <header class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-lg">
@@ -20,12 +71,22 @@
       <div>
         <h1 class="text-[18px] font-bold text-white tracking-tight flex items-center gap-2">
           FireGuard IoT — Hệ Thống Giám Sát Cảnh Báo Cháy
-          <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30">PBL4 SOC</span>
+          <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30">PBL4</span>
         </h1>
-        <div class="text-[12px] text-[#e4beba] flex items-center gap-2 mt-0.5 font-mono">
-          <span id="dbStatusBadge" class="flex items-center gap-1.5 text-[#4cd7f6]">
-            <span class="w-2 h-2 rounded-full bg-[#4cd7f6] animate-pulse"></span>
-            HỆ THỐNG TRỰC TUYẾN
+        <div class="text-[12px] text-[#e4beba] flex items-center gap-2 mt-0.5 font-mono flex-wrap">
+          <span id="dbStatusBadge" class="flex items-center gap-1.5 text-[#8a8f9d]">
+            <span class="w-2 h-2 rounded-full bg-[#8a8f9d]"></span>
+            CSDL: ĐANG TẢI
+          </span>
+          <span>•</span>
+          <span id="mqttStatusBadge" class="flex items-center gap-1.5 text-[#8a8f9d]">
+            <span class="w-2 h-2 rounded-full bg-[#8a8f9d]"></span>
+            MQTT: --
+          </span>
+          <span>•</span>
+          <span id="camChip" class="flex items-center gap-1.5 text-[#8a8f9d]">
+            <span class="w-2 h-2 rounded-full bg-[#8a8f9d]"></span>
+            CAMERA: --
           </span>
           <span>•</span>
           <span id="headerLiveClock">--:--:--</span>
@@ -33,40 +94,57 @@
       </div>
     </div>
 
-    <!-- Right Header Actions & Active User -->
+    <!-- Người đang đăng nhập & thao tác -->
     <div class="flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
-      <!-- Active User Chip (từ bảng Users) -->
-      <div id="headerUserChip" onclick="openAuthModal('login')" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] font-mono text-[12px] cursor-pointer transition-all" title="Click để chuyển hoặc quản lý tài khoản">
-        <div class="w-6 h-6 rounded-full bg-[#ff5451] text-[#5c0008] flex items-center justify-center font-bold text-[10px]" id="headerUserAvatar">U</div>
+      <div id="headerUserChip" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1c1f29] border border-[#31353f] font-mono text-[12px]">
+        <div class="w-6 h-6 rounded-full bg-[#ff5451] text-[#5c0008] flex items-center justify-center font-bold text-[10px]" id="headerUserAvatar">?</div>
         <div class="flex flex-col leading-none">
-          <span id="headerUserName" class="font-bold text-white">Đang tải user...</span>
+          <span id="headerUserName" class="font-bold text-white">--</span>
           <span id="headerUserRole" class="text-[10px] text-[#4cd7f6]">--</span>
         </div>
       </div>
 
-      <!-- Nút Đăng Nhập / Đăng Ký / Đăng Xuất -->
-      <button id="btnHeaderAuth" onclick="handleHeaderAuthClick()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#4cd7f6] transition-all">
-        <span class="material-symbols-outlined text-[16px]" id="iconHeaderAuth">login</span>
-        <span id="textHeaderAuth">Đăng Nhập</span>
+      <button id="btnSound" onclick="toggleSound()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all" title="Âm thanh báo động khi có cảnh báo mới">
+        <span class="material-symbols-outlined text-[16px]" id="iconSound">volume_up</span>
+        <span id="textSound">Âm thanh: Bật</span>
       </button>
 
       <button onclick="refreshData()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all">
         <span class="material-symbols-outlined text-[16px]">refresh</span>
         <span>Làm mới dữ liệu</span>
       </button>
-      <div id="systemSafetyBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/40 text-[12px] font-mono font-bold">
-        <span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span>
-        <span>HỆ THỐNG: BÌNH THƯỜNG</span>
+
+      <button onclick="openPasswordModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#dfe2ef] transition-all">
+        <span class="material-symbols-outlined text-[16px]">key</span>
+        <span>Đổi mật khẩu</span>
+      </button>
+
+      <button onclick="logoutUser()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[12px] font-mono text-[#ffb3ad] transition-all">
+        <span class="material-symbols-outlined text-[16px]">logout</span>
+        <span>Đăng Xuất</span>
+      </button>
+
+      <div id="systemSafetyBadge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1c1f29] text-[#8a8f9d] border border-[#31353f] text-[12px] font-mono font-bold">
+        <span class="w-2 h-2 rounded-full bg-[#8a8f9d]"></span>
+        <span>HỆ THỐNG: ĐANG TẢI</span>
       </div>
     </div>
   </header>
 
+  <!-- Lỗi CSDL (B25): hiện nguyên văn lỗi để người trực biết dữ liệu đang không cập nhật -->
+  <div id="dbErrorBanner" class="hidden p-3 rounded-xl bg-[#93000a]/40 border border-[#ff5451] text-[#ffdad6] font-mono text-[12px] flex items-start gap-2">
+    <span class="material-symbols-outlined text-[18px] text-[#ff5451]">database</span>
+    <div>
+      <div class="font-bold">Mất kết nối CSDL — số liệu bên dưới có thể đã cũ</div>
+      <div id="dbErrorText" class="text-[11px] text-[#ffdad6]/80 mt-0.5 break-all"></div>
+    </div>
+  </div>
+
   <!-- ==================== KPI COUNTERS ==================== -->
   <section class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-    <!-- KPI 1 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
-        <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">sensors</span> Thiết bị trực tuyến
+        <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">sensors</span> Thiết bị hoạt động
       </span>
       <div class="flex items-baseline gap-1.5 mt-2">
         <span id="kpiActiveDevices" class="text-[26px] font-bold font-mono text-[#4cd7f6] leading-none">--</span>
@@ -74,7 +152,6 @@
       </div>
     </div>
 
-    <!-- KPI 2 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#ff5451]">crisis_alert</span> Sự cố chưa xử lý
@@ -85,18 +162,16 @@
       </div>
     </div>
 
-    <!-- KPI 3 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#ffb95f]">monitoring</span> Bản ghi môi trường
       </span>
       <div class="flex items-baseline gap-1.5 mt-2">
         <span id="kpiTotalLogs" class="text-[26px] font-bold font-mono text-[#ffb95f] leading-none">--</span>
-        <span class="text-[12px] font-mono text-[#e4beba]">Lượt đo</span>
+        <span class="text-[12px] font-mono text-[#e4beba]">Lượt đo gần nhất</span>
       </div>
     </div>
 
-    <!-- KPI 4 -->
     <div class="bg-[#181b25] border border-[#262a34] rounded-xl p-3.5 flex flex-col justify-between shadow">
       <span class="text-[11px] font-mono text-[#e4beba] uppercase tracking-wider flex items-center gap-1.5">
         <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">manage_accounts</span> Cán bộ quản lý
@@ -108,101 +183,102 @@
     </div>
   </section>
 
-  <!-- ==================== SECTION 1: TRẠM GIÁM SÁT & CAMERA AI GIÁM SÁT LUỒNG LỬA ==================== -->
+  <!-- ==================== THANH CHỌN MỤC ==================== -->
+  <nav id="tabBar" class="flex items-center gap-2 flex-wrap font-mono text-[12px]">
+    <button type="button" data-action="tab" data-tab="monitor" class="tab-btn flex items-center gap-1.5 px-3.5 py-2 rounded-lg border transition-all">
+      <span class="material-symbols-outlined text-[16px]">videocam</span><span>Giám sát trực tiếp</span>
+    </button>
+    <button type="button" data-action="tab" data-tab="history" class="tab-btn flex items-center gap-1.5 px-3.5 py-2 rounded-lg border transition-all">
+      <span class="material-symbols-outlined text-[16px]">history</span><span>Lịch sử &amp; thống kê</span>
+    </button>
+    <button type="button" data-action="tab" data-tab="manage" class="tab-btn flex items-center gap-1.5 px-3.5 py-2 rounded-lg border transition-all">
+      <span class="material-symbols-outlined text-[16px]">settings_input_antenna</span><span>Trạm &amp; cán bộ</span>
+    </button>
+  </nav>
+
+  <div data-tab-panel="monitor" class="flex flex-col gap-5">
+
+  <!-- ==================== SECTION 1: CAMERA PI & TRẠM GIÁM SÁT ==================== -->
   <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-    
-    <!-- KHUNG CAMERA AI PHÁT HIỆN LỬA (5 COLS) -->
+
+    <!-- CAMERA: chỉ hiển thị luồng MJPEG của Pi, khung lửa/khói do Pi (YOLOv11n) vẽ sẵn trong ảnh -->
     <div id="cameraCard" class="lg:col-span-5 bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col justify-between gap-3 transition-all duration-300">
       <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">videocam</span>
-          <h2 class="text-[15px] font-bold text-white tracking-tight">Camera AI — Nhận Diện Luồng Lửa</h2>
+          <h2 class="text-[15px] font-bold text-white tracking-tight">Camera Pi — Nhận Diện Lửa / Khói</h2>
         </div>
-        <div id="camStatusBadge" class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/30">
-          <span class="w-1.5 h-1.5 rounded-full bg-[#4cd7f6]"></span>
-          <span>SẴN SÀNG</span>
+        <div id="camStatusBadge" class="flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-[#1c1f29] text-[#8a8f9d] border border-[#31353f]">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#8a8f9d]"></span>
+          <span>CHƯA KẾT NỐI</span>
         </div>
       </div>
 
-      <!-- Khung Video Viewport -->
       <div id="cameraViewport" class="relative aspect-video w-full bg-[#0a0d14] rounded-lg overflow-hidden border border-[#262a34] flex items-center justify-center transition-all duration-300">
-        <!-- Live Video Element (Webcam) -->
-        <video id="cameraVideo" autoplay playsinline muted class="w-full h-full object-cover hidden"></video>
+        <!-- Ảnh MJPEG từ Raspberry Pi (http://<IP-Pi>:5000/video_feed) -->
+        <img id="cameraImgStream" class="absolute inset-0 w-full h-full object-contain hidden" alt="Luồng camera Raspberry Pi">
 
-        <!-- Image Stream (IP Cam / MJPEG từ Raspberry Pi) -->
-        <img id="cameraImgStream" class="w-full h-full object-cover hidden" alt="Luồng IP Camera">
-
-        <!-- Canvas vẽ Bounding Box ngọn lửa thời gian thực -->
-        <canvas id="cameraCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-20"></canvas>
-
-        <!-- Placeholder khi chưa mở camera -->
+        <!-- Chưa kết nối camera -->
         <div id="cameraPlaceholder" class="flex flex-col items-center justify-center text-center p-4 gap-2 z-10">
           <div class="w-12 h-12 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[#4cd7f6]">
             <span class="material-symbols-outlined text-[28px]">videocam_off</span>
           </div>
-          <span class="text-[12px] font-mono text-[#e4beba]">Chưa bật luồng camera</span>
-          <span class="text-[10.5px] font-mono text-[#8a8f9d]">Bấm "Bật Webcam" hoặc "Camera IP" bên dưới để kết nối</span>
+          <span id="cameraPlaceholderText" class="text-[12px] font-mono text-[#e4beba]">Chưa kết nối camera Pi</span>
+          <span class="text-[10.5px] font-mono text-[#8a8f9d]">Bấm "Kết nối camera Pi" bên dưới (cổng 5000, đường dẫn /video_feed)</span>
         </div>
 
-        <!-- OSD Badges góc trên -->
+        <!-- Mất tín hiệu camera -->
+        <div id="cameraLostOverlay" class="hidden absolute inset-0 z-20 bg-black/70 flex flex-col items-center justify-center text-center p-4 gap-1.5">
+          <span class="material-symbols-outlined text-[32px] text-[#ff5451]">signal_disconnected</span>
+          <span class="text-[13px] font-bold font-mono text-[#ffdad6]">Mất tín hiệu camera</span>
+          <span id="cameraLostReason" class="text-[10.5px] font-mono text-[#e4beba]"></span>
+          <span class="text-[10.5px] font-mono text-[#8a8f9d]">Tự thử kết nối lại mỗi 5 giây</span>
+        </div>
+
+        <!-- Nhãn góc trên: nguồn luồng + model, FPS đo thật tại trình duyệt -->
         <div class="absolute top-2 left-2 z-30 flex items-center gap-1.5">
-          <span class="text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-white border border-white/10 backdrop-blur flex items-center gap-1">
-            <span id="camRecDot" class="w-1.5 h-1.5 rounded-full bg-[#4cd7f6]"></span> CAM-01
-          </span>
+          <span id="camSourceLabel" class="hidden text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-white border border-white/10 backdrop-blur"></span>
           <span class="text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10 backdrop-blur">
-            AI: YOLOv8-Fire
+            AI trên Pi: YOLOv11n
           </span>
         </div>
-
         <div class="absolute top-2 right-2 z-30 flex items-center gap-1.5">
-          <span id="camFpsBadge" class="text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10 backdrop-blur">
-            30 FPS
-          </span>
+          <span id="camFpsBadge" class="hidden text-[9.5px] font-mono px-2 py-0.5 rounded bg-black/70 text-[#4cd7f6] border border-white/10 backdrop-blur" title="Số khung hình mới nhận được mỗi giây tại trình duyệt"></span>
         </div>
+      </div>
 
-        <!-- Banner cảnh báo phát hiện ngọn lửa đỏ rực -->
-        <div id="flameWarningBanner" class="hidden absolute bottom-2 left-2 right-2 p-2 rounded-lg bg-[#93000a]/90 backdrop-blur border border-[#ff5451] text-white font-mono z-30 shadow-lg flex items-center justify-between">
-          <div class="flex items-center gap-1.5 text-[11px] font-bold text-[#ffdad6]">
-            <span class="material-symbols-outlined text-[16px] text-[#ff5451] animate-bounce">local_fire_department</span>
-            <span>PHÁT HIỆN NGỌN LỬA! (<span id="flameConfidence">94.8%</span>)</span>
-          </div>
-          <span id="flameLocation" class="text-[10px] text-[#ffdad6]/80">Tọa độ: [X:160, Y:95]</span>
-        </div>
+      <!-- Trạng thái thật do Pi báo về (MQTT) và kết quả AI gần nhất trong CSDL -->
+      <div class="flex flex-col gap-1 text-[11px] font-mono">
+        <div id="piCameraStatus" class="text-[#8a8f9d]">Camera Pi: chưa có báo cáo trạng thái qua MQTT</div>
+        <div id="aiStatusLine" class="text-[#8a8f9d]">AI trên Pi: đang tải...</div>
       </div>
 
       <!-- Thanh điều khiển Camera -->
       <div class="flex items-center justify-between gap-2 flex-wrap pt-1 border-t border-[#262a34]">
         <div class="flex items-center gap-1.5">
-          <button id="btnToggleWebcam" onclick="toggleWebcam()" class="px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] font-mono text-[#dfe2ef] flex items-center gap-1.5 transition-all">
-            <span class="material-symbols-outlined text-[15px] text-[#4cd7f6]">camera</span>
-            <span id="btnWebcamText">Bật Webcam</span>
-          </button>
           <button onclick="connectIpCamera()" class="px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] font-mono text-[#dfe2ef] flex items-center gap-1.5 transition-all">
             <span class="material-symbols-outlined text-[15px] text-[#ffb95f]">settings_ethernet</span>
-            <span>Camera IP</span>
+            <span>Kết nối camera Pi</span>
+          </button>
+          <button id="btnCameraStop" onclick="stopCamera(true)" class="hidden px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] font-mono text-[#dfe2ef] flex items-center gap-1.5 transition-all">
+            <span class="material-symbols-outlined text-[15px] text-[#8a8f9d]">stop_circle</span>
+            <span>Ngắt</span>
           </button>
         </div>
-
-        <div class="flex items-center gap-1.5">
-          <button id="btnSimulateFlame" onclick="toggleSimulateFlame()" class="px-2.5 py-1.5 rounded-lg bg-[#ff5451]/15 hover:bg-[#ff5451]/25 border border-[#ff5451]/40 text-[11px] font-mono text-[#ff5451] flex items-center gap-1 transition-all">
-            <span class="material-symbols-outlined text-[15px]">whatshot</span>
-            <span id="btnSimulateText">Test Bắt Lửa</span>
-          </button>
-          <button onclick="captureSnapshot()" class="p-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#dfe2ef] transition-all" title="Chụp ảnh bằng chứng">
-            <span class="material-symbols-outlined text-[15px]">photo_camera</span>
-          </button>
-        </div>
+        <button onclick="captureSnapshot()" class="p-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#dfe2ef] transition-all" title="Lưu ảnh khung hình hiện tại">
+          <span class="material-symbols-outlined text-[15px]">photo_camera</span>
+        </button>
       </div>
     </div>
 
-    <!-- DANH SÁCH TRẠM GIÁM SÁT (7 COLS) -->
+    <!-- DANH SÁCH TRẠM GIÁM SÁT -->
     <div class="lg:col-span-7 bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
       <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">developer_board</span>
           <h2 class="text-[15px] font-bold text-white tracking-tight">Danh Sách Trạm Giám Sát</h2>
         </div>
-        <span class="text-[11px] font-mono text-[#e4beba]">Tự động cập nhật số đo mới nhất của từng thiết bị</span>
+        <span class="text-[11px] font-mono text-[#e4beba]">Số đo mới nhất của từng thiết bị</span>
       </div>
 
       <div id="devicesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -215,14 +291,46 @@
 
   </section>
 
+  <!-- ==================== BIỂU ĐỒ NHIỆT ĐỘ / ĐỘ ẨM ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5 gap-3 flex-wrap">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#ffb95f] text-[20px]">show_chart</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Biểu Đồ Nhiệt Độ &amp; Độ Ẩm</h2>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <label class="text-[11px] font-mono text-[#e4beba]" for="envDeviceSelect">Trạm</label>
+        <select id="envDeviceSelect" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]"></select>
+        <label class="text-[11px] font-mono text-[#e4beba]" for="envSpanSelect">Khoảng</label>
+        <select id="envSpanSelect" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+          <option value="30">30 phút</option>
+          <option value="60" selected>1 giờ</option>
+          <option value="180">3 giờ</option>
+          <option value="720">12 giờ</option>
+          <option value="1440">24 giờ</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex items-center gap-4 flex-wrap text-[11px] font-mono text-[#e4beba]">
+      <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-[#ffb95f] inline-block"></span>Nhiệt độ (°C, trục trái)</span>
+      <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-[#4cd7f6] inline-block"></span>Độ ẩm (%, trục phải)</span>
+      <span class="flex items-center gap-1.5"><span class="w-4 border-t-2 border-dashed border-[#ff5451] inline-block"></span>Ngưỡng nguy hiểm 45 °C</span>
+    </div>
+    <div class="relative w-full h-64 bg-[#0a0d14] rounded-lg border border-[#262a34]">
+      <canvas id="envChart" class="absolute inset-0 w-full h-full"></canvas>
+      <div id="envChartEmpty" class="absolute inset-0 flex items-center justify-center text-[12px] font-mono text-[#8a8f9d]">Đang tải số đo...</div>
+    </div>
+    <div id="envChartInfo" class="text-[11px] font-mono text-[#8a8f9d]">—</div>
+  </section>
+
   <!-- ==================== SECTION 2: BẢNG CẢNH BÁO SỰ CỐ (ALERTHISTORY) ==================== -->
   <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
     <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
       <div class="flex items-center gap-2">
         <span class="material-symbols-outlined text-[#ff5451] text-[20px]">warning</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Lịch Sử Cảnh Báo Khẩn Cấp</h2>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Cảnh Báo Gần Đây</h2>
       </div>
-      <span class="text-[11px] font-mono text-[#e4beba]">Chỉ ghi khi AI xác nhận hoặc cảm biến vượt ngưỡng an toàn</span>
+      <span class="text-[11px] font-mono text-[#e4beba]">20 cảnh báo mới nhất • Mức do Pi đánh giá • Người xác nhận là tài khoản đang đăng nhập</span>
     </div>
 
     <div class="overflow-x-auto">
@@ -231,57 +339,20 @@
           <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
             <th class="py-2.5 px-3">MÃ #ID</th>
             <th class="py-2.5 px-3">THIẾT BỊ</th>
-            <th class="py-2.5 px-3">KHU VỰC (ZONE)</th>
-            <th class="py-2.5 px-3">LOẠI CẢNH BÁO</th>
+            <th class="py-2.5 px-3">KHU VỰC</th>
+            <th class="py-2.5 px-3">LOẠI</th>
             <th class="py-2.5 px-3">MỨC ĐỘ</th>
             <th class="py-2.5 px-3">THỜI GIAN</th>
+            <th class="py-2.5 px-3">ẢNH</th>
             <th class="py-2.5 px-3">SMS</th>
             <th class="py-2.5 px-3">TRẠNG THÁI</th>
+            <th class="py-2.5 px-3">NGƯỜI XÁC NHẬN</th>
             <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
           </tr>
         </thead>
         <tbody id="alertsTableBody" class="divide-y divide-[#262a34]">
           <tr>
-            <td colspan="9" class="py-6 text-center text-[#e4beba]">Đang tải dữ liệu cảnh báo...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- ==================== SECTION 3: CÁN BỘ & NGƯỜI DÙNG (USERS) ==================== -->
-  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
-    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
-      <div class="flex items-center gap-2">
-        <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">group</span>
-        <h2 class="text-[15px] font-bold text-white tracking-tight">Cán Bộ Trực Ban & Người Nhận SMS Cảnh Báo</h2>
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="text-[11px] font-mono text-[#e4beba] hidden md:inline">Cấu hình quyền Admin / User và số điện thoại nhận SMS</span>
-        <button onclick="openAuthModal('register')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-mono font-bold transition-all">
-          <span class="material-symbols-outlined text-[15px]">person_add</span>
-          <span>+ Đăng Ký Cán Bộ Mới</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="overflow-x-auto">
-      <table class="w-full text-left font-mono text-[12px]">
-        <thead>
-          <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
-            <th class="py-2.5 px-3">USER ID</th>
-            <th class="py-2.5 px-3">HỌ VÀ TÊN</th>
-            <th class="py-2.5 px-3">TÊN ĐĂNG NHẬP</th>
-            <th class="py-2.5 px-3">VAI TRÒ (ROLE)</th>
-            <th class="py-2.5 px-3">SỐ ĐIỆN THOẠI (NHẬN SMS)</th>
-            <th class="py-2.5 px-3">EMAIL LIÊN HỆ</th>
-            <th class="py-2.5 px-3">NGÀY ĐĂNG KÝ</th>
-            <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
-          </tr>
-        </thead>
-        <tbody id="usersTableBody" class="divide-y divide-[#262a34]">
-          <tr>
-            <td colspan="8" class="py-6 text-center text-[#e4beba]">Đang tải danh sách người dùng...</td>
+            <td colspan="11" class="py-6 text-center text-[#e4beba]">Đang tải dữ liệu cảnh báo...</td>
           </tr>
         </tbody>
       </table>
@@ -295,7 +366,7 @@
         <span class="material-symbols-outlined text-[#ffb95f] text-[20px]">table_chart</span>
         <h2 class="text-[15px] font-bold text-white tracking-tight">Dữ Liệu Đo Môi Trường Gần Nhất</h2>
       </div>
-      <span class="text-[11px] font-mono text-[#e4beba]">20 lượt ghi gần nhất từ cảm biến DHT11, MQ-2 và AI</span>
+      <span class="text-[11px] font-mono text-[#e4beba]">20 lượt ghi gần nhất từ DHT11, MQ-2 và AI trên Pi</span>
     </div>
 
     <div class="overflow-x-auto max-h-80">
@@ -306,7 +377,8 @@
             <th class="py-2.5 px-3">THIẾT BỊ</th>
             <th class="py-2.5 px-3">NHIỆT ĐỘ</th>
             <th class="py-2.5 px-3">ĐỘ ẨM</th>
-            <th class="py-2.5 px-3">KHÓI / GAS</th>
+            <th class="py-2.5 px-3">KHÓI</th>
+            <th class="py-2.5 px-3">MỨC</th>
             <th class="py-2.5 px-3">KẾT QUẢ AI</th>
             <th class="py-2.5 px-3">ĐỘ TIN CẬY</th>
             <th class="py-2.5 px-3">THỜI GIAN GHI</th>
@@ -314,123 +386,354 @@
         </thead>
         <tbody id="logsTableBody" class="divide-y divide-[#262a34]">
           <tr>
-            <td colspan="8" class="py-6 text-center text-[#e4beba]">Đang tải dữ liệu môi trường...</td>
+            <td colspan="9" class="py-6 text-center text-[#e4beba]">Đang tải dữ liệu môi trường...</td>
           </tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- ==================== AUTH MODAL (ĐĂNG NHẬP / ĐĂNG KÝ) ==================== -->
-  <div id="authModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
+  </div>
+
+  <div data-tab-panel="history" class="hidden flex flex-col gap-5">
+
+  <!-- ==================== TRA CỨU LỊCH SỬ CẢNH BÁO & THỐNG KÊ ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5 gap-3 flex-wrap">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#ff5451] text-[20px]">manage_search</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Tra Cứu Lịch Sử Cảnh Báo</h2>
+      </div>
+      <span id="histInfo" class="text-[11px] font-mono text-[#e4beba]">Mặc định 7 ngày gần nhất</span>
+    </div>
+
+    <form id="historyForm" onsubmit="handleHistorySubmit(event)" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 items-end font-mono text-[11px]">
+      <label class="flex flex-col gap-1 text-[#e4beba]">Từ ngày
+        <input id="histFrom" type="date" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+      </label>
+      <label class="flex flex-col gap-1 text-[#e4beba]">Đến ngày
+        <input id="histTo" type="date" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+      </label>
+      <label class="flex flex-col gap-1 text-[#e4beba]">Loại cảnh báo
+        <select id="histType" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+          <option value="">Tất cả</option>
+          <option value="Fire">Lửa</option>
+          <option value="Smoke">Khói</option>
+          <option value="HighTemperature">Nhiệt độ cao</option>
+          <option value="HighGas">Khí gas cao</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[#e4beba]">Mức độ
+        <select id="histSeverity" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+          <option value="">Tất cả</option>
+          <option value="High">Mức 2 – Khẩn cấp</option>
+          <option value="Medium">Mức 1 – Cảnh báo sớm</option>
+          <option value="Low">Thấp</option>
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-[#e4beba]">Trạng thái
+        <select id="histStatus" class="bg-[#1c1f29] border border-[#31353f] rounded-lg px-2.5 py-1.5 text-[12px] font-mono text-[#dfe2ef] focus:outline-none focus:border-[#4cd7f6]">
+          <option value="">Tất cả</option>
+          <option value="pending">Chưa xử lý</option>
+          <option value="done">Đã xác nhận</option>
+        </select>
+      </label>
+      <div class="flex items-center gap-2">
+        <button id="btnHistSubmit" type="submit" class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] font-bold transition-all">
+          <span class="material-symbols-outlined text-[15px]">filter_alt</span>Lọc
+        </button>
+        <button id="btnHistCsv" type="button" onclick="exportHistoryCsv()" disabled class="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#dfe2ef] transition-all disabled:opacity-40">
+          <span class="material-symbols-outlined text-[15px]">download</span>Xuất CSV
+        </button>
+      </div>
+    </form>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2.5 font-mono">
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">KẾT QUẢ LỌC</div><div id="histCountTotal" class="text-[20px] font-bold text-white">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">LỬA</div><div id="histCountFire" class="text-[20px] font-bold text-[#ff5451]">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">KHÓI</div><div id="histCountSmoke" class="text-[20px] font-bold text-[#ffb95f]">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">NHIỆT ĐỘ CAO</div><div id="histCountTemp" class="text-[20px] font-bold text-[#f3a6ff]">--</div></div>
+      <div class="p-2.5 rounded-lg bg-[#1c1f29] border border-[#262a34]"><div class="text-[10px] text-[#e4beba]">CHƯA XỬ LÝ</div><div id="histCountPending" class="text-[20px] font-bold text-[#ff5451]">--</div></div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center justify-between gap-2 flex-wrap text-[11px] font-mono text-[#e4beba]">
+        <span>Số cảnh báo mỗi ngày (mọi loại, trong khoảng ngày đã chọn)</span>
+        <span class="flex items-center gap-3 flex-wrap">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#ff5451] inline-block"></span>Lửa</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#ffb95f] inline-block"></span>Khói</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#f3a6ff] inline-block"></span>Nhiệt độ cao</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-[#8a8f9d] inline-block"></span>Khác</span>
+        </span>
+      </div>
+      <div id="histChart" class="h-44 p-2 rounded-lg bg-[#0a0d14] border border-[#262a34] flex items-end gap-1 overflow-hidden">
+        <div class="w-full self-center text-center text-[12px] font-mono text-[#8a8f9d]">Chưa tải dữ liệu</div>
+      </div>
+      <div id="histChartLabels" class="flex gap-1 px-2 text-[9.5px] font-mono text-[#8a8f9d]"></div>
+    </div>
+
+    <div class="overflow-x-auto max-h-[28rem]">
+      <table class="w-full text-left font-mono text-[12px]">
+        <thead class="sticky top-0 bg-[#1c1f29] border-b border-[#31353f] z-10">
+          <tr class="text-[#e4beba]">
+            <th class="py-2.5 px-3">MÃ #ID</th>
+            <th class="py-2.5 px-3">THIẾT BỊ</th>
+            <th class="py-2.5 px-3">KHU VỰC</th>
+            <th class="py-2.5 px-3">LOẠI</th>
+            <th class="py-2.5 px-3">MỨC ĐỘ</th>
+            <th class="py-2.5 px-3">THỜI GIAN</th>
+            <th class="py-2.5 px-3">ẢNH</th>
+            <th class="py-2.5 px-3">SMS</th>
+            <th class="py-2.5 px-3">TRẠNG THÁI</th>
+            <th class="py-2.5 px-3">NGƯỜI XÁC NHẬN</th>
+            <th class="py-2.5 px-3 text-right">TÁC VỤ</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody" class="divide-y divide-[#262a34]">
+          <tr><td colspan="11" class="py-6 text-center text-[#e4beba]">Chọn khoảng ngày rồi bấm Lọc.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+
+  <div data-tab-panel="manage" class="hidden flex flex-col gap-5">
+
+  <!-- ==================== QUẢN LÝ TRẠM GIÁM SÁT (DEVICES, CHỈ ADMIN) ==================== -->
+  <section class="admin-only hidden bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5 gap-3 flex-wrap">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">settings_input_antenna</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Quản Lý Trạm Giám Sát</h2>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="deviceMgmtNote" class="text-[11px] font-mono text-[#e4beba]">Chỉ quản trị viên được thêm, sửa, xoá trạm</span>
+        <button type="button" onclick="openDeviceModal(null)" class="admin-only hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-mono font-bold transition-all">
+          <span class="material-symbols-outlined text-[15px]">add_circle</span>
+          <span>+ Thêm Trạm Mới</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left font-mono text-[12px]">
+        <thead>
+          <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
+            <th class="py-2.5 px-3">MÃ TRẠM</th>
+            <th class="py-2.5 px-3">TÊN TRẠM</th>
+            <th class="py-2.5 px-3">KHU VỰC</th>
+            <th class="py-2.5 px-3">LOẠI THIẾT BỊ</th>
+            <th class="py-2.5 px-3">ĐỊA CHỈ IP</th>
+            <th class="py-2.5 px-3">TRẠNG THÁI</th>
+            <th class="py-2.5 px-3">SỐ ĐO CUỐI</th>
+            <th class="admin-only hidden py-2.5 px-3 text-right">TÁC VỤ</th>
+          </tr>
+        </thead>
+        <tbody id="deviceMgmtBody" class="divide-y divide-[#262a34]">
+          <tr><td colspan="8" class="py-6 text-center text-[#e4beba]">Đang tải danh sách trạm...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ==================== SECTION 3: CÁN BỘ & NGƯỜI DÙNG (USERS) ==================== -->
+  <section class="bg-[#181b25] border border-[#262a34] rounded-xl p-4 shadow-lg flex flex-col gap-3">
+    <div class="flex items-center justify-between border-b border-[#262a34] pb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#4cd7f6] text-[20px]">group</span>
+        <h2 class="text-[15px] font-bold text-white tracking-tight">Cán Bộ Trực Ban & Người Nhận SMS Cảnh Báo</h2>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="admin-only hidden text-[11px] font-mono text-[#e4beba] md:inline">Quản lý tài khoản và số điện thoại nhận SMS</span>
+        <button onclick="openRegisterModal()" class="admin-only hidden flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4cd7f6]/15 hover:bg-[#4cd7f6]/25 border border-[#4cd7f6]/40 text-[#4cd7f6] text-[11px] font-mono font-bold transition-all">
+          <span class="material-symbols-outlined text-[15px]">person_add</span>
+          <span>+ Đăng Ký Cán Bộ Mới</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left font-mono text-[12px]">
+        <thead>
+          <tr class="text-[#e4beba] border-b border-[#31353f] bg-[#1c1f29]">
+            <th class="py-2.5 px-3">MÃ</th>
+            <th class="py-2.5 px-3">HỌ VÀ TÊN</th>
+            <th class="py-2.5 px-3">TÊN ĐĂNG NHẬP</th>
+            <th class="py-2.5 px-3">VAI TRÒ</th>
+            <th class="admin-only hidden py-2.5 px-3">SỐ ĐIỆN THOẠI (NHẬN SMS)</th>
+            <th class="admin-only hidden py-2.5 px-3">EMAIL LIÊN HỆ</th>
+            <th class="py-2.5 px-3">NGÀY ĐĂNG KÝ</th>
+            <th class="admin-only hidden py-2.5 px-3 text-right">TÁC VỤ</th>
+          </tr>
+        </thead>
+        <tbody id="usersTableBody" class="divide-y divide-[#262a34]">
+          <tr>
+            <td colspan="8" class="py-6 text-center text-[#e4beba]">Đang tải danh sách người dùng...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  </div>
+
+  </div>
+  <!-- ==================== HẾT DASHBOARD ==================== -->
+
+  <!-- ==================== MODAL ĐĂNG KÝ CÁN BỘ (CHỈ ADMIN) ==================== -->
+  <div id="registerModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 transition-all">
     <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-md p-6 shadow-2xl flex flex-col gap-4 relative">
-      
-      <!-- Nút đóng Modal -->
-      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all">
+      <button onclick="closeRegisterModal()" class="absolute top-4 right-4 text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all" title="Đóng">
         <span class="material-symbols-outlined text-[20px]">close</span>
       </button>
 
-      <!-- Modal Header -->
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-[#ff5451] flex items-center justify-center text-[#5c0008] font-bold shadow-md">
-          <span class="material-symbols-outlined text-[24px]">local_fire_department</span>
+        <div class="w-10 h-10 rounded-xl bg-[#4cd7f6] flex items-center justify-center text-[#003640] font-bold shadow-md">
+          <span class="material-symbols-outlined text-[24px]">person_add</span>
         </div>
         <div>
-          <h3 class="text-[17px] font-bold text-white tracking-tight">Tài Khoản FireGuard IoT</h3>
-          <p class="text-[11px] font-mono text-[#8a8f9d]">Tương tác trực tiếp với bảng Users trong CSDL MySQL</p>
+          <h3 class="text-[17px] font-bold text-white tracking-tight">Đăng Ký Cán Bộ Mới</h3>
+          <p class="text-[11px] font-mono text-[#8a8f9d]">Chỉ quản trị viên được tạo tài khoản và chọn vai trò</p>
         </div>
       </div>
 
-      <!-- Tab Switcher (Đăng Nhập / Đăng Ký) -->
-      <div class="flex rounded-xl bg-[#0f131c] p-1 border border-[#262a34]">
-        <button id="tabBtnLogin" onclick="switchAuthTab('login')" class="flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow">
-          Đăng Nhập
-        </button>
-        <button id="tabBtnRegister" onclick="switchAuthTab('register')" class="flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all">
-          Đăng Ký Tài Khoản
-        </button>
-      </div>
-
-      <!-- TAB 1: FORM ĐĂNG NHẬP -->
-      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="flex flex-col gap-3.5">
-        <div id="loginAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
-
-        <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập (Username):</label>
-          <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">person</span>
-            <input id="loginUsername" type="text" required placeholder="Ví dụ: admin hoặc supervisor1" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu:</label>
-          <div class="relative">
-            <span class="material-symbols-outlined absolute left-3 top-2.5 text-[18px] text-[#8a8f9d]">lock</span>
-            <input id="loginPassword" type="password" required placeholder="Nhập mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl pl-9 pr-3 py-2 text-[13px] font-mono text-white outline-none transition-all">
-          </div>
-        </div>
-
-        <!-- Gợi ý tài khoản có sẵn trong CSDL -->
-        <div class="p-2.5 rounded-xl bg-[#0f131c] border border-[#262a34] text-[10.5px] font-mono text-[#8a8f9d] flex flex-col gap-1">
-          <span class="text-[#4cd7f6] font-bold">Gợi ý tài khoản sẵn có trong CSDL:</span>
-          <div class="flex gap-2 flex-wrap mt-0.5">
-            <button type="button" onclick="fillQuickLogin('admin', '123456')" class="px-2 py-0.5 rounded bg-[#1c1f29] hover:bg-[#262a34] text-white border border-[#31353f]">admin (pass: 123456)</button>
-            <button type="button" onclick="fillQuickLogin('supervisor1', '123456')" class="px-2 py-0.5 rounded bg-[#1c1f29] hover:bg-[#262a34] text-white border border-[#31353f]">supervisor1</button>
-          </div>
-        </div>
-
-        <button type="submit" id="btnLoginSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg">
-          <span class="material-symbols-outlined text-[18px]">login</span>
-          <span>Đăng Nhập Hệ Thống</span>
-        </button>
-      </form>
-
-      <!-- TAB 2: FORM ĐĂNG KÝ -->
-      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="hidden flex flex-col gap-3">
+      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="flex flex-col gap-3" autocomplete="off">
         <div id="regAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
 
         <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập *:</label>
-            <input id="regUsername" type="text" required placeholder="user_moi" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label for="regUsername" class="block text-[11px] font-mono text-[#e4beba] mb-1">Tên đăng nhập *:</label>
+            <input id="regUsername" type="text" required maxlength="50" placeholder="user_moi" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu *:</label>
-            <input id="regPassword" type="password" required placeholder="Mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label for="regPassword" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu * (≥ 6 ký tự):</label>
+            <input id="regPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Mật khẩu" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
           </div>
         </div>
 
         <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Họ và tên cán bộ *:</label>
-          <input id="regFullName" type="text" required placeholder="Ví dụ: Lê Hoàng Nam" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label for="regFullName" class="block text-[11px] font-mono text-[#e4beba] mb-1">Họ và tên cán bộ *:</label>
+          <input id="regFullName" type="text" required maxlength="100" placeholder="Ví dụ: Lê Hoàng Nam" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
         </div>
 
         <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Số ĐT (Nhận SMS):</label>
-            <input id="regPhone" type="tel" placeholder="09xxxxxxxx" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+            <label for="regPhone" class="block text-[11px] font-mono text-[#e4beba] mb-1">Số ĐT (Nhận SMS):</label>
+            <input id="regPhone" type="tel" maxlength="15" placeholder="09xxxxxxxx" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
           </div>
           <div>
-            <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Vai trò (Role):</label>
+            <label for="regRole" class="block text-[11px] font-mono text-[#e4beba] mb-1">Vai trò:</label>
             <select id="regRole" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
-              <option value="User">User (Giám sát viên)</option>
-              <option value="Admin">Admin (Quản trị viên)</option>
+              <option value="User">Giám sát viên</option>
+              <option value="Admin">Quản trị viên</option>
             </select>
           </div>
         </div>
 
         <div>
-          <label class="block text-[11px] font-mono text-[#e4beba] mb-1">Email liên hệ:</label>
-          <input id="regEmail" type="email" placeholder="canbo@smartfire.vn" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+          <label for="regEmail" class="block text-[11px] font-mono text-[#e4beba] mb-1">Email liên hệ:</label>
+          <input id="regEmail" type="email" maxlength="100" placeholder="canbo@smartfire.vn" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#ff5451] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
         </div>
 
         <button type="submit" id="btnRegSubmit" class="w-full py-2.5 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold font-mono rounded-xl text-[13px] transition-all flex items-center justify-center gap-2 shadow-lg mt-1">
           <span class="material-symbols-outlined text-[18px]">person_add</span>
-          <span>Tạo Tài Khoản & Lưu Vào CSDL</span>
+          <span>Tạo Tài Khoản</span>
         </button>
       </form>
+    </div>
+  </div>
 
+  <!-- ==================== MODAL ĐỔI MẬT KHẨU ==================== -->
+  <div id="passwordModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-sm p-6 shadow-2xl flex flex-col gap-4 relative">
+      <button onclick="closePasswordModal()" class="absolute top-4 right-4 text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all" title="Đóng">
+        <span class="material-symbols-outlined text-[20px]">close</span>
+      </button>
+      <h3 class="text-[17px] font-bold text-white tracking-tight">Đổi Mật Khẩu</h3>
+      <form id="passwordForm" onsubmit="handlePasswordSubmit(event)" class="flex flex-col gap-3">
+        <div id="pwdAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+        <div>
+          <label for="pwdCurrent" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu hiện tại:</label>
+          <input id="pwdCurrent" type="password" required autocomplete="current-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+        </div>
+        <div>
+          <label for="pwdNew" class="block text-[11px] font-mono text-[#e4beba] mb-1">Mật khẩu mới (≥ 6 ký tự):</label>
+          <input id="pwdNew" type="password" required minlength="6" autocomplete="new-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+        </div>
+        <div>
+          <label for="pwdConfirm" class="block text-[11px] font-mono text-[#e4beba] mb-1">Nhập lại mật khẩu mới:</label>
+          <input id="pwdConfirm" type="password" required minlength="6" autocomplete="new-password" class="w-full bg-[#0f131c] border border-[#262a34] focus:border-[#4cd7f6] rounded-xl px-3 py-2 text-[12px] font-mono text-white outline-none transition-all">
+        </div>
+        <button type="submit" id="btnPwdSubmit" class="w-full py-2.5 bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold font-mono rounded-xl text-[13px] transition-all">Lưu mật khẩu mới</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL XEM ẢNH BẰNG CHỨNG ==================== -->
+  <div id="snapshotModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-3xl p-4 shadow-2xl flex flex-col gap-3 relative">
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <h3 id="snapshotTitle" class="text-[15px] font-bold text-white tracking-tight">Ảnh bằng chứng</h3>
+          <p id="snapshotSubtitle" class="text-[11px] font-mono text-[#8a8f9d]"></p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="snapshotDownload" href="#" download class="px-2.5 py-1.5 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[11px] font-mono text-[#dfe2ef] flex items-center gap-1.5 transition-all">
+            <span class="material-symbols-outlined text-[15px]">download</span>
+            <span>Tải ảnh</span>
+          </a>
+          <button onclick="closeSnapshotModal()" class="text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all" title="Đóng">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+      </div>
+      <div class="relative w-full bg-[#0a0d14] rounded-lg border border-[#262a34] flex items-center justify-center min-h-[240px]">
+        <img id="snapshotImg" class="max-w-full max-h-[70vh] object-contain" alt="Ảnh bằng chứng do Pi chụp">
+        <span id="snapshotError" class="hidden absolute text-[12px] font-mono text-[#ffdad6]">Không tải được ảnh.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL THÊM / SỬA TRẠM (CHỈ ADMIN) ==================== -->
+  <div id="deviceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div class="bg-[#181b25] border border-[#31353f] rounded-2xl w-full max-w-lg p-5 shadow-2xl flex flex-col gap-3">
+      <div class="flex items-center justify-between">
+        <h3 id="devModalTitle" class="text-[15px] font-bold text-white tracking-tight">Thêm trạm giám sát</h3>
+        <button type="button" onclick="closeDeviceModal()" class="text-[#8a8f9d] hover:text-white p-1 rounded-lg hover:bg-[#262a34] transition-all" title="Đóng">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+      <div id="devAlert" class="hidden p-2.5 rounded-lg text-[11px] font-mono"></div>
+      <form id="deviceForm" onsubmit="handleDeviceSubmit(event)" class="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-[11px] text-[#e4beba]">
+        <label class="flex flex-col gap-1">Mã trạm (DEVICE_ID trên Pi)
+          <input id="devId" type="text" required maxlength="20" pattern="[A-Za-z0-9_\-]+" placeholder="PI-01" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+        </label>
+        <label class="flex flex-col gap-1">Tên trạm
+          <input id="devName" type="text" required maxlength="100" placeholder="Pi Kho A" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+        </label>
+        <label class="flex flex-col gap-1">Khu vực
+          <input id="devZone" type="text" required maxlength="100" list="devZoneList" placeholder="Kho hàng A" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+          <datalist id="devZoneList"></datalist>
+        </label>
+        <label class="flex flex-col gap-1">Loại thiết bị
+          <input id="devType" type="text" maxlength="50" placeholder="RaspberryPi-5" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+        </label>
+        <label class="flex flex-col gap-1">Địa chỉ IP (để trống nếu dùng DHCP)
+          <input id="devIp" type="text" maxlength="15" placeholder="192.168.1.101" autocomplete="off" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+        </label>
+        <label class="flex flex-col gap-1">Trạng thái
+          <select id="devStatus" class="w-full bg-[#1c1f29] border border-[#31353f] rounded-lg px-3 py-2 text-[13px] font-mono text-white focus:outline-none focus:border-[#4cd7f6]">
+            <option value="Active">Hoạt động</option>
+            <option value="Inactive">Ngừng hoạt động</option>
+            <option value="Maintenance">Bảo trì</option>
+          </select>
+        </label>
+        <div class="md:col-span-2 flex justify-end gap-2 pt-1">
+          <button type="button" onclick="closeDeviceModal()" class="px-3.5 py-2 rounded-lg bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#dfe2ef] text-[12px] transition-all">Huỷ</button>
+          <button id="btnDevSubmit" type="submit" class="px-3.5 py-2 rounded-lg bg-[#4cd7f6] hover:bg-[#4cd7f6]/80 text-[#003640] font-bold text-[12px] transition-all disabled:opacity-50">Lưu trạm</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -439,14 +742,68 @@
 
   <!-- ==================== JAVASCRIPT LOGIC ==================== -->
   <script>
+    'use strict';
+
+    // ========================================================
+    // TIỆN ÍCH CHUNG
+    // ========================================================
+    const el = (id) => document.getElementById(id);
+
+    // Mọi chuỗi lấy từ CSDL / người dùng đều phải qua hàm này trước khi đưa vào innerHTML (chống XSS)
+    function escapeHtml(value) {
+      if (value === null || value === undefined) return '';
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/`/g, '&#96;');
+    }
+
+    function toInt(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.trunc(n) : 0;
+    }
+
+    function storageGet(key) {
+      try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function storageSet(key, value) {
+      try { localStorage.setItem(key, value); } catch (e) { /* trình duyệt chặn lưu */ }
+    }
+
+    const TEMP_DANGER = 45;   // trùng ngưỡng nhiệt của Pi (main_iot.py)
+
+    // Hiển thị tiếng Việt, giá trị trong CSDL giữ nguyên
+    const SEVERITY_TEXT = { High: 'Mức 2 – Khẩn cấp', Medium: 'Mức 1 – Cảnh báo sớm', Low: 'Thấp' };
+    const ALERT_TYPE_TEXT = { Fire: 'Lửa', Smoke: 'Khói', HighTemperature: 'Nhiệt độ cao', HighGas: 'Khí gas cao' };
+    const DEVICE_STATUS_TEXT = { Active: 'HOẠT ĐỘNG', Inactive: 'NGỪNG HOẠT ĐỘNG', Maintenance: 'BẢO TRÌ' };
+    const ROLE_TEXT = { Admin: 'Quản trị viên', User: 'Giám sát viên' };
+    const LEVEL_TEXT = ['Bình thường', 'Mức 1', 'Mức 2'];
+
+    const severityText = (s) => SEVERITY_TEXT[s] || String(s || '');
+    const alertTypeText = (t) => ALERT_TYPE_TEXT[t] || String(t || '');
+    const roleText = (r) => ROLE_TEXT[r] || String(r || '');
+
+    function fmtNumber(v, digits = 1) {
+      return v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v).toFixed(digits);
+    }
+
+    function fmtDateTime(v) {
+      if (!v) return '—';
+      const d = new Date(v);
+      return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString('vi-VN');
+    }
+
     // Live clock
     setInterval(() => {
       const now = new Date();
-      document.getElementById('headerLiveClock').textContent = now.toLocaleTimeString('vi-VN') + ' • ' + now.toLocaleDateString('vi-VN');
+      el('headerLiveClock').textContent = now.toLocaleTimeString('vi-VN') + ' • ' + now.toLocaleDateString('vi-VN');
     }, 1000);
 
     function showToast(message, type = 'info') {
-      const container = document.getElementById('toastContainer');
+      const container = el('toastContainer');
       if (!container) return;
       const toast = document.createElement('div');
       const colors = {
@@ -455,21 +812,271 @@
         error: 'bg-[#93000a] border-[#ff5451] text-[#ffdad6]'
       };
       toast.className = `p-3 rounded-lg border shadow-xl text-[12px] font-mono flex items-center gap-2 pointer-events-auto transition-all duration-300 ${colors[type] || colors.info}`;
-      toast.innerHTML = `<span class="material-symbols-outlined text-[16px]">${type === 'error' ? 'error' : 'check_circle'}</span> ${message}`;
+      const icon = document.createElement('span');
+      icon.className = 'material-symbols-outlined text-[16px]';
+      icon.textContent = type === 'error' ? 'error' : (type === 'success' ? 'check_circle' : 'info');
+      const text = document.createElement('span');
+      text.textContent = message;
+      toast.append(icon, text);
       container.appendChild(toast);
-      setTimeout(() => { toast.remove(); }, 3500);
+      setTimeout(() => { toast.remove(); }, 4000);
     }
 
-    async function fetchDashboardData(showNotify = false) {
+    // ========================================================
+    // GỌI WEB API (cookie đăng nhập gửi kèm tự động, 401 -> về màn hình đăng nhập)
+    // ========================================================
+    async function api(url, options = {}) {
+      const headers = { 'Accept': 'application/json' };
+      if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+      let res;
       try {
-        const res = await fetch('/api/dashboard');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        window.renderRealDatabaseData(data);
-        if (showNotify) showToast('Đã đồng bộ dữ liệu mới nhất từ MySQL!', 'success');
+        res = await fetch(url, {
+          method: options.method || 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers,
+          body: options.body !== undefined ? JSON.stringify(options.body) : undefined
+        });
+      } catch (err) {
+        return { ok: false, status: 0, body: { error: 'Không kết nối được tới máy chủ web.' } };
+      }
+      let body = null;
+      try { body = await res.json(); } catch (e) { body = null; }
+      if (res.status === 401 && !options.allow401) {
+        sessionExpired();
+      }
+      return { ok: res.ok, status: res.status, body: body || {} };
+    }
+
+    // ========================================================
+    // ĐĂNG NHẬP / ĐĂNG XUẤT
+    // ========================================================
+    let currentUser = null;
+    let lastData = null;
+    let pollTimer = null;
+    let hubConnection = null;
+    let dashLoading = false;
+
+    const isAdmin = () => !!currentUser && currentUser.role === 'Admin';
+
+    function showLoginScreen(message, isError = true) {
+      el('bootScreen').classList.add('hidden');
+      el('appRoot').classList.add('hidden');
+      el('loginScreen').classList.remove('hidden');
+      const box = el('loginAlert');
+      if (message) {
+        box.className = isError
+          ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+          : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+        box.textContent = message;
+      } else {
+        box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono';
+        box.textContent = '';
+      }
+      el('loginPassword').value = '';
+      setTimeout(() => el('loginUsername').focus(), 0);
+    }
+
+    // Phiên hết hạn / bị huỷ: tải lại trang để xoá sạch dữ liệu đang hiện, rồi báo lý do ở màn hình đăng nhập
+    let expiring = false;
+    function sessionExpired() {
+      if (expiring || !currentUser) return;
+      expiring = true;
+      try { sessionStorage.setItem('smartfire_login_msg', 'Phiên đăng nhập đã hết hạn hoặc tài khoản đã bị thay đổi. Vui lòng đăng nhập lại.'); } catch (e) { /* bỏ qua */ }
+      location.reload();
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      unlockAudio();   // lần bấm này cho phép trình duyệt phát âm thanh báo động về sau
+
+      const u = el('loginUsername').value.trim();
+      const p = el('loginPassword').value;
+      if (!u || !p) return;
+
+      const btn = el('btnLoginSubmit');
+      btn.disabled = true;
+      showLoginScreen('Đang xác thực tài khoản...', false);
+      el('loginUsername').value = u;
+
+      const res = await api('/api/auth/login', { method: 'POST', body: { username: u, password: p }, allow401: true });
+      btn.disabled = false;
+
+      if (res.ok && res.body.success && res.body.user) {
+        el('loginPassword').value = '';
+        enterApp(res.body.user);
+        showToast(`Đăng nhập thành công. Chào ${res.body.user.fullName || res.body.user.username}!`, 'success');
+      } else {
+        showLoginScreen(res.body.error || 'Tên đăng nhập hoặc mật khẩu không đúng.');
+        el('loginUsername').value = u;
+      }
+    }
+
+    async function logoutUser() {
+      await api('/api/auth/logout', { method: 'POST', allow401: true });
+      try { sessionStorage.setItem('smartfire_login_msg', 'Đã đăng xuất.'); } catch (e) { /* bỏ qua */ }
+      location.reload();
+    }
+
+    function updateHeaderUserUi() {
+      if (!currentUser) return;
+      const name = currentUser.fullName || currentUser.username || '';
+      el('headerUserAvatar').textContent = (name.trim().split(/\s+/).pop() || '?').charAt(0).toUpperCase();
+      el('headerUserName').textContent = name;
+      el('headerUserRole').textContent = roleText(currentUser.role);
+      document.querySelectorAll('.admin-only').forEach(node => node.classList.toggle('hidden', !isAdmin()));
+    }
+
+    function enterApp(user) {
+      currentUser = user;
+      el('bootScreen').classList.add('hidden');
+      el('loginScreen').classList.add('hidden');
+      el('appRoot').classList.remove('hidden');
+      updateHeaderUserUi();
+      updateSoundButton();
+      initHistoryForm();
+      showTab(storageGet('smartfire_tab') || 'monitor');
+
+      fetchDashboardData(false);
+      clearInterval(pollTimer);
+      pollTimer = setInterval(() => fetchDashboardData(false), 3000);
+      startSignalR();
+
+      const savedCam = storageGet('smartfire_cam_url');
+      if (savedCam) startCamera(savedCam);
+    }
+
+    function startSignalR() {
+      if (!window.signalR || hubConnection) return;
+      hubConnection = new signalR.HubConnectionBuilder()
+        .withUrl('/hubs/firealert')
+        .withAutomaticReconnect()
+        .build();
+      hubConnection.on('DashboardUpdated', (data) => window.renderRealDatabaseData(data));
+      hubConnection.start().catch(err => console.warn('SignalR không kết nối được, dùng quét định kỳ:', err));
+    }
+
+    // Mở trang: còn cookie hợp lệ thì vào thẳng dashboard, không thì hiện màn hình đăng nhập
+    window.addEventListener('DOMContentLoaded', async () => {
+      let msg = null;
+      try { msg = sessionStorage.getItem('smartfire_login_msg'); sessionStorage.removeItem('smartfire_login_msg'); } catch (e) { msg = null; }
+
+      const res = await api('/api/auth/me', { allow401: true });
+      if (res.ok && res.body.user) {
+        enterApp(res.body.user);
+      } else if (res.status === 0) {
+        showLoginScreen(res.body.error);
+      } else {
+        showLoginScreen(msg, msg !== 'Đã đăng xuất.');
+      }
+    });
+
+    // ========================================================
+    // ÂM THANH BÁO ĐỘNG (Web Audio API, không cần file âm thanh)
+    // ========================================================
+    const sound = { ctx: null, enabled: storageGet('smartfire_sound') !== 'off' };
+
+    function unlockAudio() {
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        if (!sound.ctx) sound.ctx = new Ctx();
+        if (sound.ctx.state === 'suspended') sound.ctx.resume().then(updateSoundButton).catch(() => {});
+      } catch (e) { /* trình duyệt không hỗ trợ */ }
+      updateSoundButton();
+    }
+    // Mở lại trang khi còn phiên: trình duyệt chỉ cho phát âm thanh sau lần bấm / gõ phím đầu tiên
+    ['pointerdown', 'keydown'].forEach(evt => document.addEventListener(evt, unlockAudio, { once: true, capture: true }));
+
+    function audioReady() {
+      return !!sound.ctx && sound.ctx.state === 'running';
+    }
+
+    function updateSoundButton() {
+      const icon = el('iconSound');
+      const text = el('textSound');
+      const btn = el('btnSound');
+      if (!sound.enabled) {
+        icon.textContent = 'volume_off';
+        text.textContent = 'Âm thanh: Tắt';
+        btn.title = 'Bấm để bật âm thanh báo động';
+      } else if (!audioReady()) {
+        icon.textContent = 'volume_mute';
+        text.textContent = 'Âm thanh: chờ bấm';
+        btn.title = 'Trình duyệt cần một lần bấm vào trang để phát âm thanh';
+      } else {
+        icon.textContent = 'volume_up';
+        text.textContent = 'Âm thanh: Bật';
+        btn.title = 'Bấm để tắt âm thanh báo động';
+      }
+    }
+
+    function toggleSound() {
+      unlockAudio();
+      sound.enabled = !sound.enabled;
+      storageSet('smartfire_sound', sound.enabled ? 'on' : 'off');
+      updateSoundButton();
+      if (sound.enabled) playAlarm(1);
+    }
+
+    // Mức 2: 3 tiếng cao, Mức 1: 2 tiếng thấp hơn
+    function playAlarm(level) {
+      if (!sound.enabled || !audioReady()) return;
+      const ctx = sound.ctx;
+      const count = level >= 2 ? 3 : 2;
+      const freq = level >= 2 ? 880 : 660;
+      const t0 = ctx.currentTime + 0.02;
+      for (let i = 0; i < count; i++) {
+        const start = t0 + i * 0.35;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.25, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + 0.28);
+      }
+    }
+
+    // Cảnh báo mới (AlertId lớn hơn lần trước) mức Medium/High chưa xác nhận -> phát âm thanh
+    let lastAlertId = null;
+    function checkNewAlerts(alerts) {
+      const maxId = alerts.reduce((m, a) => Math.max(m, toInt(a.alertId)), 0);
+      if (lastAlertId === null) { lastAlertId = maxId; return; }
+      const fresh = alerts.filter(a => toInt(a.alertId) > lastAlertId && !a.acknowledged
+        && (a.severity === 'High' || a.severity === 'Medium'));
+      if (maxId > lastAlertId) lastAlertId = maxId;
+      if (fresh.length === 0) return;
+
+      const top = fresh.find(a => a.severity === 'High') || fresh[0];
+      playAlarm(top.severity === 'High' ? 2 : 1);
+      showToast(`Cảnh báo mới: ${severityText(top.severity)} – ${alertTypeText(top.alertType)} tại ${top.deviceName || top.deviceId}`, 'error');
+    }
+
+    // ========================================================
+    // DỮ LIỆU DASHBOARD
+    // ========================================================
+    async function fetchDashboardData(showNotify = false) {
+      if (!currentUser || dashLoading) return;
+      dashLoading = true;
+      try {
+        const res = await api('/api/dashboard');
+        if (res.status === 401) return;
+        if (!res.ok) throw new Error(res.body.error || ('HTTP ' + res.status));
+        window.renderRealDatabaseData(res.body);
+        if (showNotify) {
+          if (res.body.isConnected) showToast('Đã đồng bộ dữ liệu mới nhất từ MySQL.', 'success');
+          else showToast('Máy chủ web chạy nhưng không đọc được CSDL.', 'error');
+        }
       } catch (err) {
         console.error('Lỗi tải dữ liệu dashboard:', err);
-        if (showNotify) showToast('Không thể kết nối tới Web API.', 'error');
+        if (showNotify) showToast('Không thể kết nối tới Web API: ' + err.message, 'error');
+      } finally {
+        dashLoading = false;
       }
     }
 
@@ -479,724 +1086,1416 @@
     }
 
     async function acknowledgeAlert(alertId) {
-      try {
-        const uId = window.currentAuthUser ? window.currentAuthUser.userId : 1;
-        const res = await fetch('/api/alerts/acknowledge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ alertId: alertId, userId: uId })
-        });
-        const result = await res.json();
-        if (result.success) {
-          showToast(`Đã xác nhận xử lý sự cố #${alertId}`, 'success');
-          await fetchDashboardData(false);
-        } else {
-          showToast(`Không thể xác nhận sự cố #${alertId}`, 'error');
-        }
-      } catch (err) {
-        showToast('Lỗi kết nối Web API khi xác nhận sự cố.', 'error');
+      // Người xác nhận do máy chủ lấy từ phiên đăng nhập, không gửi userId
+      const res = await api('/api/alerts/acknowledge', { method: 'POST', body: { alertId } });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        showToast(`Đã xác nhận xử lý sự cố #${alertId}`, 'success');
+        await fetchDashboardData(false);
+        if (hist.loaded) loadHistory(false);
+      } else {
+        showToast(res.body.error || `Không thể xác nhận sự cố #${alertId}`, 'error');
       }
     }
-
-    // Khởi tạo dữ liệu & kết nối SignalR Real-time khi trang tải xong
-    window.addEventListener('DOMContentLoaded', () => {
-      fetchDashboardData(false);
-      setInterval(() => fetchDashboardData(false), 3000);
-
-      if (window.signalR) {
-        const connection = new signalR.HubConnectionBuilder()
-          .withUrl('/hubs/firealert')
-          .withAutomaticReconnect()
-          .build();
-
-        connection.on('DashboardUpdated', (data) => {
-          window.renderRealDatabaseData(data);
-        });
-
-        connection.start().catch(err => console.warn('SignalR fallback to polling:', err));
-      }
-    });
 
     // ========================================================
-    // QUẢN LÝ ĐĂNG NHẬP, ĐĂNG KÝ & TƯƠNG TÁC BẢNG USERS
+    // QUẢN LÝ CÁN BỘ (CHỈ ADMIN)
     // ========================================================
-    window.currentAuthUser = JSON.parse(sessionStorage.getItem('fireguard_user') || 'null');
-
-    function updateHeaderUserUi() {
-      const avatar = document.getElementById('headerUserAvatar');
-      const nameEl = document.getElementById('headerUserName');
-      const roleEl = document.getElementById('headerUserRole');
-      const textAuth = document.getElementById('textHeaderAuth');
-      const iconAuth = document.getElementById('iconHeaderAuth');
-
-      if (window.currentAuthUser) {
-        if (avatar) avatar.textContent = window.currentAuthUser.fullName.split(' ').pop().charAt(0).toUpperCase();
-        if (nameEl) nameEl.textContent = window.currentAuthUser.fullName;
-        if (roleEl) roleEl.textContent = `${window.currentAuthUser.role.toUpperCase()} (SOC)`;
-        if (textAuth) textAuth.textContent = 'Đăng Xuất';
-        if (iconAuth) iconAuth.textContent = 'logout';
-      } else {
-        if (avatar) avatar.textContent = '?';
-        if (nameEl) nameEl.textContent = 'Chưa đăng nhập';
-        if (roleEl) roleEl.textContent = 'Khách (Guest)';
-        if (textAuth) textAuth.textContent = 'Đăng Nhập';
-        if (iconAuth) iconAuth.textContent = 'login';
-      }
+    function setRegAlert(message, isError) {
+      const box = el('regAlert');
+      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono'; box.textContent = ''; return; }
+      box.className = isError
+        ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+        : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+      box.textContent = message;
     }
 
-    function handleHeaderAuthClick() {
-      if (window.currentAuthUser) {
-        logoutUser();
-      } else {
-        openAuthModal('login');
-      }
+    function openRegisterModal() {
+      if (!isAdmin()) return;
+      el('registerForm').reset();
+      setRegAlert(null);
+      el('registerModal').classList.remove('hidden');
+      setTimeout(() => el('regUsername').focus(), 0);
     }
 
-    function logoutUser() {
-      window.currentAuthUser = null;
-      sessionStorage.removeItem('fireguard_user');
-      updateHeaderUserUi();
-      showToast('Đã đăng xuất tài khoản.', 'info');
-      openAuthModal('login');
-    }
-
-    function openAuthModal(tab = 'login') {
-      const modal = document.getElementById('authModal');
-      if (modal) modal.classList.remove('hidden');
-      switchAuthTab(tab);
-    }
-
-    function closeAuthModal() {
-      const modal = document.getElementById('authModal');
-      if (modal) modal.classList.add('hidden');
-    }
-
-    function switchAuthTab(tab) {
-      const loginForm = document.getElementById('loginForm');
-      const regForm = document.getElementById('registerForm');
-      const tabLogin = document.getElementById('tabBtnLogin');
-      const tabReg = document.getElementById('tabBtnRegister');
-      const loginAlert = document.getElementById('loginAlert');
-      const regAlert = document.getElementById('regAlert');
-
-      if (loginAlert) loginAlert.classList.add('hidden');
-      if (regAlert) regAlert.classList.add('hidden');
-
-      if (tab === 'login') {
-        loginForm.classList.remove('hidden');
-        regForm.classList.add('hidden');
-        tabLogin.className = 'flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow';
-        tabReg.className = 'flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all';
-      } else {
-        loginForm.classList.add('hidden');
-        regForm.classList.remove('hidden');
-        tabReg.className = 'flex-1 py-2 text-center text-[12px] font-mono font-bold rounded-lg transition-all bg-[#1c1f29] text-white shadow';
-        tabLogin.className = 'flex-1 py-2 text-center text-[12px] font-mono text-[#8a8f9d] hover:text-white rounded-lg transition-all';
-      }
-    }
-
-    function fillQuickLogin(user, pass) {
-      document.getElementById('loginUsername').value = user;
-      document.getElementById('loginPassword').value = pass;
-    }
-
-    async function handleLoginSubmit(e) {
-      e.preventDefault();
-      const u = document.getElementById('loginUsername').value.trim();
-      const p = document.getElementById('loginPassword').value;
-
-      if (!u || !p) return;
-
-      const alertBox = document.getElementById('loginAlert');
-      if (alertBox) {
-        alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
-        alertBox.textContent = 'Đang xác thực thông tin tài khoản từ CSDL...';
-        alertBox.classList.remove('hidden');
-      }
-
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: u, password: p })
-        });
-        const result = await res.json();
-        window.handleAuthResponse('login', result);
-        if (result.success) await fetchDashboardData(false);
-      } catch (err) {
-        window.handleAuthResponse('login', { success: false, error: 'Lỗi kết nối Web API.' });
-      }
+    function closeRegisterModal() {
+      el('registerModal').classList.add('hidden');
+      el('regPassword').value = '';
     }
 
     async function handleRegisterSubmit(e) {
       e.preventDefault();
-      const username = document.getElementById('regUsername').value.trim();
-      const password = document.getElementById('regPassword').value;
-      const fullName = document.getElementById('regFullName').value.trim();
-      const phone = document.getElementById('regPhone').value.trim();
-      const email = document.getElementById('regEmail').value.trim();
-      const role = document.getElementById('regRole').value;
+      if (!isAdmin()) return;
+      const body = {
+        username: el('regUsername').value.trim(),
+        password: el('regPassword').value,
+        fullName: el('regFullName').value.trim(),
+        phone: el('regPhone').value.trim(),
+        email: el('regEmail').value.trim(),
+        role: el('regRole').value
+      };
+      if (!body.username || !body.password || !body.fullName) return;
 
-      if (!username || !password || !fullName) return;
+      setRegAlert('Đang lưu tài khoản vào CSDL...', false);
+      const btn = el('btnRegSubmit');
+      btn.disabled = true;
+      const res = await api('/api/auth/register', { method: 'POST', body });
+      btn.disabled = false;
+      if (res.status === 401) return;
 
-      const alertBox = document.getElementById('regAlert');
-      if (alertBox) {
-        alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#ff5451]/10 text-[#ff5451] border border-[#ff5451]/30';
-        alertBox.textContent = 'Đang lưu tài khoản vào bảng Users trong CSDL...';
-        alertBox.classList.remove('hidden');
-      }
-
-      try {
-        const res = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, fullName, phone, email, role })
-        });
-        const result = await res.json();
-        window.handleAuthResponse('register', result);
-        if (result.success) await fetchDashboardData(false);
-      } catch (err) {
-        window.handleAuthResponse('register', { success: false, error: 'Lỗi kết nối Web API.' });
+      if (res.ok && res.body.success && res.body.user) {
+        closeRegisterModal();
+        showToast(`Đã thêm cán bộ "${res.body.user.fullName}" (${roleText(res.body.user.role)}).`, 'success');
+        await fetchDashboardData(false);
+      } else {
+        setRegAlert(res.body.error || 'Lỗi khi tạo tài khoản.', true);
       }
     }
 
-    async function confirmDeleteUser(userId, username) {
-      if (window.currentAuthUser && window.currentAuthUser.userId === userId) {
-        alert('Không thể xóa tài khoản bạn đang đăng nhập!');
+    async function confirmDeleteUser(userId) {
+      if (!isAdmin()) return;
+      if (currentUser && currentUser.userId === userId) {
+        showToast('Không thể xóa tài khoản đang đăng nhập.', 'error');
         return;
       }
-      if (confirm(`Bạn có chắc chắn muốn xóa tài khoản "${username}" (#${userId}) khỏi bảng Users CSDL không?`)) {
-        try {
-          const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
-          const result = await res.json();
-          if (result.success) {
-            showToast(`Đã xóa tài khoản #${userId}`, 'success');
-            await fetchDashboardData(false);
-          } else {
-            showToast(`Không thể xóa tài khoản #${userId}`, 'error');
-          }
-        } catch (err) {
-          showToast('Lỗi kết nối Web API khi xóa tài khoản.', 'error');
-        }
+      const u = lastData && lastData.users ? lastData.users.find(x => toInt(x.userId) === userId) : null;
+      const label = u ? `"${u.username}" (#${userId})` : `#${userId}`;
+      if (!confirm(`Xóa tài khoản ${label} khỏi hệ thống? Thao tác này không hoàn tác được.`)) return;
+
+      const res = await api(`/api/users/${userId}`, { method: 'DELETE' });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        showToast(`Đã xóa tài khoản #${userId}`, 'success');
+        await fetchDashboardData(false);
+      } else {
+        showToast(res.body.error || `Không thể xóa tài khoản #${userId}`, 'error');
       }
     }
 
-    // Nhận phản hồi đăng nhập/đăng ký từ C# WinForms
-    window.handleAuthResponse = function(action, res) {
-      if (action === 'login') {
-        const alertBox = document.getElementById('loginAlert');
-        if (res.success && res.user) {
-          window.currentAuthUser = res.user;
-          sessionStorage.setItem('fireguard_user', JSON.stringify(res.user));
-          updateHeaderUserUi();
-          closeAuthModal();
-          showToast(`Đăng nhập thành công! Chào mừng ${res.user.fullName} (${res.user.role})`, 'success');
-        } else {
-          if (alertBox) {
-            alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]';
-            alertBox.textContent = res.error || 'Tên đăng nhập hoặc mật khẩu không chính xác.';
-            alertBox.classList.remove('hidden');
-          }
-        }
-      } else if (action === 'register') {
-        const alertBox = document.getElementById('regAlert');
-        if (res.success && res.user) {
-          window.currentAuthUser = res.user;
-          sessionStorage.setItem('fireguard_user', JSON.stringify(res.user));
-          updateHeaderUserUi();
-          closeAuthModal();
-          showToast(`Đăng ký thành công! Đã thêm cán bộ "${res.user.fullName}" vào bảng Users.`, 'success');
-        } else {
-          if (alertBox) {
-            alertBox.className = 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]';
-            alertBox.textContent = res.error || 'Lỗi khi tạo tài khoản.';
-            alertBox.classList.remove('hidden');
-          }
-        }
+    // Nút trong bảng sinh động: bắt sự kiện ở bảng, đọc id từ data-* (không ghép chuỗi vào onclick)
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'tab') { showTab(btn.dataset.tab); return; }
+      // Mã trạm là chuỗi (PI-01): đọc từ data-device, trình duyệt đã giải mã ký tự đặc biệt
+      if (action === 'edit-device' || action === 'delete-device') {
+        const deviceId = btn.dataset.device || '';
+        if (!deviceId) return;
+        if (action === 'edit-device') openDeviceModal(deviceId);
+        else confirmDeleteDevice(deviceId);
+        return;
       }
+      const id = toInt(btn.dataset.id);
+      if (id <= 0) return;
+      if (btn.dataset.action === 'ack') acknowledgeAlert(id);
+      else if (btn.dataset.action === 'snapshot') openSnapshotModal(id);
+      else if (btn.dataset.action === 'delete-user') confirmDeleteUser(id);
+    });
+
+    // ========================================================
+    // ĐỔI MẬT KHẨU
+    // ========================================================
+    function setPwdAlert(message, isError) {
+      const box = el('pwdAlert');
+      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono'; box.textContent = ''; return; }
+      box.className = isError
+        ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+        : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+      box.textContent = message;
+    }
+
+    function openPasswordModal() {
+      el('passwordForm').reset();
+      setPwdAlert(null);
+      el('passwordModal').classList.remove('hidden');
+      setTimeout(() => el('pwdCurrent').focus(), 0);
+    }
+
+    function closePasswordModal() {
+      el('passwordModal').classList.add('hidden');
+      el('passwordForm').reset();
+    }
+
+    async function handlePasswordSubmit(e) {
+      e.preventDefault();
+      const currentPassword = el('pwdCurrent').value;
+      const newPassword = el('pwdNew').value;
+      if (newPassword !== el('pwdConfirm').value) {
+        setPwdAlert('Hai lần nhập mật khẩu mới không khớp.', true);
+        return;
+      }
+      el('btnPwdSubmit').disabled = true;
+      const res = await api('/api/auth/change-password', { method: 'POST', body: { currentPassword, newPassword } });
+      el('btnPwdSubmit').disabled = false;
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        closePasswordModal();
+        showToast('Đã đổi mật khẩu.', 'success');
+      } else {
+        setPwdAlert(res.body.error || 'Không đổi được mật khẩu.', true);
+      }
+    }
+
+    // ========================================================
+    // XEM ẢNH BẰNG CHỨNG (ảnh do Pi chụp, lưu trong AlertHistory)
+    // ========================================================
+    function openSnapshotModal(alertId) {
+      const a = (lastData && lastData.alerts ? lastData.alerts.find(x => toInt(x.alertId) === alertId) : null)
+        || hist.rows.find(x => toInt(x.alertId) === alertId) || null;
+      const url = `/api/alerts/${alertId}/snapshot`;
+      el('snapshotTitle').textContent = `Ảnh bằng chứng — cảnh báo #${alertId}`;
+      el('snapshotSubtitle').textContent = a
+        ? `${a.deviceId} (${a.deviceName}) • ${alertTypeText(a.alertType)} • ${severityText(a.severity)} • ${fmtDateTime(a.alertTime)}`
+        : '';
+      el('snapshotError').classList.add('hidden');
+      const img = el('snapshotImg');
+      img.classList.remove('hidden');
+      img.onerror = () => { img.classList.add('hidden'); el('snapshotError').classList.remove('hidden'); };
+      img.src = url;
+      const link = el('snapshotDownload');
+      link.href = url;
+      link.setAttribute('download', `canh_bao_${alertId}.jpg`);
+      el('snapshotModal').classList.remove('hidden');
+    }
+
+    function closeSnapshotModal() {
+      el('snapshotModal').classList.add('hidden');
+      el('snapshotImg').removeAttribute('src');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      closeSnapshotModal();
+      closeRegisterModal();
+      closePasswordModal();
+      closeDeviceModal();
+    });
+
+    // ========================================================
+    // CAMERA PI: đọc luồng MJPEG, báo mất tín hiệu và tự thử lại
+    //   - Khung lửa/khói do Pi vẽ sẵn trong ảnh, trang KHÔNG tự vẽ thêm gì.
+    //   - Đọc luồng bằng fetch để biết chính xác lúc có khung hình mới (Pi đã bật CORS *).
+    //     Pi gửi lại đúng ảnh cũ khi camera treo, nên khung trùng nội dung không được tính là mới.
+    //   - Fetch bị chặn thì hiển thị thẳng bằng <img> (chỉ phát hiện được lỗi kết nối).
+    // ========================================================
+    const CAMERA_RETRY_MS = 5000;
+    const CAMERA_STALL_MS = 6000;
+    const cam = {
+      url: '', active: false, state: 'off', mode: 'fetch',
+      ctrl: null, retryTimer: null, attemptAt: 0, lastFreshAt: 0, lastSig: null,
+      gotFrameThisAttempt: false, frameTimes: [], objectUrl: null, lastFrame: null
     };
 
-    // ========================================================
-    // QUẢN LÝ CAMERA AI & NHẬN DIỆN LUỒNG LỬA (WEBCAM / IP / AI BBOX)
-    // ========================================================
-    let mediaStream = null;
-    let isCameraLive = false;
-    let isFlameDetected = false;
-    let isSimulatingFlame = false;
-    let animFrameId = null;
-    let flameBBox = { x: 0.32, y: 0.22, width: 0.36, height: 0.52 }; // Tỷ lệ tương đối trên khung hình
+    function cameraDefaultUrl() {
+      const devices = (lastData && lastData.devices) || [];
+      const dev = devices.find(d => d.ipAddress);
+      return `http://${dev ? dev.ipAddress : '<IP-Pi>'}:5000/video_feed`;
+    }
 
-    async function toggleWebcam() {
-      const video = document.getElementById('cameraVideo');
-      const placeholder = document.getElementById('cameraPlaceholder');
-      const imgStream = document.getElementById('cameraImgStream');
-      const btnText = document.getElementById('btnWebcamText');
-      const camDot = document.getElementById('camRecDot');
-
-      if (isCameraLive && mediaStream) {
-        // Tắt webcam
-        mediaStream.getTracks().forEach(t => t.stop());
-        mediaStream = null;
-        video.srcObject = null;
-        video.classList.add('hidden');
-        placeholder.classList.remove('hidden');
-        isCameraLive = false;
-        btnText.textContent = 'Bật Webcam';
-        camDot.className = 'w-1.5 h-1.5 rounded-full bg-[#4cd7f6]';
-        showToast('Đã dừng webcam.', 'info');
-      } else {
-        // Mở webcam
-        try {
-          imgStream.classList.add('hidden');
-          mediaStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-          });
-          video.srcObject = mediaStream;
-          video.classList.remove('hidden');
-          placeholder.classList.add('hidden');
-          isCameraLive = true;
-          btnText.textContent = 'Tắt Webcam';
-          camDot.className = 'w-1.5 h-1.5 rounded-full bg-[#ff5451] animate-ping';
-          showToast('Đã kết nối luồng Webcam thành công!', 'success');
-          startCameraOverlayLoop();
-        } catch (err) {
-          console.error(err);
-          showToast('Không thể mở Webcam: ' + (err.message || 'Thiết bị bận hoặc từ chối quyền'), 'error');
-        }
+    function cameraSourceLabel(url) {
+      try {
+        const host = new URL(url).hostname;
+        const dev = ((lastData && lastData.devices) || []).find(d => d.ipAddress === host);
+        return dev ? `${dev.deviceId} • ${host}` : host;
+      } catch (e) {
+        return 'Camera IP';
       }
     }
 
     function connectIpCamera() {
-      const currentUrl = localStorage.getItem('smartfire_ip_cam') || 'http://192.168.1.101:8080/stream.mjpg';
-      const url = prompt('Nhập địa chỉ luồng MJPEG / IP Camera từ Raspberry Pi hoặc mạng nội bộ:', currentUrl);
-      if (!url) return;
-
-      localStorage.setItem('smartfire_ip_cam', url);
-      const video = document.getElementById('cameraVideo');
-      const imgStream = document.getElementById('cameraImgStream');
-      const placeholder = document.getElementById('cameraPlaceholder');
-      const camDot = document.getElementById('camRecDot');
-
-      // Tắt webcam nếu đang bật
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(t => t.stop());
-        mediaStream = null;
-        video.srcObject = null;
-        video.classList.add('hidden');
-        document.getElementById('btnWebcamText').textContent = 'Bật Webcam';
+      const current = storageGet('smartfire_cam_url') || cameraDefaultUrl();
+      const input = prompt('Địa chỉ luồng video của Raspberry Pi (main_iot.py phục vụ MJPEG ở cổng 5000):', current);
+      if (!input) return;
+      const url = input.trim();
+      if (!/^https?:\/\/[^<>\s]+$/i.test(url)) {
+        showToast('Địa chỉ camera không hợp lệ (ví dụ: http://192.168.1.101:5000/video_feed).', 'error');
+        return;
       }
-
-      imgStream.src = url;
-      imgStream.classList.remove('hidden');
-      placeholder.classList.add('hidden');
-      isCameraLive = true;
-      camDot.className = 'w-1.5 h-1.5 rounded-full bg-[#4cd7f6] animate-pulse';
-      showToast('Đang kết nối camera IP: ' + url, 'info');
-      startCameraOverlayLoop();
+      storageSet('smartfire_cam_url', url);
+      startCamera(url);
     }
 
-    function toggleSimulateFlame() {
-      isSimulatingFlame = !isSimulatingFlame;
-      const btn = document.getElementById('btnSimulateFlame');
-      const btnText = document.getElementById('btnSimulateText');
+    function startCamera(url) {
+      stopCamera(false);
+      cam.url = url;
+      cam.active = true;
+      cam.mode = 'fetch';
+      cam.lastSig = null;
+      el('btnCameraStop').classList.remove('hidden');
+      const label = el('camSourceLabel');
+      label.textContent = cameraSourceLabel(url);
+      label.classList.remove('hidden');
+      setCamState('connecting');
+      openStream();
+    }
 
-      if (isSimulatingFlame) {
-        btn.className = 'px-2.5 py-1.5 rounded-lg bg-[#ff5451] text-[#5c0008] font-bold border border-[#ff5451] text-[11px] font-mono flex items-center gap-1 transition-all shadow-[0_0_15px_rgba(255,84,81,0.6)]';
-        btnText.textContent = 'Tắt Test Lửa';
-        setFlameAlert(true, 96.5, 'Khu thử nghiệm AI Vision');
-        showToast('🔥 ĐÃ KÍCH HOẠT MÔ PHỎNG PHÁT HIỆN LUỒNG LỬA!', 'error');
+    function stopCamera(byUser) {
+      cam.active = false;
+      clearTimeout(cam.retryTimer);
+      cam.retryTimer = null;
+      abortStream();
+      const img = el('cameraImgStream');
+      img.onload = img.onerror = null;
+      img.removeAttribute('src');
+      if (cam.objectUrl) { URL.revokeObjectURL(cam.objectUrl); cam.objectUrl = null; }
+      cam.lastFrame = null;
+      cam.frameTimes = [];
+      el('btnCameraStop').classList.add('hidden');
+      el('camSourceLabel').classList.add('hidden');
+      setCamState('off');
+      if (byUser) {
+        storageSet('smartfire_cam_url', '');
+        showToast('Đã ngắt luồng camera.', 'info');
+      }
+    }
+
+    function abortStream() {
+      if (cam.ctrl) { cam.ctrl.abort(); cam.ctrl = null; }
+    }
+
+    function setCamState(state, reason) {
+      cam.state = state;
+      const img = el('cameraImgStream');
+      const placeholder = el('cameraPlaceholder');
+      const lost = el('cameraLostOverlay');
+      const badge = el('camStatusBadge');
+      const fps = el('camFpsBadge');
+
+      const badgeStyles = {
+        off: ['bg-[#1c1f29] text-[#8a8f9d] border-[#31353f]', 'bg-[#8a8f9d]', 'CHƯA KẾT NỐI'],
+        connecting: ['bg-[#ee9800]/20 text-[#ffb95f] border-[#ffb95f]/40', 'bg-[#ffb95f] animate-pulse', 'ĐANG KẾT NỐI'],
+        live: ['bg-[#009eb9]/20 text-[#4cd7f6] border-[#4cd7f6]/30', 'bg-[#4cd7f6] animate-pulse', 'TRỰC TIẾP'],
+        lost: ['bg-[#93000a] text-[#ffdad6] border-[#ff5451]', 'bg-[#ff5451] animate-ping', 'MẤT TÍN HIỆU']
+      }[state];
+      badge.className = `flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold font-mono border ${badgeStyles[0]}`;
+      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${badgeStyles[1]}"></span><span>${badgeStyles[2]}</span>`;
+
+      placeholder.classList.toggle('hidden', state === 'live' || state === 'lost');
+      el('cameraPlaceholderText').textContent = state === 'connecting' ? 'Đang kết nối camera Pi...' : 'Chưa kết nối camera Pi';
+      img.classList.toggle('hidden', !(state === 'live' || (state === 'lost' && img.getAttribute('src'))));
+      img.classList.toggle('opacity-40', state === 'lost');
+      lost.classList.toggle('hidden', state !== 'lost');
+      el('cameraLostReason').textContent = state === 'lost' ? (reason || '') : '';
+      if (state !== 'live') fps.classList.add('hidden');
+      renderCamChip();
+    }
+
+    function cameraLost(reason) {
+      if (!cam.active) return;
+      abortStream();
+      const img = el('cameraImgStream');
+      img.onload = img.onerror = null;
+      if (cam.mode === 'img') img.removeAttribute('src');
+      if (cam.state !== 'lost') console.warn('Mất tín hiệu camera:', reason);
+      setCamState('lost', reason);
+      clearTimeout(cam.retryTimer);
+      cam.retryTimer = setTimeout(() => {
+        cam.retryTimer = null;
+        cam.mode = 'fetch';
+        openStream();
+      }, CAMERA_RETRY_MS);
+    }
+
+    function appendBytes(a, b) {
+      const out = new Uint8Array(a.length + b.length);
+      out.set(a, 0);
+      out.set(b, a.length);
+      return out;
+    }
+
+    function indexOfMarker(buf, b1, b2, from) {
+      for (let i = from; i < buf.length - 1; i++) {
+        if (buf[i] === b1 && buf[i + 1] === b2) return i;
+      }
+      return -1;
+    }
+
+    // Tách 1 ảnh JPEG khỏi bộ đệm: ưu tiên Content-Length trong header của part, không có thì tìm FFD8 ... FFD9
+    function takeJpeg(buf) {
+      const soi = indexOfMarker(buf, 0xFF, 0xD8, 0);
+      if (soi < 0) return null;
+      let header = '';
+      for (let i = Math.max(0, soi - 256); i < soi; i++) header += String.fromCharCode(buf[i]);
+      const m = /Content-Length:\s*(\d+)/i.exec(header);
+      let end;
+      if (m) {
+        end = soi + Number(m[1]);
+        if (buf.length < end) return null;
       } else {
-        btn.className = 'px-2.5 py-1.5 rounded-lg bg-[#ff5451]/15 hover:bg-[#ff5451]/25 border border-[#ff5451]/40 text-[11px] font-mono text-[#ff5451] flex items-center gap-1 transition-all';
-        btnText.textContent = 'Test Bắt Lửa';
-        setFlameAlert(false);
-        showToast('Đã dừng mô phỏng bắt lửa.', 'info');
+        const eoi = indexOfMarker(buf, 0xFF, 0xD9, soi + 2);
+        if (eoi < 0) return null;
+        end = eoi + 2;
+      }
+      return { frame: buf.slice(soi, end), rest: buf.slice(end) };
+    }
+
+    // Băm FNV-1a toàn bộ ảnh (vài chục KB/khung, rất nhẹ) để nhận ra ảnh lặp lại y hệt
+    function frameSignature(bytes) {
+      let h = 0x811c9dc5 ^ bytes.length;
+      for (let i = 0; i < bytes.length; i++) h = Math.imul(h ^ bytes[i], 0x01000193);
+      return h | 0;
+    }
+
+    function onFrame(bytes) {
+      const sig = frameSignature(bytes);
+      if (sig === cam.lastSig) return;   // Pi gửi lại ảnh cũ: camera đang treo
+      const now = Date.now();
+      cam.lastSig = sig;
+      cam.lastFreshAt = now;
+      cam.gotFrameThisAttempt = true;
+      cam.frameTimes.push(now);
+      cam.lastFrame = bytes;
+
+      const img = el('cameraImgStream');
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+      img.src = url;
+      if (cam.objectUrl) URL.revokeObjectURL(cam.objectUrl);
+      cam.objectUrl = url;
+      if (cam.state !== 'live') setCamState('live');
+    }
+
+    async function openStream() {
+      if (!cam.active) return;
+      abortStream();
+      const ctrl = new AbortController();
+      cam.ctrl = ctrl;
+      cam.attemptAt = Date.now();
+      cam.gotFrameThisAttempt = false;
+      cam.frameTimes = [];
+
+      if (cam.mode === 'img') { openImgStream(ctrl); return; }
+
+      try {
+        const res = await fetch(cam.url, { signal: ctrl.signal, cache: 'no-store', mode: 'cors', credentials: 'omit' });
+        if (!res.ok || !res.body) throw new Error('Pi trả về HTTP ' + res.status);
+        const reader = res.body.getReader();
+        let buf = new Uint8Array(0);
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (ctrl !== cam.ctrl) return;
+          if (done) throw new Error('Pi đã đóng luồng video');
+          buf = appendBytes(buf, value);
+          let part;
+          while ((part = takeJpeg(buf)) !== null) {
+            buf = part.rest;
+            onFrame(part.frame);
+          }
+          if (buf.length > 8 * 1024 * 1024) buf = new Uint8Array(0);   // dữ liệu lạ, bỏ để không đầy bộ nhớ
+        }
+      } catch (err) {
+        if (ctrl.signal.aborted || ctrl !== cam.ctrl || !cam.active) return;
+        if (err instanceof TypeError && !cam.gotFrameThisAttempt) {
+          // Có thể do trình duyệt chặn đọc luồng khác nguồn: thử hiển thị thẳng bằng <img>
+          cam.mode = 'img';
+          openImgStream(ctrl);
+          return;
+        }
+        cameraLost(err.message || 'Lỗi đọc luồng video');
       }
     }
 
-    function setFlameAlert(active, confidence = 94.8, locationName = '') {
-      isFlameDetected = active;
-      const card = document.getElementById('cameraCard');
-      const viewport = document.getElementById('cameraViewport');
-      const badge = document.getElementById('camStatusBadge');
-      const banner = document.getElementById('flameWarningBanner');
-      const confSpan = document.getElementById('flameConfidence');
-      const locSpan = document.getElementById('flameLocation');
+    function openImgStream(ctrl) {
+      const img = el('cameraImgStream');
+      img.onload = () => {
+        if (ctrl !== cam.ctrl) return;
+        cam.gotFrameThisAttempt = true;
+        cam.lastFreshAt = Date.now();
+        cam.lastFrame = null;
+        if (cam.state !== 'live') setCamState('live');
+      };
+      img.onerror = () => {
+        if (ctrl !== cam.ctrl) return;
+        cameraLost('Không tải được luồng video từ Pi');
+      };
+      if (cam.objectUrl) { URL.revokeObjectURL(cam.objectUrl); cam.objectUrl = null; }
+      img.src = cam.url + (cam.url.includes('?') ? '&' : '?') + '_t=' + Date.now();
+    }
 
-      if (active) {
-        card.classList.add('border-[#ff5451]', 'shadow-[0_0_25px_rgba(255,84,81,0.25)]');
-        viewport.classList.add('border-[#ff5451]', 'shadow-[inset_0_0_35px_rgba(255,84,81,0.45)]');
-        badge.className = 'flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-[#93000a] text-[#ffdad6] border border-[#ff5451] animate-pulse';
-        badge.innerHTML = '<span class="material-symbols-outlined text-[13px] text-[#ff5451]">local_fire_department</span> 🔥 PHÁT HIỆN LỬA';
-        banner.classList.remove('hidden');
-        if (confSpan) confSpan.textContent = typeof confidence === 'number' ? confidence.toFixed(1) + '%' : confidence;
-        if (locSpan && locationName) locSpan.textContent = locationName;
+    // Mỗi giây: đo FPS thật và phát hiện luồng đứng hình
+    setInterval(() => {
+      if (!cam.active || cam.retryTimer) return;
+      const now = Date.now();
+
+      cam.frameTimes = cam.frameTimes.filter(t => now - t <= 2000);
+      const fps = el('camFpsBadge');
+      if (cam.state === 'live' && cam.mode === 'fetch') {
+        fps.textContent = `${Math.round(cam.frameTimes.length / 2)} FPS`;
+        fps.classList.remove('hidden');
       } else {
-        card.classList.remove('border-[#ff5451]', 'shadow-[0_0_25px_rgba(255,84,81,0.25)]');
-        viewport.classList.remove('border-[#ff5451]', 'shadow-[inset_0_0_35px_rgba(255,84,81,0.45)]');
-        badge.className = 'flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/30';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-[#4cd7f6]"></span> <span>SẴN SÀNG</span>';
-        banner.classList.add('hidden');
+        fps.classList.add('hidden');
       }
-      drawOverlay();
-    }
 
-    function startCameraOverlayLoop() {
-      if (animFrameId) cancelAnimationFrame(animFrameId);
-      function loop() {
-        drawOverlay();
-        animFrameId = requestAnimationFrame(loop);
+      const canCheckStall = cam.mode === 'fetch' || !cam.gotFrameThisAttempt;
+      const since = now - Math.max(cam.lastFreshAt, cam.attemptAt);
+      if (canCheckStall && since > CAMERA_STALL_MS) {
+        cameraLost(cam.gotFrameThisAttempt
+          ? `Không nhận được khung hình mới trong ${Math.round(since / 1000)} giây`
+          : 'Không kết nối được tới Pi');
       }
-      animFrameId = requestAnimationFrame(loop);
-    }
-
-    function drawOverlay() {
-      const canvas = document.getElementById('cameraCanvas');
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      if (canvas.width !== rect.width || canvas.height !== rect.height) {
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-      }
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // 1. Vẽ Crosshair trung tâm định vị mục tiêu
-      ctx.strokeStyle = 'rgba(76, 215, 246, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([4, 4]);
-      ctx.beginPath();
-      ctx.moveTo(w / 2 - 20, h / 2);
-      ctx.lineTo(w / 2 + 20, h / 2);
-      ctx.moveTo(w / 2, h / 2 - 20);
-      ctx.lineTo(w / 2, h / 2 + 20);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // 2. Nếu phát hiện lửa -> Vẽ Bounding Box AI đỏ rực với nhãn
-      if (isFlameDetected) {
-        // Tọa độ ngọn lửa động nhẹ mô phỏng flicker ngọn lửa
-        const time = Date.now() / 200;
-        const jitterX = Math.sin(time) * 4;
-        const jitterY = Math.cos(time * 1.5) * 3;
-
-        const bx = (flameBBox.x * w) + jitterX;
-        const by = (flameBBox.y * h) + jitterY;
-        const bw = flameBBox.width * w;
-        const bh = flameBBox.height * h;
-
-        // Vùng phủ sáng màu lửa đỏ cam trong bounding box
-        const grad = ctx.createRadialGradient(bx + bw / 2, by + bh / 2, 10, bx + bw / 2, by + bh / 2, bw);
-        grad.addColorStop(0, 'rgba(255, 84, 81, 0.25)');
-        grad.addColorStop(1, 'rgba(255, 84, 81, 0.05)');
-        ctx.fillStyle = grad;
-        ctx.fillRect(bx, by, bw, bh);
-
-        // Khung chữ nhật viền lửa
-        ctx.strokeStyle = '#ff5451';
-        ctx.lineWidth = 2.5;
-        ctx.strokeRect(bx, by, bw, bh);
-
-        // 4 góc HUD brackets
-        const cornerLen = 14;
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#ffb95f';
-        // Top-Left
-        ctx.beginPath();
-        ctx.moveTo(bx, by + cornerLen); ctx.lineTo(bx, by); ctx.lineTo(bx + cornerLen, by);
-        // Top-Right
-        ctx.moveTo(bx + bw - cornerLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cornerLen);
-        // Bottom-Left
-        ctx.moveTo(bx, by + bh - cornerLen); ctx.lineTo(bx, by + bh); ctx.lineTo(bx + cornerLen, by + bh);
-        // Bottom-Right
-        ctx.moveTo(bx + bw - cornerLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cornerLen);
-        ctx.stroke();
-
-        // Nhãn AI Bounding Box
-        ctx.fillStyle = '#ff5451';
-        ctx.fillRect(bx, by - 22, 160, 22);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px monospace';
-        ctx.fillText('🔥 FLAME: ' + (document.getElementById('flameConfidence')?.textContent || '94.8%'), bx + 6, by - 7);
-      }
-    }
+    }, 1000);
 
     function captureSnapshot() {
-      const video = document.getElementById('cameraVideo');
-      const img = document.getElementById('cameraImgStream');
-      const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
-      const ctx = canvas.getContext('2d');
-
-      if (mediaStream && !video.classList.contains('hidden')) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      } else if (!img.classList.contains('hidden') && img.src) {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      } else {
-        // Tạo ảnh snapshot nền tối
-        ctx.fillStyle = '#0f131c';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '24px monospace';
-        ctx.fillText('FIREGUARD IOT SNAPSHOT • ' + new Date().toLocaleString('vi-VN'), 50, 80);
+      if (cam.state !== 'live') {
+        showToast('Chưa có hình từ camera Pi để lưu.', 'error');
+        return;
       }
-
-      // Đính kèm watermark và nhãn AI nếu có lửa
-      if (isFlameDetected) {
-        ctx.strokeStyle = '#ff5451';
-        ctx.lineWidth = 5;
-        ctx.strokeRect(450, 180, 400, 350);
-        ctx.fillStyle = '#ff5451';
-        ctx.fillRect(450, 140, 250, 40);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 18px monospace';
-        ctx.fillText('🔥 FLAME DETECTED 95%', 460, 168);
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      if (cam.lastFrame) {
+        const a = document.createElement('a');
+        const url = URL.createObjectURL(new Blob([cam.lastFrame], { type: 'image/jpeg' }));
+        a.href = url;
+        a.download = `FireGuard_camera_${stamp}.jpg`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('Đã lưu khung hình hiện tại của camera Pi.', 'success');
+        return;
       }
-
-      const a = document.createElement('a');
-      a.download = `FireGuard_Snapshot_${Date.now()}.png`;
-      a.href = canvas.toDataURL('image/png');
-      a.click();
-      showToast('Đã chụp và tải về ảnh bằng chứng camera!', 'success');
+      const img = el('cameraImgStream');
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/jpeg', 0.92);
+        a.download = `FireGuard_camera_${stamp}.jpg`;
+        a.click();
+        showToast('Đã lưu khung hình hiện tại của camera Pi.', 'success');
+      } catch (e) {
+        showToast('Trình duyệt chặn lưu ảnh từ camera khác nguồn (Pi cần bật CORS).', 'error');
+      }
     }
 
-    // Khởi động vòng lặp overlay ngay từ đầu
-    window.addEventListener('DOMContentLoaded', () => {
-      startCameraOverlayLoop();
+    // ========================================================
+    // ĐỒNG BỘ DỮ LIỆU TỪ CSDL VÀO GIAO DIỆN (REST + SignalR)
+    // ========================================================
+    function tempCell(value, recordedAt, big) {
+      const v = fmtNumber(value);
+      if (v === null) {
+        const hint = recordedAt ? 'Mất cảm biến' : 'Chưa có dữ liệu';
+        return `<span class="${big ? 'text-[15px]' : ''} font-bold text-[#8a8f9d]">—</span>`
+          + `<div class="text-[9.5px] font-normal text-[#ffb95f]">${hint}</div>`;
+      }
+      const hot = Number(value) >= TEMP_DANGER;
+      return `<span class="${big ? 'text-[15px]' : ''} font-bold ${hot ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${v} °C</span>`;
+    }
+
+    function humidityCell(value, recordedAt, big) {
+      const v = fmtNumber(value);
+      if (v === null) {
+        const hint = recordedAt ? 'Mất cảm biến' : 'Chưa có dữ liệu';
+        return `<span class="${big ? 'text-[15px]' : ''} font-bold text-[#8a8f9d]">—</span>`
+          + `<div class="text-[9.5px] font-normal text-[#ffb95f]">${hint}</div>`;
+      }
+      return `<span class="${big ? 'text-[15px]' : ''} font-bold text-[#4cd7f6]">${v} %</span>`;
+    }
+
+    function smokeText(level, detected) {
+      const lv = fmtNumber(level, 0);
+      return (lv !== null ? lv + '% · ' : '') + (detected ? 'CÓ KHÓI' : 'Không');
+    }
+
+    function renderStatusBadges(data) {
+      const dbBadge = el('dbStatusBadge');
+      if (data.isConnected) {
+        dbBadge.className = 'flex items-center gap-1.5 text-[#4cd7f6]';
+        dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6] animate-pulse"></span> CSDL: TRỰC TUYẾN';
+      } else {
+        dbBadge.className = 'flex items-center gap-1.5 text-[#ff5451]';
+        dbBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ff5451]"></span> CSDL: MẤT KẾT NỐI';
+      }
+
+      const mqttBadge = el('mqttStatusBadge');
+      if (data.mqttConnected) {
+        mqttBadge.className = 'flex items-center gap-1.5 text-[#4cd7f6]';
+        mqttBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> MQTT: ĐÃ KẾT NỐI';
+        mqttBadge.title = '';
+      } else {
+        mqttBadge.className = 'flex items-center gap-1.5 text-[#ffb95f]';
+        mqttBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#ffb95f] animate-pulse"></span> MQTT: MẤT KẾT NỐI (đang thử lại)';
+        mqttBadge.title = data.mqttError || '';
+      }
+
+      el('dbErrorBanner').classList.toggle('hidden', !!data.isConnected);
+      el('dbErrorText').textContent = data.isConnected ? '' : (data.error || 'Không rõ lỗi.');
+
+      const safetyBadge = el('systemSafetyBadge');
+      const pending = toInt(data.kpis && data.kpis.pendingAlerts);
+      if (!data.isConnected) {
+        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#ee9800]/20 text-[#ffb95f] border border-[#ffb95f]/40 text-[12px] font-mono font-bold';
+        safetyBadge.innerHTML = '<span class="material-symbols-outlined text-[16px]">help</span> HỆ THỐNG: KHÔNG RÕ (LỖI CSDL)';
+      } else if (pending > 0) {
+        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#93000a] text-[#ffdad6] border border-[#ff5451] text-[12px] font-mono font-bold animate-pulse';
+        safetyBadge.innerHTML = `<span class="material-symbols-outlined text-[16px]">warning</span> BÁO ĐỘNG: CÓ ${pending} SỰ CỐ CẦN XỬ LÝ!`;
+      } else {
+        safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/40 text-[12px] font-mono font-bold';
+        safetyBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> HỆ THỐNG: AN TOÀN';
+      }
+    }
+
+    // Trạng thái camera do Pi báo qua MQTT + kết quả AI mới nhất trong CSDL (số thật, không tự bịa)
+    function renderCameraInfo(data) {
+      renderCamChip();
+      const cams = data.cameras || [];
+      const pis = data.piStatuses || [];
+      const piStatus = el('piCameraStatus');
+      const ids = [...new Set([...pis.map(p => p.deviceId), ...cams.map(c => c.deviceId)])].sort();
+      if (ids.length === 0) {
+        piStatus.className = 'text-[#8a8f9d]';
+        piStatus.textContent = 'Pi / camera: chưa có báo cáo trạng thái qua MQTT';
+      } else {
+        let anyBad = false;
+        const parts = ids.map(id => {
+          const p = pis.find(x => x.deviceId === id);
+          const c = cams.find(x => x.deviceId === id);
+          const bits = [];
+          if (p) { bits.push(p.online ? 'Pi trực tuyến' : 'PI NGOẠI TUYẾN'); if (!p.online) anyBad = true; }
+          // Pi ngoại tuyến thì trạng thái camera cũ không còn ý nghĩa
+          if (c && (!p || p.online)) {
+            bits.push(c.cameraOk === true ? 'camera hoạt động' : (c.cameraOk === false ? 'CAMERA MẤT TÍN HIỆU' : 'camera không rõ'));
+            if (c.cameraOk === false) anyBad = true;
+            if (c.cameraSmoke) bits.push('AI thấy khói');
+          }
+          return `${id}: ${bits.join(' · ')}`;
+        });
+        piStatus.className = anyBad ? 'text-[#ff5451] font-bold' : 'text-[#4cd7f6]';
+        piStatus.textContent = 'Pi báo: ' + parts.join(' | ');
+      }
+
+      const fireDevs = (data.devices || []).filter(d => d.aiResult);
+      const aiLine = el('aiStatusLine');
+      const card = el('cameraCard');
+      const danger = (data.devices || []).some(d => toInt(d.alertLevel) >= 2);
+      card.classList.toggle('border-[#ff5451]', danger);
+      card.classList.toggle('shadow-[0_0_25px_rgba(255,84,81,0.25)]', danger);
+      if (fireDevs.length === 0) {
+        aiLine.className = 'text-[#8a8f9d]';
+        aiLine.textContent = 'AI trên Pi (bản ghi mới nhất): không phát hiện lửa';
+      } else {
+        aiLine.className = 'text-[#ff5451] font-bold';
+        aiLine.textContent = 'AI trên Pi phát hiện lửa: ' + fireDevs.map(d => {
+          const conf = fmtNumber(d.confidenceScore);
+          return `${d.deviceId} (${d.deviceName})${conf !== null ? ' – độ tin cậy ' + conf + '%' : ''}`;
+        }).join(' | ');
+      }
+    }
+
+    function renderUsers(users) {
+      const body = el('usersTableBody');
+      const admin = isAdmin();
+      if (!users || users.length === 0) {
+        body.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-[#e4beba]">Chưa có người dùng nào.</td></tr>';
+        return;
+      }
+      body.innerHTML = users.map(u => {
+        const id = toInt(u.userId);
+        const isMe = currentUser && currentUser.userId === id;
+        const roleBadge = u.role === 'Admin'
+          ? '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] border border-[#ff5451]/30">QUẢN TRỊ VIÊN</span>'
+          : '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] font-bold text-[10px] border border-[#4cd7f6]/30">GIÁM SÁT VIÊN</span>';
+        const name = String(u.fullName || '');
+        const initial = (name.trim().split(/\s+/).pop() || '?').charAt(0).toUpperCase();
+        const actionCell = !admin ? '' : `<td class="py-2.5 px-3 text-right">${isMe
+          ? '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] font-bold border border-[#4cd7f6]/30">BẠN</span>'
+          : `<button data-action="delete-user" data-id="${id}" class="px-2 py-1 rounded bg-[#ff5451]/10 hover:bg-[#ff5451]/20 text-[#ff5451] text-[10.5px] transition-all font-mono border border-[#ff5451]/30">Xóa</button>`}</td>`;
+        const contactCells = !admin ? '' : `
+            <td class="py-2.5 px-3 text-[#ffb95f] font-bold">${escapeHtml(u.phoneNumber) || 'Chưa cài đặt'}</td>
+            <td class="py-2.5 px-3 text-[#e4beba]">${escapeHtml(u.email) || '—'}</td>`;
+        return `
+          <tr class="hover:bg-[#1c1f29] transition-colors ${isMe ? 'bg-[#4cd7f6]/5' : ''}">
+            <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${id}</td>
+            <td class="py-2.5 px-3 font-bold text-white">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[10px] text-[#4cd7f6] font-bold">${escapeHtml(initial)}</div>
+                <span>${escapeHtml(name)}</span>
+                ${isMe ? '<span class="text-[9px] font-mono text-[#4cd7f6] ml-1">(Đang đăng nhập)</span>' : ''}
+              </div>
+            </td>
+            <td class="py-2.5 px-3 text-[#e4beba]">${escapeHtml(u.username)}</td>
+            <td class="py-2.5 px-3">${roleBadge}</td>${contactCells}
+            <td class="py-2.5 px-3 text-[#e4beba]">${escapeHtml(fmtDateTime(u.createdAt).split(' ').pop())}</td>
+            ${actionCell}
+          </tr>`;
+      }).join('');
+    }
+
+    function renderDevices(devices) {
+      const box = el('devicesContainer');
+      if (!devices || devices.length === 0) {
+        box.innerHTML = '<div class="col-span-full py-6 text-center text-[#e4beba] font-mono">Hiện chưa có thiết bị nào.</div>';
+        return;
+      }
+      box.innerHTML = devices.map(d => {
+        const level = toInt(d.alertLevel);
+        const isDanger = level >= 2;
+        const isWarn = level === 1;
+        const cardBorder = isDanger
+          ? 'border-[#ff5451] bg-[#ff5451]/5 shadow-[0_0_15px_rgba(255,84,81,0.2)]'
+          : (isWarn ? 'border-[#ffb95f]/60 bg-[#ffb95f]/5' : 'border-[#262a34] bg-[#181b25]');
+        const statusText = DEVICE_STATUS_TEXT[d.status] || String(d.status || '');
+        const statusBadge = d.status === 'Active'
+          ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#009eb9]/30 text-[#4cd7f6]">${escapeHtml(statusText)}</span>`
+          : `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#31353f] text-[#e4beba]">${escapeHtml(statusText)}</span>`;
+        const conf = fmtNumber(d.confidenceScore);
+        const aiText = d.aiResult
+          ? `AI: Có lửa${conf !== null ? ' (' + conf + '%)' : ''}`
+          : 'AI: Không phát hiện lửa';
+        const levelBadge = isDanger
+          ? `<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">${SEVERITY_TEXT.High}</span>`
+          : (isWarn ? `<span class="px-2 py-0.5 rounded bg-[#ee9800]/20 text-[#ffb95f] font-bold text-[10px]">${SEVERITY_TEXT.Medium}</span>` : '');
+
+        return `
+          <div class="rounded-xl border ${cardBorder} p-3.5 flex flex-col justify-between transition-all">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <span class="text-[11px] font-mono font-bold text-[#4cd7f6]">${escapeHtml(d.deviceId)}</span>
+                <h3 class="text-[14px] font-bold text-white mt-0.5">${escapeHtml(d.deviceName)}</h3>
+                <span class="text-[11px] text-[#e4beba] font-mono">${escapeHtml(d.zoneName)} • ${escapeHtml(d.deviceType)}</span>
+              </div>
+              <div class="flex flex-col items-end gap-1">${statusBadge}${levelBadge}</div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 my-3 p-2 rounded-lg bg-[#1c1f29] border border-[#262a34] text-center font-mono">
+              <div>
+                <div class="text-[10px] text-[#e4beba]">Nhiệt độ</div>
+                <div>${tempCell(d.temperature, d.recordedAt, true)}</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-[#e4beba]">Độ ẩm</div>
+                <div>${humidityCell(d.humidity, d.recordedAt, true)}</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-[#e4beba]">Khói</div>
+                <div class="text-[15px] font-bold ${d.smokeDetected ? 'text-[#ff5451]' : 'text-white'}">${smokeText(d.smokeLevel, d.smokeDetected)}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between gap-2 text-[11px] font-mono text-[#e4beba] pt-1 border-t border-[#262a34] flex-wrap">
+              <span>IP: ${escapeHtml(d.ipAddress) || 'DHCP'} • Cập nhật: ${escapeHtml(fmtDateTime(d.recordedAt))}</span>
+              <span class="${d.aiResult ? 'text-[#ff5451] font-bold' : 'text-[#4cd7f6]'}">${aiText}</span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // Một dòng cảnh báo (dùng chung cho bảng "Cảnh báo gần đây" và bảng lịch sử, 11 cột)
+    function alertRowHtml(a) {
+      const id = toInt(a.alertId);
+      const isHigh = a.severity === 'High';
+      const sevBadge = isHigh
+        ? `<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px] whitespace-nowrap">${escapeHtml(severityText(a.severity))}</span>`
+        : `<span class="px-2 py-0.5 rounded bg-[#ee9800]/20 text-[#ffb95f] font-bold text-[10px] whitespace-nowrap">${escapeHtml(severityText(a.severity))}</span>`;
+      const statusBadge = a.acknowledged
+        ? '<span class="px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] font-bold text-[10px] whitespace-nowrap">ĐÃ XÁC NHẬN</span>'
+        : '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] animate-pulse whitespace-nowrap">CHƯA XỬ LÝ</span>';
+      const actionBtn = a.acknowledged
+        ? '<span class="text-[11px] text-[#e4beba]">Đã đóng</span>'
+        : `<button data-action="ack" data-id="${id}" class="px-2.5 py-1 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold rounded text-[11px] transition-all whitespace-nowrap">Xác nhận đã xử lý</button>`;
+      const snapBtn = a.hasSnapshot
+        ? `<button data-action="snapshot" data-id="${id}" class="px-2 py-1 rounded bg-[#1c1f29] hover:bg-[#262a34] border border-[#31353f] text-[#dfe2ef] text-[10.5px] flex items-center gap-1 whitespace-nowrap"><span class="material-symbols-outlined text-[14px]">image</span>Xem ảnh</button>`
+        : '<span class="text-[#8a8f9d]">—</span>';
+      const ackBy = a.acknowledged
+        ? `<span class="text-white">${escapeHtml(a.acknowledgedByName) || '—'}</span>`
+          + (a.acknowledgedAt ? `<div class="text-[10px] text-[#8a8f9d]">${escapeHtml(fmtDateTime(a.acknowledgedAt))}</div>` : '')
+        : '<span class="text-[#8a8f9d]">—</span>';
+
+      return `
+          <tr class="hover:bg-[#1c1f29] transition-colors">
+            <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${id}</td>
+            <td class="py-2.5 px-3 font-bold text-white">${escapeHtml(a.deviceId)} <span class="text-[11px] text-[#e4beba] font-normal">(${escapeHtml(a.deviceName)})</span></td>
+            <td class="py-2.5 px-3">${escapeHtml(a.zoneName)}</td>
+            <td class="py-2.5 px-3 font-bold ${isHigh ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${escapeHtml(alertTypeText(a.alertType))}</td>
+            <td class="py-2.5 px-3">${sevBadge}</td>
+            <td class="py-2.5 px-3 text-[#e4beba] whitespace-nowrap">${escapeHtml(fmtDateTime(a.alertTime))}</td>
+            <td class="py-2.5 px-3">${snapBtn}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${a.smsSent ? '<span class="text-[#4cd7f6]">✓ Đã gửi</span>' : '<span class="text-[#e4beba]">Chưa gửi</span>'}</td>
+            <td class="py-2.5 px-3">${statusBadge}</td>
+            <td class="py-2.5 px-3">${ackBy}</td>
+            <td class="py-2.5 px-3 text-right">${actionBtn}</td>
+          </tr>`;
+    }
+
+    function renderAlerts(alerts) {
+      const body = el('alertsTableBody');
+      if (!alerts || alerts.length === 0) {
+        body.innerHTML = '<tr><td colspan="11" class="py-4 text-center text-[#4cd7f6]">Không có cảnh báo nào.</td></tr>';
+        return;
+      }
+      body.innerHTML = alerts.map(alertRowHtml).join('');
+    }
+
+    function renderLogs(logs) {
+      const body = el('logsTableBody');
+      if (!logs || logs.length === 0) {
+        body.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-[#e4beba]">Chưa có dữ liệu nào.</td></tr>';
+        return;
+      }
+      body.innerHTML = logs.map(l => {
+        const level = toInt(l.alertLevel);
+        const aiBadge = l.aiResult
+          ? '<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">CÓ LỬA</span>'
+          : '<span class="px-2 py-0.5 rounded bg-[#1c1f29] text-[#4cd7f6] text-[10px]">KHÔNG</span>';
+        const levelClass = level >= 2 ? 'text-[#ff5451] font-bold' : (level === 1 ? 'text-[#ffb95f] font-bold' : 'text-[#e4beba]');
+        const conf = fmtNumber(l.confidenceScore);
+        return `
+          <tr class="hover:bg-[#1c1f29] transition-colors">
+            <td class="py-2 px-3 text-[#e4beba]">#${toInt(l.logId)}</td>
+            <td class="py-2 px-3 font-bold text-white">${escapeHtml(l.deviceId)} <span class="text-[10.5px] text-[#e4beba]">(${escapeHtml(l.deviceName)})</span></td>
+            <td class="py-2 px-3">${tempCell(l.temperature, l.recordedAt, false)}</td>
+            <td class="py-2 px-3">${humidityCell(l.humidity, l.recordedAt, false)}</td>
+            <td class="py-2 px-3 ${l.smokeDetected ? 'text-[#ff5451] font-bold' : 'text-white'}">${smokeText(l.smokeLevel, l.smokeDetected)}</td>
+            <td class="py-2 px-3 ${levelClass}">${LEVEL_TEXT[level] || level}</td>
+            <td class="py-2 px-3">${aiBadge}</td>
+            <td class="py-2 px-3 text-[#e4beba]">${conf !== null ? conf + '%' : '—'}</td>
+            <td class="py-2 px-3 text-[#e4beba] text-[11px]">${escapeHtml(fmtDateTime(l.recordedAt))}</td>
+          </tr>`;
+      }).join('');
+    }
+
+    // ========================================================
+    // CHUYỂN MỤC (Giám sát trực tiếp / Lịch sử & thống kê / Trạm & cán bộ)
+    // ========================================================
+    const TAB_ON = ['bg-[#4cd7f6]/15', 'border-[#4cd7f6]/40', 'text-[#4cd7f6]', 'font-bold'];
+    const TAB_OFF = ['bg-[#1c1f29]', 'border-[#31353f]', 'text-[#dfe2ef]', 'hover:bg-[#262a34]'];
+    let currentTab = 'monitor';
+
+    function showTab(name) {
+      if (!document.querySelector(`[data-tab-panel="${name}"]`)) name = 'monitor';
+      currentTab = name;
+      document.querySelectorAll('[data-tab-panel]').forEach(p => p.classList.toggle('hidden', p.dataset.tabPanel !== name));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        const on = b.dataset.tab === name;
+        TAB_ON.forEach(c => b.classList.toggle(c, on));
+        TAB_OFF.forEach(c => b.classList.toggle(c, !on));
+      });
+      storageSet('smartfire_tab', name);
+      // canvas bị ẩn thì kích thước = 0, phải vẽ lại khi hiện ra
+      if (name === 'monitor') requestAnimationFrame(drawEnvChart);
+      if (name === 'history' && !hist.loaded && !hist.loading) loadHistory(false);
+    }
+
+    // ========================================================
+    // LỊCH SỬ CẢNH BÁO, THỐNG KÊ THEO NGÀY, XUẤT CSV
+    // ========================================================
+    const hist = { rows: [], stats: [], from: '', to: '', limited: false, loaded: false, loading: false };
+    const STAT_COLORS = { Fire: 'bg-[#ff5451]', Smoke: 'bg-[#ffb95f]', HighTemperature: 'bg-[#f3a6ff]', Other: 'bg-[#8a8f9d]' };
+
+    const pad2 = (n) => String(n).padStart(2, '0');
+    function localIsoDate(d) {
+      return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    }
+    function parseIsoDate(s) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+      return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : null;
+    }
+    const viDate = (s) => { const d = parseIsoDate(s); return d ? `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}` : String(s || ''); };
+
+    // yyyy-MM-dd HH:mm:ss theo giờ máy (Excel sắp xếp được)
+    function fmtSortable(v) {
+      if (!v) return '';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return '';
+      return `${localIsoDate(d)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+    }
+
+    function initHistoryForm() {
+      if (el('histFrom').value && el('histTo').value) return;
+      const today = new Date();
+      const from = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6);
+      el('histFrom').value = localIsoDate(from);
+      el('histTo').value = localIsoDate(today);
+    }
+
+    function handleHistorySubmit(e) {
+      e.preventDefault();
+      loadHistory(true);
+    }
+
+    async function loadHistory(notify) {
+      if (!currentUser || hist.loading) return;
+      initHistoryForm();
+      let from = el('histFrom').value;
+      let to = el('histTo').value;
+      if (!parseIsoDate(from) || !parseIsoDate(to)) {
+        showToast('Vui lòng chọn đủ Từ ngày và Đến ngày.', 'error');
+        return;
+      }
+      if (from > to) {   // chọn ngược thì đảo lại cho đúng
+        [from, to] = [to, from];
+        el('histFrom').value = from;
+        el('histTo').value = to;
+      }
+
+      const params = new URLSearchParams({ fromDate: from, toDate: to });
+      if (el('histType').value) params.set('alertType', el('histType').value);
+      if (el('histSeverity').value) params.set('severity', el('histSeverity').value);
+      if (el('histStatus').value) params.set('status', el('histStatus').value);
+
+      hist.loading = true;
+      el('btnHistSubmit').disabled = true;
+      el('histInfo').textContent = 'Đang truy vấn CSDL...';
+      const res = await api('/api/alerts/history?' + params.toString());
+      hist.loading = false;
+      el('btnHistSubmit').disabled = false;
+      if (res.status === 401) return;
+
+      if (!res.ok || !res.body.success) {
+        const msg = res.body.error || ('Không lọc được lịch sử (HTTP ' + res.status + ').');
+        el('histInfo').textContent = msg;
+        showToast(msg, 'error');
+        return;
+      }
+      hist.rows = Array.isArray(res.body.alerts) ? res.body.alerts : [];
+      hist.stats = Array.isArray(res.body.stats) ? res.body.stats : [];
+      hist.from = res.body.fromDate || from;
+      hist.to = res.body.toDate || to;
+      hist.limited = !!res.body.limited;
+      hist.loaded = true;
+      renderHistory();
+      if (notify) showToast(`Đã lọc được ${hist.rows.length} cảnh báo.`, 'success');
+    }
+
+    function renderHistory() {
+      const rows = hist.rows;
+      el('histInfo').textContent = `Từ ${viDate(hist.from)} đến ${viDate(hist.to)} • ${rows.length} cảnh báo`
+        + (hist.limited ? ' (chỉ hiện 500 cảnh báo mới nhất, hãy thu hẹp khoảng ngày)' : '');
+      el('histCountTotal').textContent = String(rows.length);
+      el('histCountFire').textContent = String(rows.filter(a => a.alertType === 'Fire').length);
+      el('histCountSmoke').textContent = String(rows.filter(a => a.alertType === 'Smoke').length);
+      el('histCountTemp').textContent = String(rows.filter(a => a.alertType === 'HighTemperature').length);
+      el('histCountPending').textContent = String(rows.filter(a => !a.acknowledged).length);
+      el('btnHistCsv').disabled = rows.length === 0;
+
+      el('historyTableBody').innerHTML = rows.length === 0
+        ? '<tr><td colspan="11" class="py-6 text-center text-[#4cd7f6]">Không có cảnh báo nào khớp bộ lọc.</td></tr>'
+        : rows.map(alertRowHtml).join('');
+
+      renderHistoryChart();
+    }
+
+    // Biểu đồ cột chồng: mỗi ngày một cột, chia màu theo loại cảnh báo (div thuần, không dùng thư viện)
+    function renderHistoryChart() {
+      const chart = el('histChart');
+      const labels = el('histChartLabels');
+      const start = parseIsoDate(hist.from);
+      const end = parseIsoDate(hist.to);
+      if (!start || !end) return;
+
+      const byDay = new Map();
+      hist.stats.forEach(s => {
+        const key = String(s.dateLabel || '');
+        if (!byDay.has(key)) byDay.set(key, { Fire: 0, Smoke: 0, HighTemperature: 0, Other: 0 });
+        const bucket = byDay.get(key);
+        const type = Object.prototype.hasOwnProperty.call(bucket, s.alertType) && s.alertType !== 'Other' ? s.alertType : 'Other';
+        bucket[type] += toInt(s.count);
+      });
+
+      const days = [];
+      for (let d = new Date(start); d <= end && days.length <= 366; d.setDate(d.getDate() + 1)) {
+        const key = localIsoDate(d);
+        const c = byDay.get(key) || { Fire: 0, Smoke: 0, HighTemperature: 0, Other: 0 };
+        days.push({ key, label: `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`, c, total: c.Fire + c.Smoke + c.HighTemperature + c.Other });
+      }
+      const max = Math.max(1, ...days.map(x => x.total));
+      if (days.every(x => x.total === 0)) {
+        chart.innerHTML = '<div class="w-full self-center text-center text-[12px] font-mono text-[#8a8f9d]">Không có cảnh báo nào trong khoảng ngày này</div>';
+        labels.innerHTML = '';
+        return;
+      }
+
+      const showCount = days.length <= 31;
+      chart.innerHTML = days.map(x => {
+        const pct = x.total === 0 ? 0 : Math.max(4, Math.round((x.total / max) * 85));
+        const segs = ['Fire', 'Smoke', 'HighTemperature', 'Other']
+          .filter(t => x.c[t] > 0)
+          .map(t => `<div class="${STAT_COLORS[t]}" style="height:${(x.c[t] / x.total) * 100}%"></div>`)
+          .join('');
+        const tip = `${x.label}: ${x.total} cảnh báo (Lửa ${x.c.Fire}, Khói ${x.c.Smoke}, Nhiệt độ cao ${x.c.HighTemperature}, Khác ${x.c.Other})`;
+        return `
+          <div class="flex-1 min-w-0 h-full flex flex-col justify-end items-center gap-0.5" title="${escapeHtml(tip)}">
+            ${showCount && x.total > 0 ? `<span class="text-[9.5px] font-mono font-bold text-[#ffb95f] leading-none">${x.total}</span>` : ''}
+            <div class="w-full max-w-[28px] flex flex-col-reverse rounded-t overflow-hidden hover:brightness-125 transition-all" style="height:${pct}%">${segs}</div>
+          </div>`;
+      }).join('');
+
+      const step = Math.ceil(days.length / 14);
+      labels.innerHTML = days.map((x, i) =>
+        `<span class="flex-1 min-w-0 text-center truncate">${i % step === 0 ? escapeHtml(x.label) : ''}</span>`).join('');
+    }
+
+    // Ô CSV: bọc nháy kép, nhân đôi nháy kép bên trong; ô bắt đầu bằng = + - @ thì thêm ' để Excel không chạy công thức
+    function csvCell(value) {
+      let s = value === null || value === undefined ? '' : String(value);
+      if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+
+    function exportHistoryCsv() {
+      if (hist.rows.length === 0) {
+        showToast('Chưa có dữ liệu để xuất. Hãy bấm Lọc trước.', 'error');
+        return;
+      }
+      const header = ['Mã cảnh báo', 'Thời gian', 'Mã thiết bị', 'Tên thiết bị', 'Khu vực', 'Loại cảnh báo', 'Mức độ',
+        'Trạng thái', 'Người xác nhận', 'Thời điểm xác nhận', 'SMS', 'Có ảnh'];
+      const lines = hist.rows.map(a => [
+        toInt(a.alertId),
+        fmtSortable(a.alertTime),
+        a.deviceId,
+        a.deviceName,
+        a.zoneName,
+        alertTypeText(a.alertType),
+        severityText(a.severity),
+        a.acknowledged ? 'Đã xác nhận' : 'Chưa xử lý',
+        a.acknowledgedByName || '',
+        fmtSortable(a.acknowledgedAt),
+        a.smsSent ? 'Đã gửi' : 'Chưa gửi',
+        a.hasSnapshot ? 'Có' : 'Không'
+      ].map(csvCell).join(','));
+
+      // BOM UTF-8 để Excel đọc đúng tiếng Việt
+      const csv = '﻿' + [header.map(csvCell).join(','), ...lines].join('\r\n');
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `lich_su_canh_bao_${hist.from}_den_${hist.to}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast(`Đã xuất ${hist.rows.length} dòng ra file CSV.`, 'success');
+    }
+
+    // ========================================================
+    // QUẢN LÝ TRẠM GIÁM SÁT (CHỈ ADMIN)
+    // ========================================================
+    let deviceEditId = null;
+
+    function deviceStatusBadge(status) {
+      const text = escapeHtml(DEVICE_STATUS_TEXT[status] || String(status || ''));
+      if (status === 'Active') return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#009eb9]/30 text-[#4cd7f6] whitespace-nowrap">${text}</span>`;
+      if (status === 'Maintenance') return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#ee9800]/20 text-[#ffb95f] whitespace-nowrap">${text}</span>`;
+      return `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#31353f] text-[#e4beba] whitespace-nowrap">${text}</span>`;
+    }
+
+    function renderDeviceMgmt(devices) {
+      if (!isAdmin()) return;
+      const body = el('deviceMgmtBody');
+      const list = devices || [];
+
+      // Gợi ý khu vực đã có (tạo bằng DOM, không ghép chuỗi HTML)
+      const zones = [...new Set(list.map(d => d.zoneName).filter(Boolean))].sort();
+      el('devZoneList').replaceChildren(...zones.map(z => new Option(z, z)));
+
+      if (list.length === 0) {
+        body.innerHTML = '<tr><td colspan="8" class="py-6 text-center text-[#e4beba]">Chưa có trạm nào. Bấm "+ Thêm Trạm Mới".</td></tr>';
+        return;
+      }
+      body.innerHTML = list.map(d => {
+        const id = escapeHtml(d.deviceId);
+        return `
+          <tr class="hover:bg-[#1c1f29] transition-colors">
+            <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">${id}</td>
+            <td class="py-2.5 px-3 font-bold text-white">${escapeHtml(d.deviceName)}</td>
+            <td class="py-2.5 px-3">${escapeHtml(d.zoneName)}</td>
+            <td class="py-2.5 px-3 text-[#e4beba]">${escapeHtml(d.deviceType)}</td>
+            <td class="py-2.5 px-3 text-[#e4beba]">${escapeHtml(d.ipAddress) || 'DHCP'}</td>
+            <td class="py-2.5 px-3">${deviceStatusBadge(d.status)}</td>
+            <td class="py-2.5 px-3 text-[#e4beba] text-[11px] whitespace-nowrap">${escapeHtml(fmtDateTime(d.recordedAt))}</td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+              <button type="button" data-action="edit-device" data-device="${id}" class="px-2 py-1 rounded bg-[#4cd7f6]/10 hover:bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10.5px] border border-[#4cd7f6]/30 transition-all">Sửa</button>
+              <button type="button" data-action="delete-device" data-device="${id}" class="px-2 py-1 rounded bg-[#ff5451]/10 hover:bg-[#ff5451]/20 text-[#ff5451] text-[10.5px] border border-[#ff5451]/30 transition-all">Xóa</button>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+
+    function setDevAlert(message, isError) {
+      const box = el('devAlert');
+      if (!message) { box.className = 'hidden p-2.5 rounded-lg text-[11px] font-mono'; box.textContent = ''; return; }
+      box.className = isError
+        ? 'p-2.5 rounded-lg text-[11px] font-mono bg-[#93000a]/30 text-[#ffdad6] border border-[#ff5451]'
+        : 'p-2.5 rounded-lg text-[11px] font-mono bg-[#4cd7f6]/10 text-[#4cd7f6] border border-[#4cd7f6]/30';
+      box.textContent = message;
+    }
+
+    function findDevice(deviceId) {
+      return ((lastData && lastData.devices) || []).find(d => d.deviceId === deviceId) || null;
+    }
+
+    function openDeviceModal(deviceId) {
+      if (!isAdmin()) return;
+      el('deviceForm').reset();
+      setDevAlert(null);
+      const d = deviceId ? findDevice(deviceId) : null;
+      if (deviceId && !d) {
+        showToast(`Không tìm thấy trạm "${deviceId}" (có thể vừa bị xoá).`, 'error');
+        return;
+      }
+      deviceEditId = d ? d.deviceId : null;
+      el('devModalTitle').textContent = d ? `Sửa trạm ${d.deviceId}` : 'Thêm trạm giám sát';
+      el('devId').readOnly = !!d;
+      el('devId').classList.toggle('opacity-60', !!d);
+      if (d) {
+        el('devId').value = d.deviceId || '';
+        el('devName').value = d.deviceName || '';
+        el('devZone').value = d.zoneName || '';
+        el('devType').value = d.deviceType || '';
+        el('devIp').value = d.ipAddress || '';
+        el('devStatus').value = ['Active', 'Inactive', 'Maintenance'].includes(d.status) ? d.status : 'Active';
+      }
+      el('deviceModal').classList.remove('hidden');
+      setTimeout(() => (d ? el('devName') : el('devId')).focus(), 0);
+    }
+
+    function closeDeviceModal() {
+      el('deviceModal').classList.add('hidden');
+      deviceEditId = null;
+    }
+
+    async function handleDeviceSubmit(e) {
+      e.preventDefault();
+      if (!isAdmin()) return;
+      const isEdit = deviceEditId !== null;
+      const body = {
+        deviceId: isEdit ? deviceEditId : el('devId').value.trim(),
+        deviceName: el('devName').value.trim(),
+        zoneName: el('devZone').value.trim(),
+        deviceType: el('devType').value.trim(),
+        status: el('devStatus').value,
+        ipAddress: el('devIp').value.trim(),
+        isEdit
+      };
+      if (!body.deviceId || !body.deviceName || !body.zoneName) {
+        setDevAlert('Vui lòng nhập Mã trạm, Tên trạm và Khu vực.', true);
+        return;
+      }
+
+      setDevAlert('Đang lưu vào CSDL...', false);
+      const btn = el('btnDevSubmit');
+      btn.disabled = true;
+      const res = await api('/api/devices', { method: 'POST', body });
+      btn.disabled = false;
+      if (res.status === 401) return;
+
+      if (res.ok && res.body.success) {
+        closeDeviceModal();
+        showToast(isEdit ? `Đã cập nhật trạm ${body.deviceId}.` : `Đã thêm trạm ${body.deviceId.toUpperCase()}.`, 'success');
+        await fetchDashboardData(false);
+      } else {
+        setDevAlert(res.body.error || ('Không lưu được trạm (HTTP ' + res.status + ').'), true);
+      }
+    }
+
+    async function confirmDeleteDevice(deviceId) {
+      if (!isAdmin()) return;
+      const d = findDevice(deviceId);
+      const label = d ? `"${d.deviceId}" (${d.deviceName})` : `"${deviceId}"`;
+      if (!confirm(`Xóa trạm ${label}?\nToàn bộ nhật ký đo và cảnh báo của trạm này cũng bị xóa, không hoàn tác được.`)) return;
+
+      const res = await api(`/api/devices/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        showToast(`Đã xóa trạm ${deviceId}.`, 'success');
+        envLive.delete(deviceId);
+        await fetchDashboardData(false);
+      } else {
+        showToast(res.body.error || `Không xóa được trạm ${deviceId}.`, 'error');
+      }
+    }
+
+    // ========================================================
+    // BIỂU ĐỒ NHIỆT ĐỘ / ĐỘ ẨM (canvas thuần)
+    //   - Lúc chọn trạm: lấy chuỗi số đo từ CSDL (/api/environment) theo khoảng đã chọn.
+    //   - Sau đó cộng dồn số đo mới từ mỗi lần dashboard cập nhật, tối đa 240 điểm / trạm.
+    //   - null (mất cảm biến) hoặc hai lượt đo cách nhau quá 60 giây thì ngắt đường.
+    // ========================================================
+    const ENV_MAX_POINTS = 240;
+    const ENV_GAP_MS = 60000;
+    const envLive = new Map();   // deviceId -> Map(thời điểm ms -> { time, temp, hum, gap })
+    const envSeed = { deviceId: '', minutes: 0, points: [], error: null, loading: false, token: 0 };
+
+    const numOrNull = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v));
+
+    function mergeEnvLive(data) {
+      const add = (deviceId, recordedAt, temp, hum) => {
+        if (!deviceId || !recordedAt) return;
+        const time = new Date(recordedAt).getTime();
+        if (!Number.isFinite(time)) return;
+        const key = String(deviceId);
+        if (!envLive.has(key)) envLive.set(key, new Map());
+        envLive.get(key).set(time, { time, temp: numOrNull(temp), hum: numOrNull(hum), gap: ENV_GAP_MS });
+      };
+      (data.logs || []).forEach(l => add(l.deviceId, l.recordedAt, l.temperature, l.humidity));
+      (data.devices || []).forEach(d => add(d.deviceId, d.recordedAt, d.temperature, d.humidity));
+      envLive.forEach(series => {
+        if (series.size <= ENV_MAX_POINTS) return;
+        [...series.keys()].sort((a, b) => a - b).slice(0, series.size - ENV_MAX_POINTS).forEach(t => series.delete(t));
+      });
+    }
+
+    function updateEnvDeviceOptions(devices) {
+      const sel = el('envDeviceSelect');
+      const list = devices || [];
+      const sig = list.map(d => d.deviceId + '\u0001' + d.deviceName).join('\u0002');
+      if (sel.dataset.sig === sig) return;
+      sel.dataset.sig = sig;
+      const previous = sel.value || storageGet('smartfire_env_device') || '';
+      sel.replaceChildren(...list.map(d => new Option(`${d.deviceId} – ${d.deviceName}`, d.deviceId)));
+      const ids = list.map(d => d.deviceId);
+      sel.value = ids.includes(previous) ? previous : (ids[0] || '');
+      if (sel.value !== envSeed.deviceId) loadEnvSeed();
+    }
+
+    async function loadEnvSeed() {
+      const deviceId = el('envDeviceSelect').value;
+      const minutes = toInt(el('envSpanSelect').value) || 60;
+      const token = ++envSeed.token;
+      envSeed.deviceId = deviceId;
+      envSeed.minutes = minutes;
+      envSeed.points = [];
+      envSeed.error = null;
+      if (!deviceId) { drawEnvChart(); return; }
+      storageSet('smartfire_env_device', deviceId);
+
+      envSeed.loading = true;
+      drawEnvChart();
+      const res = await api(`/api/environment/${encodeURIComponent(deviceId)}?minutes=${minutes}`);
+      if (token !== envSeed.token) return;   // người dùng đã chọn trạm / khoảng khác
+      envSeed.loading = false;
+      if (res.status === 401) return;
+      if (res.ok && res.body.success && Array.isArray(res.body.points)) {
+        // Máy chủ gộp theo khung để tối đa ~720 điểm: khoảng dài thì nới ngưỡng ngắt đường theo cỡ khung
+        const bucketMs = Math.ceil((minutes * 60) / 720) * 1000;
+        const gap = Math.max(ENV_GAP_MS, bucketMs * 2.5);
+        envSeed.points = res.body.points
+          .map(p => ({ time: new Date(p.recordedAt).getTime(), temp: numOrNull(p.temperature), hum: numOrNull(p.humidity), gap }))
+          .filter(p => Number.isFinite(p.time));
+      } else {
+        envSeed.error = res.body.error || ('Không tải được số đo (HTTP ' + res.status + ').');
+      }
+      drawEnvChart();
+    }
+
+    // Chuỗi điểm của trạm đang chọn: số đo từ CSDL + số đo mới nhận được, trong khoảng thời gian đã chọn
+    function envSeriesFor(deviceId) {
+      const pts = envSeed.deviceId === deviceId ? envSeed.points.slice() : [];
+      const lastSeed = pts.length ? pts[pts.length - 1].time : -Infinity;
+      const live = envLive.get(deviceId);
+      if (live) live.forEach(p => { if (p.time > lastSeed) pts.push(p); });
+      pts.sort((a, b) => a.time - b.time);
+      if (pts.length === 0) return pts;
+      const windowStart = pts[pts.length - 1].time - (envSeed.minutes || 60) * 60000;
+      return pts.filter(p => p.time >= windowStart);
+    }
+
+    function fmtClock(ms, withSeconds) {
+      const d = new Date(ms);
+      return `${pad2(d.getHours())}:${pad2(d.getMinutes())}` + (withSeconds ? `:${pad2(d.getSeconds())}` : '');
+    }
+
+    function drawEnvSeries(ctx, pts, key, xOf, yOf, color) {
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      let drawing = false;
+      pts.forEach((p, i) => {
+        const v = p[key];
+        const prev = pts[i - 1];
+        const next = pts[i + 1];
+        const brokenBefore = !prev || prev[key] === null || p.time - prev.time > Math.max(prev.gap, p.gap);
+        const brokenAfter = !next || next[key] === null || next.time - p.time > Math.max(next.gap, p.gap);
+        if (v === null) { drawing = false; return; }
+        if (brokenBefore) drawing = false;
+        const x = xOf(p.time);
+        const y = yOf(v);
+        if (drawing) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+        if (brokenBefore && brokenAfter) ctx.fillRect(x - 2, y - 2, 4, 4);   // điểm lẻ: vẽ chấm
+        drawing = true;
+      });
+      ctx.stroke();
+    }
+
+    function drawEnvChart() {
+      const canvas = el('envChart');
+      const emptyEl = el('envChartEmpty');
+      const info = el('envChartInfo');
+      const deviceId = el('envDeviceSelect').value;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width < 2 || rect.height < 2) return;   // đang ở mục khác
+
+      const dpr = window.devicePixelRatio || 1;
+      const W = rect.width;
+      const H = rect.height;
+      if (canvas.width !== Math.round(W * dpr) || canvas.height !== Math.round(H * dpr)) {
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+      }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, W, H);
+
+      const pts = deviceId ? envSeriesFor(deviceId) : [];
+      const temps = pts.map(p => p.temp).filter(v => v !== null);
+      const hums = pts.map(p => p.hum).filter(v => v !== null);
+      if (pts.length === 0 || (temps.length === 0 && hums.length === 0)) {
+        emptyEl.textContent = !deviceId ? 'Chưa có trạm giám sát nào'
+          : envSeed.loading ? 'Đang tải số đo...'
+          : envSeed.error ? envSeed.error
+          : pts.length === 0 ? 'Chưa có số đo trong khoảng thời gian này'
+          : 'Mất cảm biến: các lượt đo gần đây không có nhiệt độ / độ ẩm';
+        emptyEl.classList.remove('hidden');
+        info.textContent = '—';
+        return;
+      }
+      emptyEl.classList.add('hidden');
+
+      const padL = 44, padR = 40, padT = 10, padB = 22;
+      const plotW = W - padL - padR;
+      const plotH = H - padT - padB;
+
+      // Trục nhiệt độ luôn chứa ngưỡng 45 °C để thấy còn cách ngưỡng bao xa
+      let tMin = Math.floor(Math.min(...temps, TEMP_DANGER) - 2);
+      let tMax = Math.ceil(Math.max(...temps, TEMP_DANGER) + 2);
+      if (temps.length === 0) { tMin = 15; tMax = TEMP_DANGER + 5; }
+      if (tMax - tMin < 8) tMin = tMax - 8;
+
+      const t0 = pts[0].time;
+      const t1 = pts[pts.length - 1].time;
+      const span = Math.max(t1 - t0, 1);
+      const xOf = (t) => padL + (pts.length === 1 ? plotW / 2 : ((t - t0) / span) * plotW);
+      const yT = (v) => padT + (1 - (v - tMin) / (tMax - tMin)) * plotH;
+      const yH = (v) => padT + (1 - Math.min(Math.max(v, 0), 100) / 100) * plotH;
+
+      ctx.font = '10px monospace';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = padT + (plotH * i) / 4;
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(W - padR, y);
+        ctx.stroke();
+        ctx.fillStyle = '#ffb95f';
+        ctx.textAlign = 'right';
+        ctx.fillText((tMax - ((tMax - tMin) * i) / 4).toFixed(0) + '°C', padL - 4, y + 3);
+        ctx.fillStyle = '#4cd7f6';
+        ctx.textAlign = 'left';
+        ctx.fillText((100 - 25 * i) + '%', W - padR + 4, y + 3);
+      }
+
+      // Đường ngưỡng nhiệt nguy hiểm của Pi (45 °C), nét đứt đỏ
+      const yDanger = yT(TEMP_DANGER);
+      ctx.strokeStyle = 'rgba(255,84,81,0.9)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(padL, yDanger);
+      ctx.lineTo(W - padR, yDanger);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#ff5451';
+      ctx.textAlign = 'left';
+      ctx.fillText(TEMP_DANGER + '°C', padL + 4, yDanger - 4);
+
+      // Mốc thời gian trục ngang
+      const withSeconds = span <= 10 * 60000;
+      ctx.fillStyle = '#8a8f9d';
+      const ticks = pts.length === 1 ? 1 : 5;
+      for (let i = 0; i < ticks; i++) {
+        const t = ticks === 1 ? t0 : t0 + (span * i) / (ticks - 1);
+        ctx.textAlign = ticks === 1 ? 'center' : (i === 0 ? 'left' : (i === ticks - 1 ? 'right' : 'center'));
+        ctx.fillText(fmtClock(t, withSeconds), xOf(t), H - 6);
+      }
+
+      drawEnvSeries(ctx, pts, 'hum', xOf, yH, '#4cd7f6');
+      drawEnvSeries(ctx, pts, 'temp', xOf, yT, '#ffb95f');
+
+      const last = pts[pts.length - 1];
+      const lastTemp = [...pts].reverse().find(p => p.temp !== null);
+      const parts = [`${deviceId}: ${pts.length} điểm`];
+      if (lastTemp) parts.push(`nhiệt độ gần nhất ${lastTemp.temp.toFixed(1)} °C lúc ${fmtClock(lastTemp.time, true)}`);
+      if (temps.length) parts.push(`cao nhất ${Math.max(...temps).toFixed(1)} °C`);
+      if (last.temp === null) parts.push('lượt đo mới nhất mất cảm biến nhiệt độ');
+      parts.push('đường bị ngắt = mất cảm biến hoặc quá 60 giây không có số đo');
+      info.textContent = parts.join(' • ');
+    }
+
+    el('envDeviceSelect').addEventListener('change', loadEnvSeed);
+    el('envSpanSelect').addEventListener('change', () => {
+      storageSet('smartfire_env_span', el('envSpanSelect').value);
+      loadEnvSeed();
+    });
+    (() => {
+      const savedSpan = storageGet('smartfire_env_span');
+      if (savedSpan && [...el('envSpanSelect').options].some(o => o.value === savedSpan)) el('envSpanSelect').value = savedSpan;
+    })();
+    let envResizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(envResizeTimer);
+      envResizeTimer = setTimeout(drawEnvChart, 150);
     });
 
     // ========================================================
-    // C# GỌI HÀM NÀY ĐỂ ĐỒNG BỘ 100% DỮ LIỆU TỪ CSDL VÀO GIAO DIỆN
+    // CHIP CAMERA TRÊN THANH TIÊU ĐỀ: luồng tại trình duyệt + camera_ok do Pi báo qua MQTT
     // ========================================================
-    window.renderRealDatabaseData = function(data) {
-      if (!data) return;
+    function renderCamChip() {
+      const chip = el('camChip');
+      if (!chip) return;
+      const pis = (lastData && lastData.piStatuses) || [];
+      const cams = (lastData && lastData.cameras) || [];
+      const online = (id) => { const p = pis.find(x => x.deviceId === id); return !p || p.online; };
+      const broken = cams.filter(c => c.cameraOk === false && online(c.deviceId)).map(c => c.deviceId);
+      const okCount = cams.filter(c => c.cameraOk === true && online(c.deviceId)).length;
 
-      // Đồng bộ trạng thái lửa của Camera với CSDL (nếu không đang bật chế độ test thủ công)
-      if (!isSimulatingFlame) {
-        const fireDev = data.devices && data.devices.find(d => d.aiResult);
-        if (fireDev) {
-          setFlameAlert(true, fireDev.confidenceScore || 94.5, `${fireDev.deviceId} - ${fireDev.deviceName}`);
-        } else if (data.kpis && data.kpis.pendingAlerts > 0) {
-          setFlameAlert(true, 88.5, 'Khu vực phát sinh cảnh báo');
-        } else {
-          setFlameAlert(false);
-        }
-      }
+      let tone = 'gray';
+      let text = 'CAMERA: CHƯA KẾT NỐI';
+      if (broken.length > 0) { tone = 'red'; text = 'CAMERA: PI BÁO MẤT TÍN HIỆU (' + broken.join(', ') + ')'; }
+      else if (cam.state === 'live') { tone = 'cyan'; text = 'CAMERA: TRỰC TIẾP'; }
+      else if (cam.state === 'lost') { tone = 'red'; text = 'CAMERA: MẤT TÍN HIỆU'; }
+      else if (cam.state === 'connecting') { tone = 'amber'; text = 'CAMERA: ĐANG KẾT NỐI'; }
+      else if (okCount > 0) { tone = 'cyan'; text = 'CAMERA: PI BÁO HOẠT ĐỘNG'; }
 
-      // 1. Cập nhật trạng thái CSDL & KPIs
-      const dbBadge = document.getElementById('dbStatusBadge');
-      if (dbBadge) {
-        if (data.isConnected) {
-          dbBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#4cd7f6] animate-pulse"></span> HỆ THỐNG TRỰC TUYẾN`;
-          dbBadge.className = 'flex items-center gap-1.5 text-[#4cd7f6]';
-        } else {
-          dbBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#ff5451]"></span> MẤT KẾT NỐI`;
-          dbBadge.className = 'flex items-center gap-1.5 text-[#ff5451]';
-        }
-      }
+      const styles = {
+        gray: ['text-[#8a8f9d]', 'bg-[#8a8f9d]'],
+        cyan: ['text-[#4cd7f6]', 'bg-[#4cd7f6]'],
+        amber: ['text-[#ffb95f]', 'bg-[#ffb95f] animate-pulse'],
+        red: ['text-[#ff5451] font-bold', 'bg-[#ff5451] animate-pulse']
+      }[tone];
+      chip.className = `flex items-center gap-1.5 ${styles[0]}`;
+      chip.innerHTML = `<span class="w-2 h-2 rounded-full ${styles[1]}"></span> ${escapeHtml(text)}`;
+    }
 
-      document.getElementById('kpiActiveDevices').textContent = String(data.kpis.activeDevices).padStart(2, '0');
-      document.getElementById('kpiTotalDevices').textContent = `/ ${String(data.kpis.totalDevices).padStart(2, '0')} Thiết bị`;
-      document.getElementById('kpiPendingAlerts').textContent = String(data.kpis.pendingAlerts).padStart(2, '0');
-      document.getElementById('kpiTotalLogs').textContent = data.kpis.totalLogs;
-      document.getElementById('kpiTotalUsers').textContent = String(data.kpis.totalUsers).padStart(2, '0');
+    window.renderRealDatabaseData = function (data) {
+      if (!data || !currentUser) return;
+      lastData = data;
+      const kpis = data.kpis || {};
 
-      // 2. Render Cán bộ / Người dùng từ bảng Users
-      const usersBody = document.getElementById('usersTableBody');
-      if (usersBody && data.users) {
-        if (data.users.length === 0) {
-          usersBody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-[#e4beba]">Chưa có người dùng nào.</td></tr>';
-        } else {
-          usersBody.innerHTML = '';
+      renderStatusBadges(data);
+      renderCameraInfo(data);
 
-          // Nếu chưa có user đăng nhập, mặc định lấy user đầu tiên
-          if (!window.currentAuthUser && data.users.length > 0) {
-            window.currentAuthUser = data.users[0];
-            sessionStorage.setItem('fireguard_user', JSON.stringify(data.users[0]));
-          }
-          updateHeaderUserUi();
+      el('kpiActiveDevices').textContent = String(toInt(kpis.activeDevices)).padStart(2, '0');
+      el('kpiTotalDevices').textContent = `/ ${String(toInt(kpis.totalDevices)).padStart(2, '0')} Thiết bị`;
+      el('kpiPendingAlerts').textContent = String(toInt(kpis.pendingAlerts)).padStart(2, '0');
+      el('kpiTotalLogs').textContent = String(toInt(kpis.totalLogs));
+      el('kpiTotalUsers').textContent = String(toInt(kpis.totalUsers)).padStart(2, '0');
 
-          data.users.forEach((u) => {
-            const isAdmin = u.role === 'Admin';
-            const roleBadge = isAdmin
-              ? '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] border border-[#ff5451]/30">ADMIN</span>'
-              : '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] font-bold text-[10px] border border-[#4cd7f6]/30">USER / SUPERVISOR</span>';
+      // Lỗi CSDL: giữ nguyên bảng đang hiện (số cũ) thay vì xoá trắng, banner đỏ đã báo lỗi
+      if (!data.isConnected && (!data.devices || data.devices.length === 0)) return;
 
-            const createdStr = new Date(u.createdAt).toLocaleDateString('vi-VN');
-            const isMe = window.currentAuthUser && window.currentAuthUser.userId === u.userId;
-            const actionCell = isMe
-              ? '<span class="px-2 py-0.5 rounded bg-[#4cd7f6]/20 text-[#4cd7f6] text-[10px] font-bold border border-[#4cd7f6]/30">BẠN</span>'
-              : `<button onclick="confirmDeleteUser(${u.userId}, '${u.username}')" class="px-2 py-1 rounded bg-[#ff5451]/10 hover:bg-[#ff5451]/20 text-[#ff5451] text-[10.5px] transition-all font-mono border border-[#ff5451]/30">Xóa</button>`;
+      renderUsers(data.users);
+      renderDevices(data.devices);
+      renderDeviceMgmt(data.devices);
+      renderAlerts(data.alerts);
+      renderLogs(data.logs);
 
-            const tr = `
-              <tr class="hover:bg-[#1c1f29] transition-colors ${isMe ? 'bg-[#4cd7f6]/5' : ''}">
-                <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${u.userId}</td>
-                <td class="py-2.5 px-3 font-bold text-white flex items-center gap-2">
-                  <div class="w-6 h-6 rounded-full bg-[#1c1f29] border border-[#31353f] flex items-center justify-center text-[10px] text-[#4cd7f6] font-bold">
-                    ${u.fullName.split(' ').pop().charAt(0).toUpperCase()}
-                  </div>
-                  ${u.fullName}
-                  ${isMe ? '<span class="text-[9px] font-mono text-[#4cd7f6] ml-1">(Đang đăng nhập)</span>' : ''}
-                </td>
-                <td class="py-2.5 px-3 text-[#e4beba]">${u.username}</td>
-                <td class="py-2.5 px-3">${roleBadge}</td>
-                <td class="py-2.5 px-3 text-[#ffb95f] font-bold flex items-center gap-1.5">
-                  <span class="material-symbols-outlined text-[15px]">sms</span>
-                  ${u.phoneNumber || 'Chưa cài đặt'}
-                </td>
-                <td class="py-2.5 px-3 text-[#e4beba]">${u.email || 'N/A'}</td>
-                <td class="py-2.5 px-3 text-[#e4beba]">${createdStr}</td>
-                <td class="py-2.5 px-3 text-right">${actionCell}</td>
-              </tr>
-            `;
-            usersBody.insertAdjacentHTML('beforeend', tr);
-          });
-        }
-      }
+      mergeEnvLive(data);
+      updateEnvDeviceOptions(data.devices);
+      if (currentTab === 'monitor') drawEnvChart();
 
-      // Trạng thái an toàn hệ thống
-      const safetyBadge = document.getElementById('systemSafetyBadge');
-      if (safetyBadge) {
-        if (data.kpis.pendingAlerts > 0) {
-          safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#93000a] text-[#ffdad6] border border-[#ff5451] text-[12px] font-mono font-bold animate-pulse';
-          safetyBadge.innerHTML = `<span class="material-symbols-outlined text-[16px]">warning</span> BÁO ĐỘNG: CÓ ${data.kpis.pendingAlerts} SỰ CỐ CẦN XỬ LÝ!`;
-        } else {
-          safetyBadge.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/40 text-[12px] font-mono font-bold';
-          safetyBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#4cd7f6]"></span> HỆ THỐNG: AN TOÀN`;
-        }
-      }
-
-      // 3. Render danh sách thiết bị thật từ bảng Devices
-      const devContainer = document.getElementById('devicesContainer');
-      if (devContainer) {
-        if (!data.devices || data.devices.length === 0) {
-          devContainer.innerHTML = '<div class="col-span-full py-6 text-center text-[#e4beba] font-mono">Hiện chưa có thiết bị nào.</div>';
-        } else {
-          devContainer.innerHTML = '';
-          data.devices.forEach(d => {
-            const isDanger = d.alertLevel >= 2;
-            const cardBorder = isDanger ? 'border-[#ff5451] bg-[#ff5451]/5 shadow-[0_0_15px_rgba(255,84,81,0.2)]' : 'border-[#262a34] bg-[#181b25]';
-            const statusBadge = d.status === 'Active' 
-              ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#009eb9]/30 text-[#4cd7f6]">ACTIVE</span>'
-              : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#31353f] text-[#e4beba]">OFFLINE</span>';
-
-            const html = `
-              <div class="rounded-xl border ${cardBorder} p-3.5 flex flex-col justify-between transition-all">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-[11px] font-mono font-bold text-[#4cd7f6]">${d.deviceId}</span>
-                    <h3 class="text-[14px] font-bold text-white mt-0.5">${d.deviceName}</h3>
-                    <span class="text-[11px] text-[#e4beba] font-mono">${d.zoneName} • ${d.deviceType}</span>
-                  </div>
-                  ${statusBadge}
-                </div>
-
-                <!-- Thông số realtime -->
-                <div class="grid grid-cols-3 gap-2 my-3 p-2 rounded-lg bg-[#1c1f29] border border-[#262a34] text-center font-mono">
-                  <div>
-                    <div class="text-[10px] text-[#e4beba]">Nhiệt độ</div>
-                    <div class="text-[15px] font-bold ${d.temperature > 40 ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${d.temperature.toFixed(1)}°C</div>
-                  </div>
-                  <div>
-                    <div class="text-[10px] text-[#e4beba]">Độ ẩm</div>
-                    <div class="text-[15px] font-bold text-[#4cd7f6]">${d.humidity.toFixed(1)}%</div>
-                  </div>
-                  <div>
-                    <div class="text-[10px] text-[#e4beba]">Khói</div>
-                    <div class="text-[15px] font-bold ${d.smokeDetected ? 'text-[#ff5451]' : 'text-white'}">${d.smokeLevel != null ? Math.round(d.smokeLevel) + '% · ' : ''}${d.smokeDetected ? 'CÓ KHÓI' : 'Không'}</div>
-                  </div>
-                </div>
-
-                <!-- Footer trạm -->
-                <div class="flex items-center justify-between text-[11px] font-mono text-[#e4beba] pt-1 border-t border-[#262a34]">
-                  <span>IP: ${d.ipAddress || 'DHCP'}</span>
-                  <span class="${d.aiResult ? 'text-[#ff5451] font-bold' : 'text-[#4cd7f6]'}">
-                    ${d.aiResult ? `🔥 AI: Có Cháy (${d.confidenceScore || 0}%)` : 'AI: An toàn'}
-                  </span>
-                </div>
-              </div>
-            `;
-            devContainer.insertAdjacentHTML('beforeend', html);
-          });
-        }
-      }
-
-      // 4. Render danh sách cảnh báo thật từ bảng AlertHistory
-      const alertsBody = document.getElementById('alertsTableBody');
-      if (alertsBody) {
-        if (!data.alerts || data.alerts.length === 0) {
-          alertsBody.innerHTML = '<tr><td colspan="9" class="py-4 text-center text-[#4cd7f6]">Không có cảnh báo cháy nào.</td></tr>';
-        } else {
-          alertsBody.innerHTML = '';
-          data.alerts.forEach(a => {
-            const isHigh = a.severity === 'High';
-            const sevBadge = isHigh 
-              ? '<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">HIGH</span>'
-              : '<span class="px-2 py-0.5 rounded bg-[#ee9800]/20 text-[#ffb95f] font-bold text-[10px]">MEDIUM</span>';
-
-            const statusBadge = a.acknowledged
-              ? '<span class="px-2 py-0.5 rounded bg-[#009eb9]/20 text-[#4cd7f6] font-bold text-[10px]">ĐÃ XÁC NHẬN</span>'
-              : '<span class="px-2 py-0.5 rounded bg-[#ff5451]/20 text-[#ff5451] font-bold text-[10px] animate-pulse">CHƯA XỬ LÝ</span>';
-
-            const actionBtn = a.acknowledged
-              ? '<span class="text-[11px] text-[#e4beba]">Đã đóng</span>'
-              : `<button onclick="acknowledgeAlert(${a.alertId})" class="px-2.5 py-1 bg-[#ff5451] hover:bg-[#ff5451]/80 text-[#5c0008] font-bold rounded text-[11px] transition-all">Xác nhận đã xử lý</button>`;
-
-            const timeStr = new Date(a.alertTime).toLocaleString('vi-VN');
-
-            const tr = `
-              <tr class="hover:bg-[#1c1f29] transition-colors">
-                <td class="py-2.5 px-3 font-bold text-[#4cd7f6]">#${a.alertId}</td>
-                <td class="py-2.5 px-3 font-bold text-white">${a.deviceId} <span class="text-[11px] text-[#e4beba] font-normal">(${a.deviceName})</span></td>
-                <td class="py-2.5 px-3">${a.zoneName}</td>
-                <td class="py-2.5 px-3 font-bold ${isHigh ? 'text-[#ff5451]' : 'text-[#ffb95f]'}">${a.alertType}</td>
-                <td class="py-2.5 px-3">${sevBadge}</td>
-                <td class="py-2.5 px-3 text-[#e4beba]">${timeStr}</td>
-                <td class="py-2.5 px-3">${a.smsSent ? '<span class="text-[#4cd7f6]">✓ Đã gửi</span>' : '<span class="text-[#e4beba]">Chưa gửi</span>'}</td>
-                <td class="py-2.5 px-3">${statusBadge}</td>
-                <td class="py-2.5 px-3 text-right">${actionBtn}</td>
-              </tr>
-            `;
-            alertsBody.insertAdjacentHTML('beforeend', tr);
-          });
-        }
-      }
-
-      // 5. Render 20 lượt ghi đo từ EnvironmentLogs
-      const logsBody = document.getElementById('logsTableBody');
-      if (logsBody) {
-        if (!data.logs || data.logs.length === 0) {
-          logsBody.innerHTML = '<tr><td colspan="8" class="py-4 text-center text-[#e4beba]">Chưa có dữ liệu nào.</td></tr>';
-        } else {
-          logsBody.innerHTML = '';
-          data.logs.forEach(l => {
-            const aiBadge = l.aiResult 
-              ? `<span class="px-2 py-0.5 rounded bg-[#93000a] text-[#ffdad6] font-bold text-[10px]">CÓ CHÁY</span>`
-              : `<span class="px-2 py-0.5 rounded bg-[#1c1f29] text-[#4cd7f6] text-[10px]">AN TOÀN</span>`;
-
-            const timeStr = new Date(l.recordedAt).toLocaleString('vi-VN');
-
-            const tr = `
-              <tr class="hover:bg-[#1c1f29] transition-colors">
-                <td class="py-2 px-3 text-[#e4beba]">#${l.logId}</td>
-                <td class="py-2 px-3 font-bold text-white">${l.deviceId} <span class="text-[10.5px] text-[#e4beba]">(${l.deviceName})</span></td>
-                <td class="py-2 px-3 ${l.temperature > 40 ? 'text-[#ff5451] font-bold' : 'text-[#ffb95f]'}">${l.temperature.toFixed(1)} °C</td>
-                <td class="py-2 px-3 text-[#4cd7f6]">${l.humidity.toFixed(1)} %</td>
-                <td class="py-2 px-3 ${l.smokeDetected ? 'text-[#ff5451] font-bold' : 'text-white'}">${l.smokeLevel != null ? Math.round(l.smokeLevel) + '% · ' : ''}${l.smokeDetected ? 'CÓ KHÓI' : 'Không'}</td>
-                <td class="py-2 px-3">${aiBadge}</td>
-                <td class="py-2 px-3 text-[#e4beba]">${l.confidenceScore ? l.confidenceScore.toFixed(1) + '%' : 'N/A'}</td>
-                <td class="py-2 px-3 text-[#e4beba] text-[11px]">${timeStr}</td>
-              </tr>
-            `;
-            logsBody.insertAdjacentHTML('beforeend', tr);
-          });
-        }
-      }
+      if (data.isConnected) checkNewAlerts(data.alerts || []);
     };
   </script>
 </body>

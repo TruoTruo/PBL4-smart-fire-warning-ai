@@ -1,7 +1,10 @@
-﻿using MySqlConnector;
-using SmartFireApp.Models;
+﻿using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using MySqlConnector;
+using SmartFireWeb.Models;
 
-namespace SmartFireApp.Services;
+namespace SmartFireWeb.Services;
 
 /// <summary>
 /// Quản lý toàn bộ truy vấn CSDL SmartFireDB trực tiếp từ MySQL (XAMPP / Docker).
@@ -57,11 +60,11 @@ public sealed class DatabaseService
         int totalLogs = 0;
         int totalUsers = 0;
         bool isConnected = false;
+        string? error = null;
 
         try
         {
             await using var conn = await OpenConnectionAsync();
-            isConnected = true;
 
             // 1. Lấy danh sách cán bộ / người dùng từ bảng Users
             const string sqlUsers = @"
@@ -90,8 +93,7 @@ public sealed class DatabaseService
             const string sqlDevices = @"
                 SELECT d.DeviceId, d.DeviceName, COALESCE(z.ZoneName, 'Chưa phân khu') AS ZoneName,
                        d.DeviceType, d.Status, d.IpAddress,
-                       COALESCE(latest.Temperature, 0) AS Temperature,
-                       COALESCE(latest.Humidity, 0) AS Humidity,
+                       latest.Temperature, latest.Humidity,
                        COALESCE(latest.SmokeDetected, FALSE) AS SmokeDetected,
                        latest.SmokeLevel,
                        COALESCE(latest.AlertLevel, 0) AS AlertLevel,
@@ -128,10 +130,10 @@ public sealed class DatabaseService
                         DeviceType: r.GetString("DeviceType"),
                         Status: status,
                         IpAddress: r.IsDBNull(r.GetOrdinal("IpAddress")) ? null : r.GetString("IpAddress"),
-                        Temperature: Convert.ToDouble(r["Temperature"]),
-                        Humidity: Convert.ToDouble(r["Humidity"]),
+                        Temperature: GetNullableDouble(r, "Temperature"),
+                        Humidity: GetNullableDouble(r, "Humidity"),
                         SmokeDetected: Convert.ToBoolean(r["SmokeDetected"]),
-                        SmokeLevel: r.IsDBNull(r.GetOrdinal("SmokeLevel")) ? null : Convert.ToDouble(r["SmokeLevel"]),
+                        SmokeLevel: GetNullableDouble(r, "SmokeLevel"),
                         AlertLevel: Convert.ToInt32(r["AlertLevel"]),
                         AiResult: Convert.ToBoolean(r["AiResult"]),
                         ConfidenceScore: r.IsDBNull(r.GetOrdinal("ConfidenceScore")) ? null : Convert.ToDouble(r["ConfidenceScore"]),
@@ -140,45 +142,25 @@ public sealed class DatabaseService
                 }
             }
 
-            // 3. Lấy danh sách cảnh báo từ AlertHistory (kèm ảnh chụp SnapshotBase64 nếu có)
-            const string sqlAlerts = @"
-                SELECT a.AlertId, a.DeviceId, COALESCE(d.DeviceName, a.DeviceId) AS DeviceName,
-                       COALESCE(z.ZoneName, 'Khu vực') AS ZoneName,
-                       a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged, a.SnapshotBase64
-                FROM AlertHistory a
-                LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
-                LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
-                ORDER BY a.AlertTime DESC
+            // 3. 20 cảnh báo mới nhất (chỉ cờ có ảnh, không kéo ảnh Base64) + tổng số chưa xử lý
+            const string sqlAlerts = AlertSelectSql + @"
+                ORDER BY a.AlertTime DESC, a.AlertId DESC
                 LIMIT 20;";
 
             await using (var cmd = new MySqlCommand(sqlAlerts, conn))
             await using (var r = await cmd.ExecuteReaderAsync())
             {
                 while (await r.ReadAsync())
-                {
-                    bool ack = r.GetBoolean("Acknowledged");
-                    if (!ack) pendingAlerts++;
-
-                    alerts.Add(new AlertModel(
-                        AlertId: r.GetInt64("AlertId"),
-                        DeviceId: r.GetString("DeviceId"),
-                        DeviceName: r.GetString("DeviceName"),
-                        ZoneName: r.GetString("ZoneName"),
-                        AlertType: r.GetString("AlertType"),
-                        Severity: r.GetString("Severity"),
-                        AlertTime: r.GetDateTime("AlertTime"),
-                        SmsSent: r.GetBoolean("SmsSent"),
-                        Acknowledged: ack,
-                        SnapshotBase64: r.IsDBNull(r.GetOrdinal("SnapshotBase64")) ? null : r.GetString("SnapshotBase64")
-                    ));
-                }
+                    alerts.Add(ReadAlert(r));
             }
+
+            await using (var cmd = new MySqlCommand("SELECT COUNT(*) FROM AlertHistory WHERE Acknowledged = FALSE;", conn))
+                pendingAlerts = Convert.ToInt32(await cmd.ExecuteScalarAsync());
 
             // 4. Lấy 20 bản ghi mới nhất từ EnvironmentLogs
             const string sqlLogs = @"
                 SELECT e.LogId, e.DeviceId, COALESCE(d.DeviceName, e.DeviceId) AS DeviceName,
-                       COALESCE(e.Temperature, 0) AS Temperature,
-                       COALESCE(e.Humidity, 0) AS Humidity,
+                       e.Temperature, e.Humidity,
                        COALESCE(e.SmokeDetected, FALSE) AS SmokeDetected,
                        e.SmokeLevel,
                        COALESCE(e.AlertLevel, 0) AS AlertLevel,
@@ -198,20 +180,24 @@ public sealed class DatabaseService
                         LogId: r.GetInt64("LogId"),
                         DeviceId: r.GetString("DeviceId"),
                         DeviceName: r.GetString("DeviceName"),
-                        Temperature: Convert.ToDouble(r["Temperature"]),
-                        Humidity: Convert.ToDouble(r["Humidity"]),
+                        Temperature: GetNullableDouble(r, "Temperature"),
+                        Humidity: GetNullableDouble(r, "Humidity"),
                         SmokeDetected: Convert.ToBoolean(r["SmokeDetected"]),
-                        SmokeLevel: r.IsDBNull(r.GetOrdinal("SmokeLevel")) ? null : Convert.ToDouble(r["SmokeLevel"]),
+                        SmokeLevel: GetNullableDouble(r, "SmokeLevel"),
                         AlertLevel: Convert.ToInt32(r["AlertLevel"]),
-                        AiResult: r.GetBoolean("AiResult"),
+                        AiResult: Convert.ToBoolean(r["AiResult"]),
                         ConfidenceScore: r.IsDBNull(r.GetOrdinal("ConfidenceScore")) ? null : Convert.ToDouble(r["ConfidenceScore"]),
                         RecordedAt: r.GetDateTime("RecordedAt")
                     ));
                 }
             }
+
+            // Chỉ coi là kết nối tốt khi cả 4 truy vấn đều chạy xong
+            isConnected = true;
         }
         catch (Exception ex)
         {
+            error = DescribeDbError(ex);
             System.Diagnostics.Debug.WriteLine($"[MySQL FetchRealData Error] {ex.Message}");
         }
 
@@ -225,132 +211,227 @@ public sealed class DatabaseService
             ServerHost: _serverHost
         );
 
-        return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected);
+        return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected, error);
     }
 
-    /// <summary>
-    /// Lọc danh sách cảnh báo theo khoảng ngày và loại sự cố (phục vụ xem lại lịch sử + ảnh chụp).
-    /// </summary>
-    public async Task<List<AlertModel>> GetAlertsByDateRangeAsync(DateTime? fromDate, DateTime? toDate, string? alertType = null)
+    private static double? GetNullableDouble(MySqlDataReader r, string column)
     {
+        int i = r.GetOrdinal(column);
+        return r.IsDBNull(i) ? null : Convert.ToDouble(r.GetValue(i), CultureInfo.InvariantCulture);
+    }
+
+    private string DescribeDbError(Exception ex) => ex is MySqlException { ErrorCode: MySqlErrorCode.UnableToConnectToHost }
+        ? $"Không kết nối được MySQL tại {_serverHost}: {ex.Message}"
+        : $"Lỗi truy vấn CSDL {_activeDbName}: {ex.Message}";
+
+    // Cột dùng chung cho mọi truy vấn danh sách cảnh báo
+    private const string AlertSelectSql = @"
+        SELECT a.AlertId, a.DeviceId, COALESCE(d.DeviceName, a.DeviceId) AS DeviceName,
+               COALESCE(z.ZoneName, 'Khu vực') AS ZoneName,
+               a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged,
+               (a.SnapshotBase64 IS NOT NULL AND a.SnapshotBase64 <> '') AS HasSnapshot,
+               u.FullName AS AcknowledgedByName, a.AcknowledgedAt
+        FROM AlertHistory a
+        LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
+        LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+        LEFT JOIN Users u ON a.AcknowledgedByUserId = u.UserId";
+
+    private static AlertModel ReadAlert(MySqlDataReader r) => new(
+        AlertId: r.GetInt64("AlertId"),
+        DeviceId: r.GetString("DeviceId"),
+        DeviceName: r.GetString("DeviceName"),
+        ZoneName: r.GetString("ZoneName"),
+        AlertType: r.GetString("AlertType"),
+        Severity: r.GetString("Severity"),
+        AlertTime: r.GetDateTime("AlertTime"),
+        SmsSent: r.GetBoolean("SmsSent"),
+        Acknowledged: r.GetBoolean("Acknowledged"),
+        HasSnapshot: Convert.ToBoolean(r["HasSnapshot"]),
+        AcknowledgedByName: r.IsDBNull(r.GetOrdinal("AcknowledgedByName")) ? null : r.GetString("AcknowledgedByName"),
+        AcknowledgedAt: r.IsDBNull(r.GetOrdinal("AcknowledgedAt")) ? null : r.GetDateTime("AcknowledgedAt"));
+
+    /// <summary>
+    /// Lọc lịch sử cảnh báo theo khoảng thời gian, loại, mức độ, trạng thái xử lý (tối đa 500 dòng mới nhất).
+    /// Lỗi CSDL được ném ra cho nơi gọi xử lý.
+    /// </summary>
+    public async Task<List<AlertModel>> GetAlertsByDateRangeAsync(
+        DateTime? fromDate, DateTime? toDate, string? alertType = null, string? severity = null, bool? acknowledged = null)
+    {
+        // Chỉ thêm điều kiện cho bộ lọc có giá trị: so sánh thẳng AlertTime để MySQL dùng được chỉ mục IX_AlertHistory_Time
+        var where = new List<string>();
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand { Connection = conn };
+        if (fromDate is DateTime from) { where.Add("a.AlertTime >= @FromDate"); cmd.Parameters.AddWithValue("@FromDate", from); }
+        if (toDate is DateTime to) { where.Add("a.AlertTime <= @ToDate"); cmd.Parameters.AddWithValue("@ToDate", to); }
+        if (!string.IsNullOrWhiteSpace(alertType)) { where.Add("a.AlertType = @AlertType"); cmd.Parameters.AddWithValue("@AlertType", alertType); }
+        if (!string.IsNullOrWhiteSpace(severity)) { where.Add("a.Severity = @Severity"); cmd.Parameters.AddWithValue("@Severity", severity); }
+        if (acknowledged is bool ack) { where.Add("a.Acknowledged = @Ack"); cmd.Parameters.AddWithValue("@Ack", ack); }
+
+        cmd.CommandText = AlertSelectSql
+            + (where.Count > 0 ? "\n        WHERE " + string.Join(" AND ", where) : "")
+            + "\n        ORDER BY a.AlertTime DESC, a.AlertId DESC\n        LIMIT 500;";
+
         var list = new List<AlertModel>();
-        const string sql = @"
-            SELECT a.AlertId, a.DeviceId, COALESCE(d.DeviceName, a.DeviceId) AS DeviceName,
-                   COALESCE(z.ZoneName, 'Khu vực') AS ZoneName,
-                   a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged, a.SnapshotBase64
-            FROM AlertHistory a
-            LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
-            LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
-            WHERE (@FromDate IS NULL OR a.AlertTime >= @FromDate)
-              AND (@ToDate IS NULL OR a.AlertTime <= @ToDate)
-              AND (@AlertType IS NULL OR a.AlertType = @AlertType)
-            ORDER BY a.AlertTime DESC
-            LIMIT 100;";
-
-        try
-        {
-            await using var conn = await OpenConnectionAsync();
-            await using var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@FromDate", (object?)fromDate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@ToDate", (object?)toDate ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@AlertType", string.IsNullOrWhiteSpace(alertType) ? DBNull.Value : alertType);
-
-            await using var r = await cmd.ExecuteReaderAsync();
-            while (await r.ReadAsync())
-            {
-                list.Add(new AlertModel(
-                    AlertId: r.GetInt64("AlertId"),
-                    DeviceId: r.GetString("DeviceId"),
-                    DeviceName: r.GetString("DeviceName"),
-                    ZoneName: r.GetString("ZoneName"),
-                    AlertType: r.GetString("AlertType"),
-                    Severity: r.GetString("Severity"),
-                    AlertTime: r.GetDateTime("AlertTime"),
-                    SmsSent: r.GetBoolean("SmsSent"),
-                    Acknowledged: r.GetBoolean("Acknowledged"),
-                    SnapshotBase64: r.IsDBNull(r.GetOrdinal("SnapshotBase64")) ? null : r.GetString("SnapshotBase64")
-                ));
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[MySQL GetAlertsByDateRange Error] {ex.Message}");
-        }
-
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+            list.Add(ReadAlert(r));
         return list;
     }
 
     /// <summary>
     /// Thống kê số lượng cảnh báo theo từng ngày và loại cảnh báo trong khoảng thời gian đã chọn.
+    /// Lỗi CSDL được ném ra cho nơi gọi xử lý.
     /// </summary>
     public async Task<List<AlertStatItem>> GetAlertStatsAsync(DateTime fromDate, DateTime toDate)
     {
         var stats = new List<AlertStatItem>();
         const string sql = @"
-            SELECT DATE_FORMAT(AlertTime, '%d/%m/%Y') AS DateLabel, AlertType, COUNT(*) AS Cnt
+            SELECT DATE_FORMAT(AlertTime, '%Y-%m-%d') AS DateLabel, AlertType, COUNT(*) AS Cnt
             FROM AlertHistory
             WHERE AlertTime BETWEEN @FromDate AND @ToDate
-            GROUP BY DATE(AlertTime), DATE_FORMAT(AlertTime, '%d/%m/%Y'), AlertType
+            GROUP BY DATE(AlertTime), DATE_FORMAT(AlertTime, '%Y-%m-%d'), AlertType
             ORDER BY DATE(AlertTime) ASC;";
 
-        try
-        {
-            await using var conn = await OpenConnectionAsync();
-            await using var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@FromDate", fromDate);
-            cmd.Parameters.AddWithValue("@ToDate", toDate);
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@FromDate", fromDate);
+        cmd.Parameters.AddWithValue("@ToDate", toDate);
 
-            await using var r = await cmd.ExecuteReaderAsync();
-            while (await r.ReadAsync())
-            {
-                stats.Add(new AlertStatItem(
-                    DateLabel: r.GetString("DateLabel"),
-                    AlertType: r.GetString("AlertType"),
-                    Count: Convert.ToInt32(r["Cnt"])
-                ));
-            }
-        }
-        catch (Exception ex)
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
         {
-            System.Diagnostics.Debug.WriteLine($"[MySQL GetAlertStats Error] {ex.Message}");
+            stats.Add(new AlertStatItem(
+                DateLabel: r.GetString("DateLabel"),
+                AlertType: r.GetString("AlertType"),
+                Count: Convert.ToInt32(r["Cnt"])
+            ));
         }
-
         return stats;
     }
 
+    /// <summary>
+    /// Chuỗi nhiệt độ / độ ẩm của một thiết bị từ thời điểm cho trước (trung bình theo khung, tối đa ~maxPoints điểm, tăng dần).
+    /// Lỗi CSDL được ném ra cho nơi gọi xử lý.
+    /// </summary>
+    public async Task<List<EnvironmentPoint>> GetEnvironmentSeriesAsync(string deviceId, DateTime fromTime, int maxPoints = 720)
+    {
+        var points = new List<EnvironmentPoint>();
+        // Gộp theo khung thời gian để khoảng dài (24 giờ) vẫn trả về tối đa ~maxPoints điểm
+        maxPoints = Math.Clamp(maxPoints, 10, 5000);
+        int spanSeconds = (int)Math.Max(1, (DateTime.Now - fromTime).TotalSeconds);
+        int bucket = Math.Max(1, (int)Math.Ceiling(spanSeconds / (double)maxPoints));
+        const string sql = @"
+            SELECT MIN(RecordedAt) AS StartAt, AVG(Temperature) AS Temperature,
+                   AVG(Humidity) AS Humidity, MAX(AlertLevel) AS AlertLevel
+            FROM EnvironmentLogs
+            WHERE DeviceId = @DeviceId AND RecordedAt >= @From
+            GROUP BY TIMESTAMPDIFF(SECOND, @From, RecordedAt) DIV @Bucket
+            ORDER BY StartAt ASC
+            LIMIT @Max;";
+
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@DeviceId", deviceId);
+        cmd.Parameters.AddWithValue("@From", fromTime);
+        cmd.Parameters.AddWithValue("@Bucket", bucket);
+        cmd.Parameters.AddWithValue("@Max", maxPoints + 10);
+
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+        {
+            points.Add(new EnvironmentPoint(
+                RecordedAt: r.GetDateTime("StartAt"),
+                Temperature: GetNullableDouble(r, "Temperature"),
+                Humidity: GetNullableDouble(r, "Humidity"),
+                AlertLevel: Convert.ToInt32(r["AlertLevel"])));
+        }
+        return points;
+    }
+
+    // PBKDF2-SHA256, salt ngẫu nhiên 16 byte. Lưu dạng: pbkdf2$<số vòng>$<salt Base64>$<hash Base64>
+    private const string Pbkdf2Prefix = "pbkdf2$";
+    private const int Pbkdf2Iterations = 210_000;
+    private const int SaltSize = 16;
+    private const int HashSize = 32;
+
+    // Hash giả để so sánh khi sai tên đăng nhập, tránh đoán tài khoản qua thời gian phản hồi
+    private static readonly Lazy<string> DummyHash = new(() => HashPassword(Guid.NewGuid().ToString("N")));
+
     public static string HashPassword(string password)
     {
-        using var sha = System.Security.Cryptography.SHA256.Create();
-        var bytes = System.Text.Encoding.UTF8.GetBytes(password);
-        var hash = sha.ComputeHash(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        byte[] salt = RandomNumberGenerator.GetBytes(SaltSize);
+        byte[] hash = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(password), salt,
+            Pbkdf2Iterations, HashAlgorithmName.SHA256, HashSize);
+        return Pbkdf2Prefix + Pbkdf2Iterations.ToString(CultureInfo.InvariantCulture)
+            + "$" + Convert.ToBase64String(salt) + "$" + Convert.ToBase64String(hash);
     }
 
     public static bool VerifyPassword(string inputPassword, string storedHash)
     {
-        if (string.IsNullOrEmpty(storedHash)) return false;
+        if (string.IsNullOrEmpty(inputPassword) || string.IsNullOrEmpty(storedHash)) return false;
 
-        // 1. Kiểm tra khớp SHA-256
-        var hash = HashPassword(inputPassword);
-        if (string.Equals(hash, storedHash, StringComparison.OrdinalIgnoreCase))
-            return true;
-
-        // 2. Hỗ trợ password cho các tài khoản seed ban đầu ($2a$placeholder)
-        if (storedHash.StartsWith("$2a$") || storedHash.Contains("placeholder"))
+        if (storedHash.StartsWith(Pbkdf2Prefix, StringComparison.Ordinal))
         {
-            if (inputPassword == "admin" || inputPassword == "123456" || inputPassword == "admin123" || inputPassword == "supervisor1")
-                return true;
+            if (!TryParsePbkdf2(storedHash, out int iterations, out byte[] salt, out byte[] expected)) return false;
+            byte[] actual = Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(inputPassword), salt,
+                iterations, HashAlgorithmName.SHA256, expected.Length);
+            return CryptographicOperations.FixedTimeEquals(actual, expected);
         }
 
-        // 3. Fallback so sánh trực tiếp
-        return string.Equals(inputPassword, storedHash, StringComparison.Ordinal);
+        // Hash cũ: SHA-256 hex không salt (tài khoản tạo bằng bản trước). Đăng nhập đúng sẽ được băm lại bằng PBKDF2.
+        if (IsLegacySha256(storedHash))
+        {
+            byte[] actual = SHA256.HashData(Encoding.UTF8.GetBytes(inputPassword));
+            return CryptographicOperations.FixedTimeEquals(actual, Convert.FromHexString(storedHash));
+        }
+
+        // Mọi dạng khác (chuỗi placeholder, mật khẩu thô...) đều bị từ chối
+        return false;
+    }
+
+    /// <summary>Hash cũ (SHA-256) hoặc PBKDF2 ít vòng hơn hiện tại thì nên băm lại.</summary>
+    public static bool NeedsRehash(string storedHash) =>
+        !TryParsePbkdf2(storedHash, out int iterations, out _, out _) || iterations < Pbkdf2Iterations;
+
+    private static bool IsLegacySha256(string storedHash) =>
+        storedHash.Length == 64 && storedHash.All(Uri.IsHexDigit);
+
+    private static bool TryParsePbkdf2(string storedHash, out int iterations, out byte[] salt, out byte[] hash)
+    {
+        iterations = 0;
+        salt = hash = Array.Empty<byte>();
+        if (!storedHash.StartsWith(Pbkdf2Prefix, StringComparison.Ordinal)) return false;
+
+        string[] parts = storedHash.Split('$');
+        if (parts.Length != 4
+            || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out iterations)
+            || iterations < 10_000 || iterations > 5_000_000)
+            return false;
+        try
+        {
+            salt = Convert.FromBase64String(parts[2]);
+            hash = Convert.FromBase64String(parts[3]);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        return salt.Length >= 8 && hash.Length >= 16;
     }
 
     /// <summary>
     /// Đăng nhập tài khoản bằng Username và Password từ bảng Users.
     /// </summary>
-    public async Task<UserModel?> LoginUserAsync(string username, string password)
+    public async Task<UserModel?> LoginUserAsync(string username, string password) =>
+        (await TryLoginAsync(username, password)).User;
+
+    /// <summary>
+    /// Như LoginUserAsync nhưng phân biệt "sai mật khẩu" (User = null, Error = null) với lỗi CSDL (Error khác null).
+    /// </summary>
+    public async Task<(UserModel? User, string? Error)> TryLoginAsync(string username, string password)
     {
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password)) return (null, null);
+
         const string sql = @"
             SELECT UserId, Username, PasswordHash, FullName, PhoneNumber, Email, Role, CreatedAt
             FROM Users
@@ -360,33 +441,116 @@ public sealed class DatabaseService
         try
         {
             await using var conn = await OpenConnectionAsync();
-            await using var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@Username", username.Trim());
+            UserModel? user = null;
+            string? storedHash = null;
 
-            await using var r = await cmd.ExecuteReaderAsync();
-            if (await r.ReadAsync())
+            await using (var cmd = new MySqlCommand(sql, conn))
             {
-                string storedHash = r.GetString("PasswordHash");
-                if (VerifyPassword(password, storedHash))
+                cmd.Parameters.AddWithValue("@Username", username.Trim());
+                await using var r = await cmd.ExecuteReaderAsync();
+                if (await r.ReadAsync())
                 {
-                    return new UserModel(
-                        UserId: r.GetInt32("UserId"),
-                        Username: r.GetString("Username"),
-                        FullName: r.GetString("FullName"),
-                        PhoneNumber: r.IsDBNull(r.GetOrdinal("PhoneNumber")) ? null : r.GetString("PhoneNumber"),
-                        Email: r.IsDBNull(r.GetOrdinal("Email")) ? null : r.GetString("Email"),
-                        Role: r.GetString("Role"),
-                        CreatedAt: r.GetDateTime("CreatedAt")
-                    );
+                    storedHash = r.GetString("PasswordHash");
+                    user = ReadUser(r);
                 }
             }
-            return null;
+
+            if (user == null || storedHash == null)
+            {
+                VerifyPassword(password, DummyHash.Value);
+                return (null, null);
+            }
+
+            if (!VerifyPassword(password, storedHash)) return (null, null);
+
+            if (NeedsRehash(storedHash))
+            {
+                try
+                {
+                    await using var up = new MySqlCommand("UPDATE Users SET PasswordHash = @Hash WHERE UserId = @UserId;", conn);
+                    up.Parameters.AddWithValue("@Hash", HashPassword(password));
+                    up.Parameters.AddWithValue("@UserId", user.UserId);
+                    await up.ExecuteNonQueryAsync();
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MySQL Rehash Error] {ex.Message}");
+                }
+            }
+
+            return (user, null);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MySQL LoginUser Error] {ex.Message}");
-            return null;
+            return (null, DescribeDbError(ex));
         }
+    }
+
+    /// <summary>Đổi mật khẩu: phải nhập đúng mật khẩu hiện tại.</summary>
+    public async Task<(bool Success, string? Error)> ChangePasswordAsync(int userId, string currentPassword, string newPassword)
+    {
+        if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 6)
+            return (false, "Mật khẩu mới phải có ít nhất 6 ký tự.");
+
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            string? storedHash;
+            await using (var cmd = new MySqlCommand("SELECT PasswordHash FROM Users WHERE UserId = @UserId LIMIT 1;", conn))
+            {
+                cmd.Parameters.AddWithValue("@UserId", userId);
+                storedHash = await cmd.ExecuteScalarAsync() as string;
+            }
+            if (storedHash == null) return (false, "Tài khoản không còn tồn tại.");
+            if (!VerifyPassword(currentPassword, storedHash)) return (false, "Mật khẩu hiện tại không đúng.");
+
+            await using var up = new MySqlCommand("UPDATE Users SET PasswordHash = @Hash WHERE UserId = @UserId;", conn);
+            up.Parameters.AddWithValue("@Hash", HashPassword(newPassword));
+            up.Parameters.AddWithValue("@UserId", userId);
+            await up.ExecuteNonQueryAsync();
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>Lấy một tài khoản theo UserId (null nếu không còn). Lỗi CSDL được ném ra cho nơi gọi xử lý.</summary>
+    public async Task<UserModel?> GetUserByIdAsync(int userId)
+    {
+        const string sql = @"
+            SELECT UserId, Username, FullName, PhoneNumber, Email, Role, CreatedAt
+            FROM Users
+            WHERE UserId = @UserId
+            LIMIT 1;";
+
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@UserId", userId);
+        await using var r = await cmd.ExecuteReaderAsync();
+        return await r.ReadAsync() ? ReadUser(r) : null;
+    }
+
+    private static UserModel ReadUser(MySqlDataReader r) => new(
+        UserId: r.GetInt32("UserId"),
+        Username: r.GetString("Username"),
+        FullName: r.GetString("FullName"),
+        PhoneNumber: r.IsDBNull(r.GetOrdinal("PhoneNumber")) ? null : r.GetString("PhoneNumber"),
+        Email: r.IsDBNull(r.GetOrdinal("Email")) ? null : r.GetString("Email"),
+        Role: r.GetString("Role"),
+        CreatedAt: r.GetDateTime("CreatedAt"));
+
+    /// <summary>Ảnh bằng chứng (Base64) của một cảnh báo, null nếu không có. Lỗi CSDL được ném ra.</summary>
+    public async Task<string?> GetAlertSnapshotAsync(long alertId)
+    {
+        const string sql = "SELECT SnapshotBase64 FROM AlertHistory WHERE AlertId = @AlertId LIMIT 1;";
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@AlertId", alertId);
+        var value = await cmd.ExecuteScalarAsync();
+        return value is string b64 && b64.Length > 0 ? b64 : null;
     }
 
     /// <summary>
@@ -521,7 +685,7 @@ public sealed class DatabaseService
         deviceName = deviceName.Trim();
         zoneName = zoneName.Trim();
         deviceType = string.IsNullOrWhiteSpace(deviceType) ? "RaspberryPi-Node" : deviceType.Trim();
-        status = string.Equals(status, "Offline", StringComparison.OrdinalIgnoreCase) ? "Offline" : "Active";
+        status = NormalizeDeviceStatus(status);
         ipAddress = string.IsNullOrWhiteSpace(ipAddress) ? null : ipAddress.Trim();
 
         try
@@ -584,7 +748,8 @@ public sealed class DatabaseService
                 cmd.Parameters.AddWithValue("@DeviceType", deviceType);
                 cmd.Parameters.AddWithValue("@Status", status);
                 cmd.Parameters.AddWithValue("@IpAddress", (object?)ipAddress ?? DBNull.Value);
-                await cmd.ExecuteNonQueryAsync();
+                if (await cmd.ExecuteNonQueryAsync() == 0)
+                    return (false, $"Không tìm thấy thiết bị '{deviceId}' để sửa.");
             }
 
             return (true, null);
@@ -595,6 +760,14 @@ public sealed class DatabaseService
         }
     }
 
+    // CSDL chỉ nhận Active / Inactive / Maintenance (CK_Devices_Status); "Offline" của giao diện cũ = Inactive
+    private static string NormalizeDeviceStatus(string? status) => status?.Trim().ToLowerInvariant() switch
+    {
+        "inactive" or "offline" => "Inactive",
+        "maintenance" => "Maintenance",
+        _ => "Active",
+    };
+
     /// <summary>
     /// Xóa trạm giám sát (xóa kèm log/cảnh báo liên quan để tránh lỗi khóa ngoại).
     /// </summary>
@@ -603,15 +776,29 @@ public sealed class DatabaseService
         try
         {
             await using var conn = await OpenConnectionAsync();
+            await using var tx = await conn.BeginTransactionAsync();
+
+            const string checkSql = "SELECT COUNT(*) FROM Devices WHERE DeviceId = @DeviceId FOR UPDATE;";
+            await using (var chk = new MySqlCommand(checkSql, conn, tx))
+            {
+                chk.Parameters.AddWithValue("@DeviceId", deviceId);
+                if (Convert.ToInt64(await chk.ExecuteScalarAsync()) == 0)
+                    return (false, "Không tìm thấy thiết bị để xóa.");
+            }
+
+            // Xoá cả ba bảng trong một giao dịch để không còn log / cảnh báo mồ côi
             const string sql = """
                 DELETE FROM AlertHistory WHERE DeviceId = @DeviceId;
                 DELETE FROM EnvironmentLogs WHERE DeviceId = @DeviceId;
                 DELETE FROM Devices WHERE DeviceId = @DeviceId;
                 """;
-            await using var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@DeviceId", deviceId);
-            int rows = await cmd.ExecuteNonQueryAsync();
-            return rows > 0 ? (true, null) : (false, "Không tìm thấy thiết bị để xóa.");
+            await using (var cmd = new MySqlCommand(sql, conn, tx))
+            {
+                cmd.Parameters.AddWithValue("@DeviceId", deviceId);
+                await cmd.ExecuteNonQueryAsync();
+            }
+            await tx.CommitAsync();
+            return (true, null);
         }
         catch (Exception ex)
         {
