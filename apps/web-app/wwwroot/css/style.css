@@ -11,6 +11,9 @@ body {
   font-variant-numeric: tabular-nums;   /* số thẳng cột khi cập nhật liên tục */
 }
 
-/* bảng sát mép khối: ô đầu và ô cuối thẳng với tiêu đề khối */
-table th:first-child, table td:first-child { padding-left: 16px; }
-table th:last-child, table td:last-child { padding-right: 16px; }
+/* bảng số đo của từng khu vực: tên bên trái, giá trị bên phải */
+.kv { width: 100%; border-collapse: collapse; }
+.kv td { padding: 5px 0; border-bottom: 1px dotted #ccc; }
+.kv td:last-child { text-align: right; font-weight: 600; }
+/* giờ phút giây: chữ đều để các dòng thẳng cột */
+.t { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
