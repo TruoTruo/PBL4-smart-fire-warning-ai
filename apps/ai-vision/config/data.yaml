@@ -1,0 +1,17 @@
+# Bộ dữ liệu D-Fire, bản chia sẵn trên Kaggle (sayedgamal99/smoke-fire-detection-yolo).
+# Giải nén vào apps/ai-vision/datasets/d-fire/ để có datasets/d-fire/data/train/images, ...
+# `path` tương đối được tính theo thư mục chứa file này (các script trong src/ tự đổi sang đường dẫn tuyệt đối).
+# Lúc huấn luyện best.pt, path là D:/Tai Lieu DUT/2026-2027/PBL4/NewResearch trên máy của nhóm.
+path: ../datasets/d-fire
+train: data/train/images
+val: data/val/images
+test: data/test/images
+
+# Classes
+names: ["smoke", "fire"]
+
+# Counts
+nc: 2 # number of classes
+train_count: 14122
+val_count: 3099
+test_count: 4306
