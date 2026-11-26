@@ -2,7 +2,7 @@
 -- 004_alert_snapshot.sql  (MySQL 8.0+)
 -- Thêm cột SnapshotBase64 vào AlertHistory: ảnh bằng chứng JPEG
 -- (mã hóa Base64) mà main_iot.py gửi kèm khi có cảnh báo.
--- mqtt-subscriber ghi cột này, desktop-app và web-app đọc để hiển thị.
+-- mqtt-subscriber ghi cột này, web-app đọc để hiển thị.
 --
 -- Dùng MEDIUMTEXT vì ảnh 480x360 sau Base64 có thể vượt 64 KB của TEXT.
 --

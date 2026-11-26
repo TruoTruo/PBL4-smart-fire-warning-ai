@@ -7,7 +7,7 @@
 --
 -- CHẠY ĐÚNG 1 LẦN trên database ĐÃ CÓ SẴN.
 -- Database tạo mới từ migrations/schema.sql thì đã có sẵn 2 cột này, KHÔNG chạy file này.
--- Chạy SAU KHI đã cập nhật code subscriber + desktop-app (code mới không còn dùng GasPpm).
+-- Chạy SAU KHI đã cập nhật code subscriber + web-app (code mới không còn dùng GasPpm).
 -- ============================================================
 
 USE SmartFireDB;

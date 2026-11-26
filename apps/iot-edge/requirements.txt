@@ -7,4 +7,4 @@ adafruit-circuitpython-dht==3.2.0
 adafruit-blinka            # cung cap module "board"
 opencv-python
 flask
-ultralytics                # YOLOv8, tu cai kem torch
+ultralytics==8.4.143       # YOLOv11n, cung ban da train best.pt; tu cai kem torch

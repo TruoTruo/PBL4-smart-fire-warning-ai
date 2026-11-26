@@ -1,7 +1,7 @@
 -- ============================================================
 -- stored_procedures.sql (MySQL 8.0+)
--- Các stored procedure phục vụ Desktop App (Trường) gọi qua
--- Services/DbService.cs. Chạy sau schema.sql + seed.sql.
+-- Các stored procedure dùng khi truy vấn tay hoặc làm báo cáo (web-app
+-- truy vấn trực tiếp trong Services/DatabaseService.cs). Chạy sau schema.sql + seed.sql.
 --
 -- LƯU Ý: MySQL không hỗ trợ giá trị mặc định cho tham số IN
 -- như SQL Server (@Param = NULL). Khi gọi CALL, nếu muốn "không
@@ -70,7 +70,7 @@ END$$
 DELIMITER ;
 
 -- ------------------------------------------------------------
--- 3. Đánh dấu 1 cảnh báo đã được người dùng xác nhận (trên desktop-app)
+-- 3. Đánh dấu 1 cảnh báo đã được người dùng xác nhận (trên web-app)
 -- ------------------------------------------------------------
 DROP PROCEDURE IF EXISTS sp_AcknowledgeAlert;
 DELIMITER $$
@@ -85,7 +85,7 @@ BEGIN
         AcknowledgedAt = NOW()
     WHERE AlertId = p_alert_id;
 
-    SELECT ROW_COUNT() AS RowsUpdated;  -- desktop-app kiểm tra =1 nghĩa là update thành công
+    SELECT ROW_COUNT() AS RowsUpdated;  -- web-app kiểm tra =1 nghĩa là update thành công
 END$$
 DELIMITER ;
 
@@ -121,24 +121,8 @@ END$$
 DELIMITER ;
 
 
--- ============================================================
--- TEST NHANH — giả sử đã chạy schema.sql + seed.sql trước đó
--- ============================================================
-
--- Test 1: lấy log 24h của PI-01 (kỳ vọng: 3 dòng, có 1 dòng AiResult=1)
-CALL sp_GetRecentEnvironmentLogs('PI-01', 24);
-
--- Test 2: lấy toàn bộ log 24h, không lọc thiết bị (kỳ vọng: 4 dòng)
-CALL sp_GetRecentEnvironmentLogs(NULL, 24);
-
--- Test 3: lấy cảnh báo chưa xác nhận (kỳ vọng: 1 dòng, Acknowledged=0)
-CALL sp_GetAlertHistory(NULL, NULL, NULL, NULL, TRUE);
-
--- Test 4: xác nhận cảnh báo đó (giả sử AlertId=1, UserId=1 là admin)
-CALL sp_AcknowledgeAlert(1, 1);
-
--- Test 5: kiểm tra lại — giờ Acknowledged phải = 1
-CALL sp_GetAlertHistory('PI-01', NULL, NULL, NULL, NULL);
-
--- Test 6: thống kê cảnh báo 30 ngày gần nhất (kỳ vọng: 1 dòng PI-01 / Fire / count=1)
-CALL sp_GetAlertStatistics(NULL, NULL);
+-- Kiểm tra nhanh (chạy tay, KHÔNG để lệnh CALL ở đây vì file này chạy
+-- tự động khi Docker khởi tạo DB):
+-- CALL sp_GetRecentEnvironmentLogs('PI-01', 24);
+-- CALL sp_GetAlertHistory(NULL, NULL, NULL, NULL, TRUE);
+-- CALL sp_GetAlertStatistics(NULL, NULL);

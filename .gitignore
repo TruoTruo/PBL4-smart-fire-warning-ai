@@ -3,6 +3,11 @@ apps/ai-vision/datasets/raw/*
 apps/ai-vision/datasets/processed/*
 apps/ai-vision/models/*.pt
 apps/ai-vision/models/*.onnx
+apps/ai-vision/datasets/d-fire/
+apps/ai-vision/runs/
+apps/ai-vision/models/*_ncnn_model/
+apps/iot-edge/*.pt
+*.pt
 !**/.gitkeep
 
 # Python
@@ -12,8 +17,6 @@ __pycache__/
 venv/
 
 # C# / .NET
-apps/desktop-app/**/bin/
-apps/desktop-app/**/obj/
 *.user
 
 # Secrets
