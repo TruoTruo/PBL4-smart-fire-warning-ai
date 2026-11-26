@@ -4,8 +4,8 @@ using SmartFireWeb.Hubs;
 namespace SmartFireWeb.Services;
 
 /// <summary>
-/// Background Service chạy ngầm cùng Web API để duy trì kết nối MQTT với Raspberry Pi 5
-/// và đẩy sự kiện cập nhật xuống trình duyệt qua SignalR ngay khi có dữ liệu mới.
+/// Background Service cháº¡y ngáº§m cÃ¹ng Web API Ä‘á»ƒ duy trÃ¬ káº¿t ná»‘i MQTT vá»›i Raspberry Pi 5
+/// vÃ  Ä‘áº©y sá»± kiá»‡n cáº­p nháº­t xuá»‘ng trÃ¬nh duyá»‡t qua SignalR ngay khi cÃ³ dá»¯ liá»‡u má»›i.
 /// </summary>
 public sealed class MqttHostedService : BackgroundService
 {
@@ -42,12 +42,12 @@ public sealed class MqttHostedService : BackgroundService
 
         try
         {
-            await _mqtt.StartAsync("test.mosquitto.org", 1883);
-            _logger.LogInformation("Đã kết nối MQTT Broker test.mosquitto.org:1883");
+            await _mqtt.StartAsync("192.168.137.191", 1883);
+            _logger.LogInformation("ÄÃ£ káº¿t ná»‘i MQTT Broker 192.168.137.191:1883");
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Không thể kết nối MQTT Broker lúc khởi động: {Message}", ex.Message);
+            _logger.LogWarning("KhÃ´ng thá»ƒ káº¿t ná»‘i MQTT Broker lÃºc khá»Ÿi Ä‘á»™ng: {Message}", ex.Message);
         }
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -59,3 +59,6 @@ public sealed class MqttHostedService : BackgroundService
         await base.StopAsync(cancellationToken);
     }
 }
+
+
+

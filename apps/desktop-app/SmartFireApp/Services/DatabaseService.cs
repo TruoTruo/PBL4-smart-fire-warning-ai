@@ -17,7 +17,7 @@ public sealed class DatabaseService
     {
         // Ưu tiên smartfiredb — database thật của dự án trên XAMPP
         _connectionString = connectionString 
-            ?? "Server=localhost;Port=3306;Database=smartfiredb;Uid=root;Pwd=;CharSet=utf8mb4;";
+            ?? "Server=localhost;Port=3307;Database=smartfiredb;Uid=root;Pwd=;CharSet=utf8mb4;";
     }
 
     private async Task<MySqlConnection> OpenConnectionAsync()
@@ -30,7 +30,7 @@ public sealed class DatabaseService
         {
             foreach (var pwd in candidatePasswords)
             {
-                var connStr = $"Server=localhost;Port=3306;Database={db};Uid=root;Pwd={pwd};CharSet=utf8mb4;Connect Timeout=2;";
+                var connStr = $"Server=localhost;Port=3307;Database={db};Uid=root;Pwd={pwd};CharSet=utf8mb4;Connect Timeout=2;";
                 try
                 {
                     var conn = new MySqlConnection(connStr);

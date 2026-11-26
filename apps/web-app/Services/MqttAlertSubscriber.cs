@@ -29,9 +29,9 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
     /// <summary>
     /// Khởi động kết nối MQTT tới Broker và lắng nghe dữ liệu từ Raspberry Pi 5.
     /// </summary>
-    /// <param name="host">Broker host (mặc định test.mosquitto.org theo file main_iot.py của Pi 5)</param>
+    /// <param name="host">Broker host (mặc định 192.168.137.191 - PHẢI trùng broker với Pi và mqtt-subscriber)</param>
     /// <param name="port">Port MQTT (mặc định 1883)</param>
-    public async Task StartAsync(string host = "test.mosquitto.org", int port = 1883)
+    public async Task StartAsync(string host = "192.168.137.191", int port = 1883)
     {
         if (_mqttClient != null && _mqttClient.IsConnected)
             return;
@@ -41,7 +41,7 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
 
         var options = new MqttClientOptionsBuilder()
             .WithTcpServer(host, port)
-            .WithClientId($"SmartFireWeb_WinForms_{Guid.NewGuid():N}")
+            .WithClientId($"SmartFireApp_WinForms_{Guid.NewGuid():N}")
             .WithCleanSession()
             .WithKeepAlivePeriod(TimeSpan.FromSeconds(60))
             .Build();
@@ -89,46 +89,45 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
         var root = doc.RootElement;
 
         // Trường hợp 1: Nhận trực tiếp từ Raspberry Pi 5 (Topic: pbl4/sensors/fire_warning)
-        // Format trong main_iot.py: { "nhiet_do": ..., "do_am": ..., "co_khoi": ... }
+        // Format từ main_iot.py: { "device_id", "nhiet_do", "do_am", "co_khoi", "co_lua", "muc_do", "confidence" }
+        // Pi đã tự đánh giá (sensor fusion) nên app KHÔNG tự đặt ngưỡng: chỉ tin theo "muc_do".
         if (topic.Equals("pbl4/sensors/fire_warning", StringComparison.OrdinalIgnoreCase))
         {
-            double temp = 0;
-            double hum = 0;
-            int smoke = 0;
-
-            if (root.TryGetProperty("nhiet_do", out var pTemp) && pTemp.TryGetDouble(out var tVal))
-                temp = tVal;
-            if (root.TryGetProperty("do_am", out var pHum) && pHum.TryGetDouble(out var hVal))
-                hum = hVal;
-            if (root.TryGetProperty("co_khoi", out var pSmoke) && pSmoke.TryGetInt32(out var sVal))
-                smoke = sVal;
-
-            bool isFireDetected = smoke == 1 || temp > 45.0;
+            string deviceId = GetString(root, "device_id") ?? "PI-01";
+            double temp = GetDouble(root, "nhiet_do") ?? 0;      // DHT11 lỗi -> Pi gửi null
+            double hum = GetDouble(root, "do_am") ?? 0;
+            bool smoke = GetInt(root, "co_khoi") == 1;            // MQ-2 chỉ cho biết CÓ / KHÔNG có khói
+            double? smokeLevel = GetDouble(root, "muc_khoi");          // mức khói (%) nếu Pi đọc bằng ADC
+            bool fire = GetInt(root, "co_lua") == 1;              // YOLO đã xác nhận lửa ổn định
+            int level = GetInt(root, "muc_do") ?? 0;              // 0 bình thường, 1 cảnh báo sớm, 2 báo cháy
+            double? confidence = fire ? GetDouble(root, "confidence") : null;   // độ tin cậy (%) của YOLO
 
             var reading = new SensorReading(
-                DeviceId: "PI-05",
-                ZoneName: "Xưởng Gia Công A - Block C2",
+                DeviceId: deviceId,
+                ZoneName: "Khu vực " + deviceId,
                 Temperature: Math.Round(temp, 1),
                 Humidity: Math.Round(hum, 1),
-                GasPpm: smoke == 1 ? 620 : 180, // Nếu phát hiện khói, giả lập nồng độ ppm tương ứng
-                AiDetected: isFireDetected,
-                Timestamp: DateTime.Now
+                SmokeDetected: smoke,
+                AiDetected: fire,
+                Timestamp: DateTime.Now,
+                ConfidenceScore: confidence,
+                AlertLevel: level,
+                SmokeLevel: smokeLevel
             );
-
             SensorReadingReceived?.Invoke(this, reading);
 
-            // Nếu phát hiện khói hoặc nhiệt độ nguy hiểm (>45°C) -> Kích hoạt AlertRecord
-            if (isFireDetected)
+            // Chỉ báo cháy khi Pi báo mức 2
+            if (level >= 2)
             {
                 var alert = new AlertRecord(
                     AlertId: DateTime.Now.Ticks % 10000,
-                    DeviceId: "PI-05",
-                    ZoneName: "Xưởng Gia Công A",
-                    AlertType: smoke == 1 ? "Phát hiện khói (MQ-2)" : "Nhiệt độ cao bất thường",
+                    DeviceId: deviceId,
+                    ZoneName: "Khu vực " + deviceId,
+                    AlertType: "Fire",
                     Severity: "High",
                     AlertTime: DateTime.Now,
                     Acknowledged: false,
-                    SmsSent: true
+                    SmsSent: false
                 );
                 AlertReceived?.Invoke(this, alert);
             }
@@ -156,24 +155,43 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
         // Trường hợp 3: Nhận sensor data chuẩn từ backend: firealert/sensor-data/{deviceId}
         else if (topic.StartsWith("firealert/sensor-data", StringComparison.OrdinalIgnoreCase))
         {
-            string deviceId = root.TryGetProperty("deviceId", out var pDev) ? pDev.GetString() ?? "PI-??" : "PI-??";
-            double temp = root.TryGetProperty("temperature", out var pTemp) && pTemp.TryGetDouble(out var tVal) ? tVal : 0;
-            double hum = root.TryGetProperty("humidity", out var pHum) && pHum.TryGetDouble(out var hVal) ? hVal : 0;
-            double gas = root.TryGetProperty("gasPpm", out var pGas) && pGas.TryGetDouble(out var gVal) ? gVal : 0;
-            bool ai = root.TryGetProperty("aiResult", out var pAi) && pAi.GetBoolean();
+            string deviceId = GetString(root, "device_id") ?? GetString(root, "deviceId") ?? "PI-??";
+            double temp = GetDouble(root, "temperature") ?? 0;
+            double hum = GetDouble(root, "humidity") ?? 0;
+            bool smoke = GetBool(root, "smoke_detected") ?? GetBool(root, "smokeDetected") ?? false;
+            bool ai = GetBool(root, "ai_result") ?? GetBool(root, "aiResult") ?? false;
 
             var reading = new SensorReading(
                 DeviceId: deviceId,
                 ZoneName: "Khu vực " + deviceId,
                 Temperature: Math.Round(temp, 1),
                 Humidity: Math.Round(hum, 1),
-                GasPpm: Math.Round(gas, 0),
+                SmokeDetected: smoke,
                 AiDetected: ai,
-                Timestamp: DateTime.Now
+                Timestamp: DateTime.Now,
+                ConfidenceScore: GetDouble(root, "confidence"),
+                SmokeLevel: GetDouble(root, "smoke_level") ?? GetDouble(root, "muc_khoi")
             );
             SensorReadingReceived?.Invoke(this, reading);
         }
     }
+
+    // Các hàm đọc JSON an toàn: giá trị null / sai kiểu thì trả về null thay vì ném lỗi
+    // (DHT11 lỗi -> Pi gửi "nhiet_do": null, nếu dùng TryGetDouble trực tiếp sẽ bị exception và mất cả message)
+    private static string? GetString(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null;
+
+    private static double? GetDouble(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.Number && p.TryGetDouble(out var v)
+            ? v : (double?)null;
+
+    private static int? GetInt(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.Number && p.TryGetInt32(out var v)
+            ? v : (int?)null;
+
+    private static bool? GetBool(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var p) && (p.ValueKind == JsonValueKind.True || p.ValueKind == JsonValueKind.False)
+            ? p.GetBoolean() : (bool?)null;
 
     public async Task StopAsync()
     {
@@ -201,3 +219,6 @@ public sealed class MqttAlertSubscriber : IAsyncDisposable
         }
     }
 }
+
+
+
