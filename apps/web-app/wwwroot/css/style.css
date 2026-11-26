@@ -1,23 +1,16 @@
-@import url("../lib/fonts/fonts.css");   /* icon Material Symbols, đặt sẵn trong wwwroot/lib/fonts */
+@import url("../lib/fonts/fonts.css");            /* icon Material Symbols */
+@import url("../lib/fonts/be-vietnam-pro.css");   /* chữ: Be Vietnam Pro, đặt sẵn trong wwwroot/lib/fonts */
 
 html, body {
   margin: 0;
   padding: 0;
 }
 body {
+  font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   overscroll-behavior: none;
   font-variant-numeric: tabular-nums;   /* số thẳng cột khi cập nhật liên tục */
 }
 
-/* thanh cuộn tối cho hợp nền */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0f131c;
-}
-::-webkit-scrollbar-thumb {
-  background: #31353f;
-  border-radius: 3px;
-}
+/* bảng sát mép khối: ô đầu và ô cuối thẳng với tiêu đề khối */
+table th:first-child, table td:first-child { padding-left: 16px; }
+table th:last-child, table td:last-child { padding-right: 16px; }
