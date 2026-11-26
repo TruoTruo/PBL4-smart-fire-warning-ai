@@ -52,6 +52,7 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
 | POST | `/api/alerts/{id}/resolve` `{ "resolution": "Handled\|FalseAlarm\|Test", "note": "..." }` | Admin hoặc người phụ trách khu vực |
 | GET | `/api/alerts/{id}/snapshot` (ảnh JPEG) | đã đăng nhập |
 | GET | `/api/alerts/history?fromDate=2026-11-20&toDate=2026-11-26&alertType=Fire` | đã đăng nhập |
+| GET | `/api/alerts/report?fromDate=2026-11-20&toDate=2026-11-26` (hiệu quả xử lý: tổng hợp, theo khu vực, theo cán bộ) | đã đăng nhập |
 | GET | `/api/environment/{deviceId}?minutes=60` (chuỗi nhiệt độ / độ ẩm) | đã đăng nhập |
 | POST | `/api/devices` (thêm / sửa trạm, `status`: Active, Inactive, Maintenance) | Admin |
 | DELETE | `/api/devices/{deviceId}` (xoá kèm nhật ký đo và cảnh báo của trạm) | Admin |
@@ -85,6 +86,9 @@ sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên th
   Đường nét đứt đỏ là ngưỡng 45 °C của Pi; đường bị ngắt khi mất cảm biến (giá trị null) hoặc quá 60 giây không có số đo.
 - **Lịch sử & thống kê**: lọc theo khoảng ngày (mặc định 7 ngày), loại, mức độ, trạng thái; biểu đồ số cảnh báo
   mỗi ngày; "Xuất CSV" (UTF-8 có BOM để Excel hiện đúng tiếng Việt, ô bắt đầu bằng `= + - @` được thêm `'` phía trước).
+  Mục "Hiệu quả xử lý" (cùng khoảng ngày): tỉ lệ đã xác nhận, thời gian phản hồi trung bình / chậm nhất
+  (từ lúc ghi cảnh báo đến lúc xác nhận), số xác nhận trong 5 phút, tỉ lệ báo nhầm theo phiếu sự cố;
+  bảng theo khu vực (kể cả khu vực không có cảnh báo) và theo cán bộ xác nhận.
 - **Trạm & cán bộ**: bảng khu vực (mô tả, người phụ trách, số trạm, số cảnh báo chưa xác nhận); Admin thêm / sửa / xoá
   khu vực, trạm và cán bộ. Tài khoản giám sát viên không thấy phần quản lý trạm.
 - **Phiếu sự cố**: bấm mã cảnh báo hoặc nút "Phiếu" để xem số đo cảm biến lúc báo, người phụ trách, người xác nhận,

@@ -1046,4 +1046,127 @@ public sealed class DatabaseService
             return false;
         }
     }
+
+    // ============================================================
+    // THỐNG KÊ HIỆU QUẢ XỬ LÝ
+    // ============================================================
+
+    // Thời gian phản hồi (giây) của một cảnh báo đã xác nhận; NULL nếu chưa xác nhận
+    private const string RespSql = "CASE WHEN a.Acknowledged AND a.AcknowledgedAt IS NOT NULL "
+        + "THEN GREATEST(0, TIMESTAMPDIFF(SECOND, a.AlertTime, a.AcknowledgedAt)) END";
+
+    private static int ToInt(object v) => v == DBNull.Value ? 0 : Convert.ToInt32(v);
+    private static double? ToNullableDouble(object v) => v == DBNull.Value ? null : Convert.ToDouble(v, CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Báo cáo trong khoảng [from, to]: tổng hợp, theo khu vực, theo cán bộ xác nhận.
+    /// Lỗi CSDL được ném ra cho nơi gọi xử lý.
+    /// </summary>
+    public async Task<(AlertReportSummary Summary, List<ZoneReportRow> ByZone, List<UserReportRow> ByUser)> GetAlertReportAsync(
+        DateTime from, DateTime to)
+    {
+        await using var conn = await OpenConnectionAsync();
+
+        string summarySql = $@"
+            SELECT COUNT(*) AS Total,
+                   SUM(a.Severity = 'High') AS High,
+                   SUM(a.Acknowledged) AS Acked,
+                   SUM(NOT a.Acknowledged) AS Pending,
+                   AVG({RespSql}) AS AvgResp,
+                   MAX({RespSql}) AS MaxResp,
+                   SUM({RespSql} <= 300) AS Within5,
+                   SUM(a.Resolution = 'Handled') AS Handled,
+                   SUM(a.Resolution = 'FalseAlarm') AS FalseAlarm,
+                   SUM(a.Resolution = 'Test') AS TestCnt,
+                   SUM(a.Acknowledged AND a.Resolution IS NULL) AS NoRes
+            FROM AlertHistory a
+            WHERE a.AlertTime BETWEEN @From AND @To;";
+        AlertReportSummary summary;
+        await using (var cmd = new MySqlCommand(summarySql, conn))
+        {
+            cmd.Parameters.AddWithValue("@From", from);
+            cmd.Parameters.AddWithValue("@To", to);
+            await using var r = await cmd.ExecuteReaderAsync();
+            await r.ReadAsync();
+            summary = new AlertReportSummary(
+                Total: ToInt(r["Total"]),
+                HighSeverity: ToInt(r["High"]),
+                Acknowledged: ToInt(r["Acked"]),
+                Pending: ToInt(r["Pending"]),
+                AvgResponseSeconds: ToNullableDouble(r["AvgResp"]),
+                MaxResponseSeconds: r["MaxResp"] == DBNull.Value ? null : ToInt(r["MaxResp"]),
+                AckWithin5Min: ToInt(r["Within5"]),
+                Handled: ToInt(r["Handled"]),
+                FalseAlarm: ToInt(r["FalseAlarm"]),
+                Test: ToInt(r["TestCnt"]),
+                NoResolution: ToInt(r["NoRes"]));
+        }
+
+        // Liệt kê mọi khu vực, kể cả khu vực không có cảnh báo trong kỳ (Devices.ZoneId bắt buộc nên không có cảnh báo mồ côi)
+        string zoneSql = $@"
+            SELECT z.ZoneId, z.ZoneName, m.FullName AS ManagerName,
+                   COUNT(a.AlertId) AS Total,
+                   SUM(a.Severity = 'High') AS High,
+                   SUM(NOT a.Acknowledged) AS Pending,
+                   AVG({RespSql}) AS AvgResp,
+                   SUM(a.Resolution = 'FalseAlarm') AS FalseAlarm,
+                   SUM(a.Resolution IS NOT NULL) AS Resolved
+            FROM Zones z
+            LEFT JOIN Users m ON z.ManagerUserId = m.UserId
+            LEFT JOIN Devices d ON d.ZoneId = z.ZoneId
+            LEFT JOIN AlertHistory a ON a.DeviceId = d.DeviceId AND a.AlertTime BETWEEN @From AND @To
+            GROUP BY z.ZoneId, z.ZoneName, m.FullName
+            ORDER BY Total DESC, ZoneName ASC;";
+        var byZone = new List<ZoneReportRow>();
+        await using (var cmd = new MySqlCommand(zoneSql, conn))
+        {
+            cmd.Parameters.AddWithValue("@From", from);
+            cmd.Parameters.AddWithValue("@To", to);
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                byZone.Add(new ZoneReportRow(
+                    ZoneId: r["ZoneId"] == DBNull.Value ? null : ToInt(r["ZoneId"]),
+                    ZoneName: r.GetString("ZoneName"),
+                    ManagerName: GetNullableString(r, "ManagerName"),
+                    Total: ToInt(r["Total"]),
+                    HighSeverity: ToInt(r["High"]),
+                    Pending: ToInt(r["Pending"]),
+                    AvgResponseSeconds: ToNullableDouble(r["AvgResp"]),
+                    FalseAlarm: ToInt(r["FalseAlarm"]),
+                    Resolved: ToInt(r["Resolved"])));
+            }
+        }
+
+        string userSql = $@"
+            SELECT u.UserId, u.FullName,
+                   COUNT(*) AS Acked,
+                   AVG({RespSql}) AS AvgResp,
+                   SUM({RespSql} <= 300) AS Within5,
+                   SUM(a.Resolution IS NOT NULL) AS Resolved
+            FROM AlertHistory a
+            JOIN Users u ON a.AcknowledgedByUserId = u.UserId
+            WHERE a.AlertTime BETWEEN @From AND @To AND a.Acknowledged
+            GROUP BY u.UserId, u.FullName
+            ORDER BY Acked DESC, u.FullName ASC;";
+        var byUser = new List<UserReportRow>();
+        await using (var cmd = new MySqlCommand(userSql, conn))
+        {
+            cmd.Parameters.AddWithValue("@From", from);
+            cmd.Parameters.AddWithValue("@To", to);
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                byUser.Add(new UserReportRow(
+                    UserId: ToInt(r["UserId"]),
+                    FullName: r.GetString("FullName"),
+                    Acknowledged: ToInt(r["Acked"]),
+                    AvgResponseSeconds: ToNullableDouble(r["AvgResp"]),
+                    AckWithin5Min: ToInt(r["Within5"]),
+                    Resolved: ToInt(r["Resolved"])));
+            }
+        }
+
+        return (summary, byZone, byUser);
+    }
 }

@@ -168,3 +168,38 @@ public sealed record AlertStatItem(string DateLabel, string AlertType, int Count
 
 /// <summary>Một điểm trên biểu đồ nhiệt độ / độ ẩm (null = DHT11 lỗi lúc đo).</summary>
 public sealed record EnvironmentPoint(DateTime RecordedAt, double? Temperature, double? Humidity, int AlertLevel);
+
+/// <summary>Tổng hợp hiệu quả xử lý cảnh báo trong một khoảng thời gian (thời gian tính bằng giây).</summary>
+public sealed record AlertReportSummary(
+    int Total,
+    int HighSeverity,
+    int Acknowledged,
+    int Pending,
+    double? AvgResponseSeconds,
+    int? MaxResponseSeconds,
+    int AckWithin5Min,            // xác nhận trong 5 phút đầu
+    int Handled,
+    int FalseAlarm,
+    int Test,
+    int NoResolution);            // đã xác nhận nhưng chưa ghi kết quả phiếu
+
+/// <summary>Một dòng thống kê theo khu vực.</summary>
+public sealed record ZoneReportRow(
+    int? ZoneId,
+    string ZoneName,
+    string? ManagerName,
+    int Total,
+    int HighSeverity,
+    int Pending,
+    double? AvgResponseSeconds,
+    int FalseAlarm,
+    int Resolved);                // số phiếu đã ghi kết quả
+
+/// <summary>Một dòng thống kê theo cán bộ đã xác nhận cảnh báo.</summary>
+public sealed record UserReportRow(
+    int UserId,
+    string FullName,
+    int Acknowledged,
+    double? AvgResponseSeconds,
+    int AckWithin5Min,
+    int Resolved);

@@ -217,6 +217,36 @@ app.MapGet("/api/alerts/history", async (
     }
 }).RequireAuthorization();
 
+// 6b2. Báo cáo hiệu quả xử lý trong khoảng ngày (mặc định 7 ngày gần nhất)
+app.MapGet("/api/alerts/report", async (DateOnly? fromDate, DateOnly? toDate, DatabaseService db) =>
+{
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    var from = fromDate ?? today.AddDays(-6);
+    var to = toDate ?? today;
+    if (to < from) (from, to) = (to, from);
+    if (to.DayNumber - from.DayNumber > 366)
+        return Results.BadRequest(new { success = false, error = "Khoảng thời gian tối đa 1 năm." });
+    try
+    {
+        var (summary, byZone, byUser) = await db.GetAlertReportAsync(
+            from.ToDateTime(TimeOnly.MinValue), to.ToDateTime(TimeOnly.MaxValue));
+        return Results.Ok(new
+        {
+            success = true,
+            fromDate = from.ToString("yyyy-MM-dd"),
+            toDate = to.ToString("yyyy-MM-dd"),
+            summary,
+            byZone,
+            byUser,
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Lỗi CSDL khi lập báo cáo: " + ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).RequireAuthorization();
+
 // 6c. Chuỗi nhiệt độ / độ ẩm của một thiết bị cho biểu đồ (mặc định 60 phút gần nhất)
 app.MapGet("/api/environment/{deviceId}", async (string deviceId, int? minutes, DatabaseService db) =>
 {

@@ -413,6 +413,65 @@
     </div>
   </section>
 
+  <!-- thống kê hiệu quả xử lý (cùng khoảng ngày với bộ lọc lịch sử) -->
+  <section class="bg-white border border-[#d9dde2] rounded-sm p-4 flex flex-col gap-4">
+    <div class="-mx-4 -mt-4 px-4 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3 flex-wrap">
+      <h2 class="text-[15px] font-bold text-[#1c2229]">Hiệu quả xử lý</h2>
+      <span id="reportInfo" class="text-[12px] text-[#5d6670]">Cùng khoảng ngày với bộ lọc ở trên</span>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="py-1 pr-4 border-r border-[#d9dde2] last:border-r-0"><div class="text-[12px] text-[#5d6670]">Đã xác nhận</div><div id="repAcked" class="text-[22px] font-bold text-[#1c2229]">--</div><div id="repAckedSub" class="text-[12px] text-[#7b838d]"></div></div>
+      <div class="py-1 pr-4 border-r border-[#d9dde2] last:border-r-0"><div class="text-[12px] text-[#5d6670]">Phản hồi trung bình</div><div id="repAvg" class="text-[22px] font-bold text-[#1c2229]">--</div><div class="text-[12px] text-[#7b838d]">từ lúc báo đến lúc xác nhận</div></div>
+      <div class="py-1 pr-4 border-r border-[#d9dde2] last:border-r-0"><div class="text-[12px] text-[#5d6670]">Chậm nhất</div><div id="repMax" class="text-[22px] font-bold text-[#1c2229]">--</div></div>
+      <div class="py-1 pr-4 border-r border-[#d9dde2] last:border-r-0"><div class="text-[12px] text-[#5d6670]">Xác nhận trong 5 phút</div><div id="repWithin5" class="text-[22px] font-bold text-[#1c2229]">--</div><div id="repWithin5Sub" class="text-[12px] text-[#7b838d]"></div></div>
+      <div class="py-1 pr-4 border-r border-[#d9dde2] last:border-r-0"><div class="text-[12px] text-[#5d6670]">Báo nhầm</div><div id="repFalse" class="text-[22px] font-bold text-[#1c2229]">--</div><div id="repFalseSub" class="text-[12px] text-[#7b838d]"></div></div>
+      <div class="py-1 pr-4 border-r border-[#d9dde2] last:border-r-0"><div class="text-[12px] text-[#5d6670]">Chưa ghi kết quả</div><div id="repNoRes" class="text-[22px] font-bold text-[#1c2229]">--</div><div class="text-[12px] text-[#7b838d]">đã xác nhận, chưa ghi phiếu</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-2 min-w-0">
+        <h3 class="text-[13px] font-bold text-[#1c2229]">Theo khu vực</h3>
+        <div class="overflow-x-auto border border-[#d9dde2] rounded-sm">
+          <table class="w-full text-left text-[13px]">
+            <thead>
+              <tr class="text-[#5d6670] border-b border-[#d9dde2] bg-[#f6f7f8]">
+                <th class="py-2.5 px-3">Khu vực</th>
+                <th class="py-2.5 px-3 text-right">Cảnh báo</th>
+                <th class="py-2.5 px-3 text-right">Mức 2</th>
+                <th class="py-2.5 px-3 text-right">Chưa xác nhận</th>
+                <th class="py-2.5 px-3 text-right">Phản hồi TB</th>
+                <th class="py-2.5 px-3 text-right">Báo nhầm</th>
+              </tr>
+            </thead>
+            <tbody id="repZoneBody" class="divide-y divide-[#d9dde2]">
+              <tr><td colspan="6" class="py-4 text-center text-[#5d6670]">Chưa có dữ liệu.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="flex flex-col gap-2 min-w-0">
+        <h3 class="text-[13px] font-bold text-[#1c2229]">Theo cán bộ xác nhận</h3>
+        <div class="overflow-x-auto border border-[#d9dde2] rounded-sm">
+          <table class="w-full text-left text-[13px]">
+            <thead>
+              <tr class="text-[#5d6670] border-b border-[#d9dde2] bg-[#f6f7f8]">
+                <th class="py-2.5 px-3">Cán bộ</th>
+                <th class="py-2.5 px-3 text-right">Đã xác nhận</th>
+                <th class="py-2.5 px-3 text-right">Phản hồi TB</th>
+                <th class="py-2.5 px-3 text-right">Trong 5 phút</th>
+                <th class="py-2.5 px-3 text-right">Đã ghi phiếu</th>
+              </tr>
+            </thead>
+            <tbody id="repUserBody" class="divide-y divide-[#d9dde2]">
+              <tr><td colspan="5" class="py-4 text-center text-[#5d6670]">Chưa có dữ liệu.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
   </div>
 
   <div data-tab-panel="manage" class="hidden flex flex-col gap-5">
@@ -1920,6 +1979,7 @@
         showToast(msg, 'error');
         return;
       }
+      loadReport(from, to);
       hist.rows = Array.isArray(res.body.alerts) ? res.body.alerts : [];
       hist.stats = Array.isArray(res.body.stats) ? res.body.stats : [];
       hist.from = res.body.fromDate || from;
@@ -2441,6 +2501,69 @@
       } else {
         setBoxAlert('incAlert', res.body.error || ('Không lưu được (HTTP ' + res.status + ').'), true);
       }
+    }
+
+    // ========================================================
+    // THỐNG KÊ HIỆU QUẢ XỬ LÝ (cùng khoảng ngày với lịch sử, không theo bộ lọc loại / mức / trạng thái)
+    // ========================================================
+    let reportSeq = 0;
+
+    const pct = (part, whole) => whole > 0 ? Math.round(part * 100 / whole) + '%' : '—';
+    const fmtAvg = (sec) => sec === null || sec === undefined ? '—' : fmtDuration(Math.round(Number(sec)));
+
+    async function loadReport(from, to) {
+      const seq = ++reportSeq;
+      el('reportInfo').textContent = 'Đang tính...';
+      const res = await api('/api/alerts/report?' + new URLSearchParams({ fromDate: from, toDate: to }).toString());
+      if (res.status === 401 || seq !== reportSeq) return;
+      if (!res.ok || !res.body.success) {
+        el('reportInfo').textContent = res.body.error || ('Không lập được báo cáo (HTTP ' + res.status + ').');
+        return;
+      }
+      renderReport(res.body);
+    }
+
+    function renderReport(rep) {
+      const s = rep.summary || {};
+      const total = toInt(s.total), acked = toInt(s.acknowledged);
+      const resolved = toInt(s.handled) + toInt(s.falseAlarm) + toInt(s.test);
+      el('reportInfo').textContent = `Từ ${viDate(rep.fromDate)} đến ${viDate(rep.toDate)} • mọi loại cảnh báo`;
+      el('repAcked').textContent = `${acked}/${total}`;
+      el('repAckedSub').textContent = total > 0 ? `${pct(acked, total)} số cảnh báo` : 'không có cảnh báo';
+      el('repAvg').textContent = fmtAvg(s.avgResponseSeconds);
+      el('repMax').textContent = fmtAvg(s.maxResponseSeconds);
+      el('repWithin5').textContent = `${toInt(s.ackWithin5Min)}/${acked}`;
+      el('repWithin5Sub').textContent = acked > 0 ? `${pct(toInt(s.ackWithin5Min), acked)} số đã xác nhận` : '';
+      el('repFalse').textContent = String(toInt(s.falseAlarm));
+      el('repFalseSub').textContent = resolved > 0
+        ? `${pct(toInt(s.falseAlarm), resolved)} số phiếu có kết quả (${resolved})`
+        : 'chưa có phiếu nào ghi kết quả';
+      el('repNoRes').textContent = String(toInt(s.noResolution));
+
+      const zones = rep.byZone || [];
+      el('repZoneBody').innerHTML = zones.length === 0
+        ? '<tr><td colspan="6" class="py-4 text-center text-[#5d6670]">Chưa có khu vực nào.</td></tr>'
+        : zones.map(z => `
+          <tr class="${toInt(z.total) === 0 ? 'text-[#7b838d]' : ''}">
+            <td class="py-2.5 px-3"><b class="${toInt(z.total) === 0 ? 'font-normal' : 'text-[#1c2229]'}">${escapeHtml(z.zoneName)}</b><div class="text-[12px] text-[#7b838d]">${z.managerName ? 'Phụ trách: ' + escapeHtml(z.managerName) : 'Chưa phân công'}</div></td>
+            <td class="py-2.5 px-3 text-right">${toInt(z.total)}</td>
+            <td class="py-2.5 px-3 text-right ${toInt(z.highSeverity) > 0 ? 'text-[#c62828] font-bold' : ''}">${toInt(z.highSeverity)}</td>
+            <td class="py-2.5 px-3 text-right ${toInt(z.pending) > 0 ? 'text-[#c62828] font-bold' : ''}">${toInt(z.pending)}</td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">${escapeHtml(fmtAvg(z.avgResponseSeconds))}</td>
+            <td class="py-2.5 px-3 text-right">${toInt(z.falseAlarm)}</td>
+          </tr>`).join('');
+
+      const users = rep.byUser || [];
+      el('repUserBody').innerHTML = users.length === 0
+        ? '<tr><td colspan="5" class="py-4 text-center text-[#5d6670]">Chưa có cảnh báo nào được xác nhận trong khoảng này.</td></tr>'
+        : users.map(u => `
+          <tr>
+            <td class="py-2.5 px-3 font-bold text-[#1c2229]">${escapeHtml(u.fullName)}</td>
+            <td class="py-2.5 px-3 text-right">${toInt(u.acknowledged)}</td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">${escapeHtml(fmtAvg(u.avgResponseSeconds))}</td>
+            <td class="py-2.5 px-3 text-right">${toInt(u.ackWithin5Min)} <span class="text-[12px] text-[#7b838d]">(${pct(toInt(u.ackWithin5Min), toInt(u.acknowledged))})</span></td>
+            <td class="py-2.5 px-3 text-right">${toInt(u.resolved)}</td>
+          </tr>`).join('');
     }
 
     // ========================================================
