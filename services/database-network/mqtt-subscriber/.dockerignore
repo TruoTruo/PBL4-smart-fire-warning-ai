@@ -1,0 +1,6 @@
+bin/
+obj/
+# cấu hình riêng từng máy (mật khẩu, IP), không đưa vào image
+appsettings.Local.json
+Dockerfile
+.dockerignore

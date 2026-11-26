@@ -10,10 +10,12 @@ SET NAMES utf8mb4;
 USE SmartFireDB;
 
 -- --- Users ---
+-- Mật khẩu băm PBKDF2-SHA256 (210.000 vòng, salt ngẫu nhiên), dạng pbkdf2$<vòng>$<salt>$<hash>.
+-- Mật khẩu demo ghi trong apps/web-app/README.md, đổi ngay sau lần đăng nhập đầu tiên.
 INSERT INTO Users (Username, PasswordHash, FullName, PhoneNumber, Email, Role)
 VALUES
-    ('admin',       '$2a$hash_admin_placeholder', 'Đỗ Khánh Duy',       '0900000001', 'duy.admin@example.com', 'Admin'),
-    ('supervisor1', '$2a$hash_user_placeholder',  'Nguyễn Văn Trường', '0900000002', 'truong@example.com',    'User');
+    ('admin',       'pbkdf2$210000$1A8GcmmTZQzu7ua6M8W/bw==$umyVbvTHOV1kTBy2VneUdBTdWDyC/zw5+Y2IixOckCQ=', 'Đỗ Khánh Duy',       '0900000001', 'duy.admin@example.com', 'Admin'),
+    ('supervisor1', 'pbkdf2$210000$O8gj71AEVPZ+K2h6DToWxA==$osRqLhVv8KPvi/rpnMrJKgdGUL7Yc19eWk9jjMIkSpQ=', 'Nguyễn Văn Trường', '0900000002', 'truong@example.com',    'User');
 
 -- --- Zones ---
 INSERT INTO Zones (ZoneName, Description, ManagerUserId)

@@ -8,8 +8,8 @@
 // Quyết định cảnh báo (2 cách, tự chọn theo nội dung message):
 //   1) Message CÓ "alert_level" (Pi đã tự đánh giá bằng sensor fusion)  -> TIN THEO PI:
 //        alert_level = 2  -> cảnh báo 'Fire'                         mức High
-//        alert_level = 1  -> 'Fire' (nếu AI thấy lửa), 'Smoke' (nếu có khói) hoặc
-//                            'HighTemperature'                       mức Medium
+//        alert_level = 1  -> 'Fire' (nếu AI thấy lửa), 'Smoke' (nếu MQ-2 hoặc camera thấy khói)
+//                            hoặc 'HighTemperature'                  mức Medium
 //        alert_level = 0  -> không cảnh báo
 //   2) Message KHÔNG có "alert_level" -> dùng xác thực kép như cũ:
 //        AiResult == true AND (SmokeDetected OR Temperature > TempThreshold)
@@ -18,20 +18,27 @@
 //     firealert/sensor-data/+            (định dạng mới: device_id, temperature, ...)
 //     pbl4/sensors/fire_warning          (định dạng cũ : nhiet_do, do_am, co_khoi, co_lua, muc_do)
 // Message cũ không có device_id -> dùng Legacy:DefaultDeviceId trong appsettings.json (mặc định PI-01).
+// Trường tùy chọn camera_ok, khoi_camera và bản tin heartbeat (muc_do 0, nhiet_do/do_am null) đều nhận được;
+// nhiệt độ/độ ẩm null ghi NULL. Heartbeat không in mỗi bản tin một dòng (chỉ khi trạng thái đổi, tóm tắt mỗi 60 s).
+// Topic trạng thái pbl4/status/{id} ("online"/"offline") không được subscribe.
 //
-// Chống trùng: cùng (thiết bị + loại cảnh báo) chỉ ghi 1 dòng AlertHistory mỗi
-// AlertThresholds:CooldownSeconds giây (mặc định 60). Dữ liệu cảm biến vẫn ghi đầy đủ.
+// Chống trùng: cùng (thiết bị + loại + mức độ) chỉ ghi 1 dòng AlertHistory mỗi
+// AlertThresholds:CooldownSeconds giây (mặc định 60). Mức độ TĂNG (Medium -> High) luôn được ghi;
+// mức thấp hơn mức vừa ghi trong cooldown thì bỏ qua. Dữ liệu cảm biến vẫn ghi đầy đủ.
+//
+// Broker chưa chạy hoặc bị ngắt: tự thử kết nối lại mãi (chờ 2, 4, 8... tối đa 30 giây).
 //
 // Khi có cảnh báo:
-//   1. Insert vào AlertHistory
-//   2. Publish lên topic firealert/alarm/{device_id} để desktop-app nhận
+//   1. Insert vào AlertHistory (bản tin không kèm ảnh thì dùng ảnh gần nhất của cùng đợt cảnh báo)
+//   2. Publish lên topic firealert/alarm/{device_id} để web-app nhận
 //
-// Chạy:  dotnet run
+// Chạy:  dotnet run        (hoặc docker compose, xem infra/docker-compose.yml)
 // ============================================================
  
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using MQTTnet;
 using MQTTnet.Client;
@@ -55,7 +62,7 @@ int cooldownSeconds = int.Parse(config["AlertThresholds:CooldownSeconds"] ?? "60
 string defaultDeviceId = config["Legacy:DefaultDeviceId"] ?? "PI-01";   // thiết bị gán cho message cũ không có device_id
  
 const string TopicSensorData = "firealert/sensor-data/+";
-const string TopicLegacy = "pbl4/sensors/fire_warning";   // topic của main_iot.py cũ
+const string TopicLegacy = "pbl4/sensors/fire_warning";   // topic main_iot.py đang dùng
 const string TopicAlarmPrefix = "firealert/alarm";
  
 // device_id <-> DeviceId, smoke_detected <-> SmokeDetected, alert_level <-> AlertLevel ...
@@ -65,8 +72,18 @@ var jsonOptions = new JsonSerializerOptions
     PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
 };
  
-// Lần cuối đã ghi cảnh báo cho (thiết bị|loại) -> để chống ghi trùng
+// Lần cuối đã ghi cảnh báo cho (thiết bị|loại|mức độ) -> để chống ghi trùng
 var lastAlertAt = new ConcurrentDictionary<string, DateTime>();
+string[] severityOrder = ["Low", "Medium", "High"];
+
+// Pi chỉ gửi ảnh khi mức tăng hoặc tối đa 10 s/lần: giữ ảnh gần nhất của đợt cảnh báo hiện tại
+// (từ lúc muc_do rời 0) để dòng AlertHistory ghi sau đó vẫn có ảnh. muc_do về 0 thì xoá
+var lastSnapshot = new ConcurrentDictionary<string, (string Data, DateTime ReceivedAt)>();
+var episodeStart = new ConcurrentDictionary<string, DateTime>();
+
+// Heartbeat 2,5 s/lần: không in mỗi bản tin một dòng, chỉ in khi trạng thái đổi hoặc tóm tắt mỗi 60 s
+const int LogSummarySeconds = 60;
+var logStates = new ConcurrentDictionary<string, DeviceLogState>();
  
 var mqttFactory = new MqttFactory();
 using var mqttClient = mqttFactory.CreateMqttClient();
@@ -86,15 +103,44 @@ mqttClient.ConnectedAsync += async e =>
     Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Đã subscribe topic: {TopicSensorData} và {TopicLegacy}");
 };
  
-mqttClient.DisconnectedAsync += async e =>
+// Chỉ 1 vòng kết nối chạy tại một thời điểm (lúc khởi động hoặc khi mất kết nối)
+var connectLock = new SemaphoreSlim(1, 1);
+
+async Task ConnectWithRetryAsync()
 {
-    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Mất kết nối MQTT, thử lại sau 5s...");
-    while (!mqttClient.IsConnected)
+    await connectLock.WaitAsync();
+    try
     {
-        await Task.Delay(TimeSpan.FromSeconds(5));
-        try { await mqttClient.ConnectAsync(mqttOptions); }
-        catch (Exception ex) { Console.WriteLine($"Kết nối lại thất bại: {ex.Message}"); }
+        int attempt = 0;
+        while (!mqttClient.IsConnected)
+        {
+            attempt++;
+            try
+            {
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Kết nối MQTT broker {mqttHost}:{mqttPort} (lần {attempt})...");
+                await mqttClient.ConnectAsync(mqttOptions, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                int waitSeconds = Math.Min(30, 1 << Math.Min(attempt, 5));   // 2, 4, 8, 16, 30, 30...
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [LỖI] Không kết nối được MQTT broker: {ex.Message.TrimEnd('.')}. Thử lại sau {waitSeconds}s");
+                await Task.Delay(TimeSpan.FromSeconds(waitSeconds));
+            }
+        }
     }
+    finally
+    {
+        connectLock.Release();
+    }
+}
+
+mqttClient.DisconnectedAsync += e =>
+{
+    // Lần kết nối thất bại cũng gọi sự kiện này (ClientWasConnected = false): vòng thử lại đang lo
+    if (!e.ClientWasConnected) return Task.CompletedTask;
+    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Mất kết nối MQTT, đang thử kết nối lại...");
+    _ = Task.Run(ConnectWithRetryAsync);
+    return Task.CompletedTask;
 };
  
 mqttClient.ApplicationMessageReceivedAsync += async e =>
@@ -127,43 +173,91 @@ mqttClient.ApplicationMessageReceivedAsync += async e =>
         return;
     }
  
+    // Một mốc giờ (giờ máy chạy subscriber) cho cả log và cảnh báo của cùng message,
+    // không dùng NOW() của MySQL để tránh lệch múi giờ khi MySQL chạy trong Docker (UTC)
+    DateTime messageTime = DateTime.Now;
+    if (payload.Timestamp is not null && DateTime.TryParse(payload.Timestamp, out var parsedTime))
+        messageTime = parsedTime;
+    messageTime = messageTime.AddTicks(-(messageTime.Ticks % TimeSpan.TicksPerSecond));   // cột DATETIME chỉ lưu tới giây
+
+    var (hasAlert, alertType, severity) = CheckAlertCondition(payload, tempThreshold);
+    int level = payload.AlertLevel ?? (hasAlert ? (severity == "High" ? 2 : 1) : 0);
+    var now = DateTime.Now;
+
+    // Đợt cảnh báo: muc_do về 0 thì xoá ảnh cũ, đang > 0 thì giữ ảnh mới nhất Pi gửi
+    if (level <= 0)
+    {
+        lastSnapshot.TryRemove(payload.DeviceId, out _);
+        episodeStart.TryRemove(payload.DeviceId, out _);
+    }
+    else
+    {
+        episodeStart.TryAdd(payload.DeviceId, now);
+        if (!string.IsNullOrEmpty(payload.Snapshot)) lastSnapshot[payload.DeviceId] = (payload.Snapshot, now);
+    }
+
+    var (printLog, skipped) = TakeLogTurn(payload, level, now);
+
     try
     {
         await using var conn = new MySqlConnection(connectionString);
         await conn.OpenAsync();
- 
-        long logId = await InsertEnvironmentLogAsync(conn, payload);
-        Console.WriteLine(
-            $"[{DateTime.Now:HH:mm:ss}] Ghi log #{logId} cho thiết bị {payload.DeviceId} <- {e.ApplicationMessage.Topic} " +
-            $"(temp={payload.Temperature}, smoke={payload.SmokeDetected}, smoke_level={payload.SmokeLevel}, ai={payload.AiResult}, conf={payload.Confidence}, level={payload.AlertLevel})");
- 
-        var (hasAlert, alertType, severity) = CheckAlertCondition(payload, tempThreshold);
-        if (!hasAlert) return;
- 
-        // Chống ghi trùng: cùng thiết bị + cùng loại cảnh báo trong khoảng cooldown
-        string key = $"{payload.DeviceId}|{alertType}";
-        var now = DateTime.Now;
-        if (lastAlertAt.TryGetValue(key, out var lastTime) && (now - lastTime).TotalSeconds < cooldownSeconds)
+
+        long logId = await InsertEnvironmentLogAsync(conn, payload, messageTime);
+        if (printLog)
         {
             Console.WriteLine(
-                $"[{now:HH:mm:ss}] {payload.DeviceId} vẫn đang ở trạng thái [{alertType}] " +
-                $"- bỏ qua cảnh báo trùng (cooldown {cooldownSeconds}s)");
+                $"[{now:HH:mm:ss}] Ghi log #{logId} cho thiết bị {payload.DeviceId} <- {e.ApplicationMessage.Topic} " +
+                $"(temp={payload.Temperature?.ToString() ?? "null"}, hum={payload.Humidity?.ToString() ?? "null"}, smoke={payload.SmokeDetected}, " +
+                $"smoke_level={payload.SmokeLevel}, ai={payload.AiResult}, conf={payload.Confidence}, level={payload.AlertLevel}" +
+                (payload.CameraOk is bool cam ? $", camera_ok={cam}" : "") +
+                (payload.KhoiCamera is bool khoiCam ? $", khoi_camera={khoiCam}" : "") + ")" +
+                (skipped > 0 ? $" [+{skipped} bản tin không đổi trạng thái đã ghi, không in]" : ""));
+        }
+
+        if (!hasAlert) return;
+
+        // Chống ghi trùng theo (thiết bị|loại|mức độ): đã ghi mức này hoặc mức cao hơn trong cooldown thì bỏ qua,
+        // mức tăng (Medium -> High) luôn được ghi
+        int rank = Math.Max(0, Array.IndexOf(severityOrder, severity));
+        bool recentlyAlerted = severityOrder.Skip(rank).Any(s =>
+            lastAlertAt.TryGetValue($"{payload.DeviceId}|{alertType}|{s}", out var lastTime)
+            && (now - lastTime).TotalSeconds < cooldownSeconds);
+        if (recentlyAlerted)
+        {
+            if (printLog)
+                Console.WriteLine(
+                    $"[{now:HH:mm:ss}] {payload.DeviceId} vẫn đang ở trạng thái [{alertType}/{severity}] " +
+                    $"- bỏ qua cảnh báo trùng (cooldown {cooldownSeconds}s)");
             return;
         }
-        lastAlertAt[key] = now;
- 
-        await InsertAlertAsync(conn, payload.DeviceId, logId, alertType, severity, payload.Snapshot);
-        Console.WriteLine($"[{now:HH:mm:ss}] CẢNH BÁO [{alertType}] thiết bị {payload.DeviceId} - mức độ {severity}");
- 
+
+        // Bản tin này không kèm ảnh thì dùng ảnh gần nhất của cùng đợt cảnh báo
+        string? snapshot = payload.Snapshot;
+        bool fromCache = false;
+        if (string.IsNullOrEmpty(snapshot)
+            && lastSnapshot.TryGetValue(payload.DeviceId, out var cached)
+            && episodeStart.TryGetValue(payload.DeviceId, out var start)
+            && cached.ReceivedAt >= start)
+        {
+            snapshot = cached.Data;
+            fromCache = true;
+        }
+
+        await InsertAlertAsync(conn, payload.DeviceId, logId, alertType, severity, snapshot, messageTime);
+        lastAlertAt[$"{payload.DeviceId}|{alertType}|{severity}"] = now;
+        string snapshotNote = snapshot is null ? "không có ảnh" : fromCache ? "ảnh lấy từ bản tin trước cùng đợt" : "có ảnh";
+        Console.WriteLine($"[{now:HH:mm:ss}] CẢNH BÁO [{alertType}] thiết bị {payload.DeviceId} - mức độ {severity} ({snapshotNote})");
+
         var alarmPayload = new AlarmPayload
         {
             DeviceId = payload.DeviceId,
             AlertType = alertType,
             Severity = severity,
             LogId = logId,
-            Timestamp = now.ToString("O"),
+            Timestamp = messageTime.ToString("O"),
         };
-        // desktop-app đọc JSON dạng camelCase (deviceId, alertType...) nên phải serialize đúng kiểu này
+        // web-app đọc JSON dạng camelCase (deviceId, alertType...) nên phải serialize đúng kiểu này
         string alarmJson = JsonSerializer.Serialize(alarmPayload,
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
  
@@ -176,25 +270,57 @@ mqttClient.ApplicationMessageReceivedAsync += async e =>
     }
     catch (MySqlException ex)
     {
-        Console.WriteLine($"[LỖI] Ghi CSDL cho thiết bị {payload.DeviceId} thất bại: {ex.Message}");
+        PrintErrorThrottled($"[LỖI] Ghi CSDL cho thiết bị {payload.DeviceId} thất bại: {ex.Message}");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"[LỖI] Xử lý message của {payload.DeviceId} thất bại: {ex.Message}");
+        PrintErrorThrottled($"[LỖI] Xử lý message của {payload.DeviceId} thất bại: {ex.Message}");
     }
 };
- 
-try
+
+// In dòng log khi trạng thái đổi (mức, mất/có DHT, khói, lửa, camera) hoặc mỗi LogSummarySeconds giây
+(bool print, int skipped) TakeLogTurn(SensorPayload p, int level, DateTime now)
 {
-    await mqttClient.ConnectAsync(mqttOptions, CancellationToken.None);
+    var st = logStates.GetOrAdd(p.DeviceId, _ => new DeviceLogState());
+    lock (st)
+    {
+        string signature = $"{level}|{p.Temperature is null}|{p.Humidity is null}|{p.SmokeDetected}|{p.AiResult}|{p.CameraOk}|{p.KhoiCamera}";
+        bool print = signature != st.Signature || (now - st.LastPrinted).TotalSeconds >= LogSummarySeconds;
+        st.Signature = signature;
+        if (!print)
+        {
+            st.Skipped++;
+            return (false, 0);
+        }
+        int skipped = st.Skipped;
+        st.Skipped = 0;
+        st.LastPrinted = now;
+        return (true, skipped);
+    }
 }
-catch (Exception ex)
+
+// Lỗi giống nhau (vd. MySQL tắt) chỉ in 1 lần mỗi 30 s, kèm số lần bị gộp
+void PrintErrorThrottled(string message)
 {
-    Console.WriteLine($"[LỖI] Không kết nối được MQTT broker {mqttHost}:{mqttPort}: {ex.Message}");
-    Console.WriteLine("      Kiểm tra MqttBroker:Host trong appsettings.json và kết nối mạng.");
-    return;
+    var st = logStates.GetOrAdd("error|" + message, _ => new DeviceLogState());
+    lock (st)
+    {
+        var now = DateTime.Now;
+        if ((now - st.LastPrinted).TotalSeconds < 30)
+        {
+            st.Skipped++;
+            return;
+        }
+        Console.WriteLine($"[{now:HH:mm:ss}] {message}" + (st.Skipped > 0 ? $" (+{st.Skipped} lần tương tự)" : ""));
+        st.Skipped = 0;
+        st.LastPrinted = now;
+    }
 }
  
+// Broker chưa chạy thì không thoát: thử lại tới khi kết nối được
+// (sai địa chỉ thì kiểm tra MqttBroker:Host trong appsettings.json / biến môi trường MqttBroker__Host)
+await ConnectWithRetryAsync();
+
 Console.WriteLine($"Bắt đầu lắng nghe... (Ctrl+C để dừng). Cooldown cảnh báo: {cooldownSeconds}s");
 await Task.Delay(Timeout.Infinite);
  
@@ -208,8 +334,8 @@ static void NormalizePayload(SensorPayload p, string topic, string defaultDevice
     // Định dạng cũ của main_iot.py -> định dạng chuẩn
     p.Temperature ??= p.NhietDo;
     p.Humidity ??= p.DoAm;
-    if (p.CoLua is int lua) p.AiResult = p.AiResult || lua != 0;
-    if (p.SmokeDetected is null && p.CoKhoi is int khoi) p.SmokeDetected = khoi != 0;
+    if (p.CoLua is bool lua) p.AiResult = p.AiResult || lua;
+    if (p.SmokeDetected is null && p.CoKhoi is bool khoi) p.SmokeDetected = khoi;
     p.AlertLevel ??= p.MucDo;
     p.SmokeLevel ??= p.MucKhoi;
     // Cột SmokeLevel là DECIMAL(5,2): ép về 0..100 để dữ liệu lạ không làm lỗi INSERT
@@ -225,7 +351,7 @@ static void NormalizePayload(SensorPayload p, string topic, string defaultDevice
     }
 }
  
-static async Task<long> InsertEnvironmentLogAsync(MySqlConnection conn, SensorPayload payload)
+static async Task<long> InsertEnvironmentLogAsync(MySqlConnection conn, SensorPayload payload, DateTime recordedAt)
 {
     // MySQL không có OUTPUT INSERTED như SQL Server, nên phải insert
     // xong rồi lấy LAST_INSERT_ID() bằng 1 câu lệnh riêng, trong cùng connection.
@@ -234,11 +360,6 @@ static async Task<long> InsertEnvironmentLogAsync(MySqlConnection conn, SensorPa
             (DeviceId, Temperature, Humidity, SmokeDetected, SmokeLevel, AlertLevel, AiResult, ConfidenceScore, RecordedAt)
         VALUES (@DeviceId, @Temperature, @Humidity, @SmokeDetected, @SmokeLevel, @AlertLevel, @AiResult, @ConfidenceScore, @RecordedAt)
         """;
- 
-    // Không có timestamp (hoặc sai định dạng) -> dùng giờ máy chạy subscriber
-    DateTime recordedAt = DateTime.Now;
-    if (payload.Timestamp is not null && DateTime.TryParse(payload.Timestamp, out var parsed))
-        recordedAt = parsed;
  
     await using (var insertCmd = new MySqlCommand(insertSql, conn))
     {
@@ -259,12 +380,12 @@ static async Task<long> InsertEnvironmentLogAsync(MySqlConnection conn, SensorPa
     return Convert.ToInt64(result);
 }
  
-static async Task InsertAlertAsync(MySqlConnection conn, string deviceId, long logId, string alertType, string severity, string? snapshotBase64)
+static async Task InsertAlertAsync(MySqlConnection conn, string deviceId, long logId, string alertType, string severity, string? snapshotBase64, DateTime alertTime)
 {
     const string sql = """
         INSERT INTO AlertHistory
             (DeviceId, LogId, AlertType, Severity, SnapshotBase64, AlertTime, SmsSent, Acknowledged)
-        VALUES (@DeviceId, @LogId, @AlertType, @Severity, @SnapshotBase64, NOW(), FALSE, FALSE)
+        VALUES (@DeviceId, @LogId, @AlertType, @Severity, @SnapshotBase64, @AlertTime, FALSE, FALSE)
         """;
  
     await using var cmd = new MySqlCommand(sql, conn);
@@ -273,6 +394,7 @@ static async Task InsertAlertAsync(MySqlConnection conn, string deviceId, long l
     cmd.Parameters.AddWithValue("@AlertType", alertType);
     cmd.Parameters.AddWithValue("@Severity", severity);
     cmd.Parameters.AddWithValue("@SnapshotBase64", (object?)snapshotBase64 ?? DBNull.Value);
+    cmd.Parameters.AddWithValue("@AlertTime", alertTime);
     await cmd.ExecuteNonQueryAsync();
 }
  
@@ -285,9 +407,10 @@ static (bool hasAlert, string alertType, string severity) CheckAlertCondition(
         if (level >= 2) return (true, "Fire", "High");
         if (level == 1)
         {
-            // Mức 1 = chỉ có 1 tín hiệu: AI thấy lửa, hoặc có khói, hoặc nhiệt cao
+            // Mức 1 = chỉ có 1 tín hiệu: AI thấy lửa, hoặc có khói (MQ-2 / camera), hoặc nhiệt cao
             if (payload.AiResult) return (true, "Fire", "Medium");
-            string type = (payload.SmokeDetected ?? false) ? "Smoke" : "HighTemperature";
+            bool anySmoke = (payload.SmokeDetected ?? false) || (payload.KhoiCamera ?? false);
+            string type = anySmoke ? "Smoke" : "HighTemperature";
             return (true, type, "Medium");
         }
         return (false, "", "");
@@ -326,11 +449,43 @@ class SensorPayload
     // --- Định dạng CŨ của main_iot.py (nhiet_do, do_am, co_khoi, co_lua, muc_do) ---
     public double? NhietDo { get; set; }
     public double? DoAm { get; set; }
-    public int? CoKhoi { get; set; }
+    [JsonConverter(typeof(FlagConverter))] public bool? CoKhoi { get; set; }
     public double? MucKhoi { get; set; }
-    public int? CoLua { get; set; }
+    [JsonConverter(typeof(FlagConverter))] public bool? CoLua { get; set; }
     public int? MucDo { get; set; }
     public string? Snapshot { get; set; }
+
+    // Tùy chọn (Pi bản mới): camera còn chạy không, camera có thấy khói không. Không lưu CSDL
+    [JsonConverter(typeof(FlagConverter))] public bool? CameraOk { get; set; }
+    [JsonConverter(typeof(FlagConverter))] public bool? KhoiCamera { get; set; }
+}
+
+// Cờ nhận cả true/false lẫn 0/1; kiểu lạ thì coi như không có (không bỏ cả message)
+class FlagConverter : JsonConverter<bool?>
+{
+    public override bool? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        switch (reader.TokenType)
+        {
+            case JsonTokenType.True: return true;
+            case JsonTokenType.False: return false;
+            case JsonTokenType.Number: return reader.GetDouble() != 0;
+            default: reader.Skip(); return null;
+        }
+    }
+
+    public override void Write(Utf8JsonWriter writer, bool? value, JsonSerializerOptions options)
+    {
+        if (value is bool b) writer.WriteBooleanValue(b);
+        else writer.WriteNullValue();
+    }
+}
+ 
+class DeviceLogState
+{
+    public string Signature { get; set; } = string.Empty;
+    public DateTime LastPrinted { get; set; } = DateTime.MinValue;
+    public int Skipped { get; set; }
 }
  
 class AlarmPayload
