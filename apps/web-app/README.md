@@ -63,9 +63,8 @@ FPS hiển thị là số đo thật tại trình duyệt.
 
 ## Chạy không cần Internet
 
-Thư viện giao diện đặt sẵn trong `wwwroot/lib`: Tailwind CSS 3.4.17 (bản chạy trên trình duyệt), SignalR 8.0.7,
-font Inter, JetBrains Mono (OFL 1.1) và Material Symbols Outlined (Apache 2.0, bản 24 px / 400). Demo trong LAN không có
-Internet vẫn hiện đúng giao diện.
+Thư viện giao diện đặt sẵn trong `wwwroot/lib`: Tailwind CSS 3.4.17 (bản chạy trên trình duyệt), SignalR 8.0.7 và
+icon Material Symbols Outlined (Apache 2.0), chữ Be Vietnam Pro (SIL Open Font License). Demo trong LAN không có Internet vẫn hiện đúng giao diện.
 
 ## Âm thanh
 
