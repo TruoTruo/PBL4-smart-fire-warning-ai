@@ -54,6 +54,7 @@ public sealed class DatabaseService
         var devices = new List<DeviceCardModel>();
         var alerts = new List<AlertModel>();
         var logs = new List<EnvironmentLogModel>();
+        var zones = new List<ZoneModel>();
         int totalDevices = 0;
         int activeDevices = 0;
         int pendingAlerts = 0;
@@ -99,9 +100,13 @@ public sealed class DatabaseService
                        COALESCE(latest.AlertLevel, 0) AS AlertLevel,
                        COALESCE(latest.AiResult, FALSE) AS AiResult,
                        latest.ConfidenceScore,
-                       latest.RecordedAt
+                       latest.RecordedAt,
+                       d.ZoneId, m.FullName AS ManagerName, m.PhoneNumber AS ManagerPhone,
+                       d.PosX, d.PosY, d.InstallDate, d.MaintenanceIntervalDays,
+                       (SELECT MAX(ml.PerformedAt) FROM MaintenanceLogs ml WHERE ml.DeviceId = d.DeviceId) AS LastMaintenance
                 FROM Devices d
                 LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+                LEFT JOIN Users m ON z.ManagerUserId = m.UserId
                 LEFT JOIN (
                     SELECT e1.*
                     FROM EnvironmentLogs e1
@@ -137,7 +142,19 @@ public sealed class DatabaseService
                         AlertLevel: Convert.ToInt32(r["AlertLevel"]),
                         AiResult: Convert.ToBoolean(r["AiResult"]),
                         ConfidenceScore: r.IsDBNull(r.GetOrdinal("ConfidenceScore")) ? null : Convert.ToDouble(r["ConfidenceScore"]),
-                        RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt")
+                        RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt"),
+                        ZoneId: r.GetInt32("ZoneId"),
+                        ManagerName: GetNullableString(r, "ManagerName"),
+                        ManagerPhone: GetNullableString(r, "ManagerPhone"),
+                        // mqtt-subscriber ghi RecordedAt theo giờ máy ứng dụng (không dùng NOW() của MySQL chạy UTC),
+                        // nên tuổi số đo cũng tính theo giờ máy chủ web
+                        AgeSeconds: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null
+                            : (int)Math.Max(0, (DateTime.Now - r.GetDateTime("RecordedAt")).TotalSeconds),
+                        PosX: GetNullableDouble(r, "PosX"),
+                        PosY: GetNullableDouble(r, "PosY"),
+                        InstallDate: r.IsDBNull(r.GetOrdinal("InstallDate")) ? null : r.GetDateTime("InstallDate"),
+                        MaintenanceIntervalDays: Convert.ToInt32(r["MaintenanceIntervalDays"]),
+                        LastMaintenance: r.IsDBNull(r.GetOrdinal("LastMaintenance")) ? null : r.GetDateTime("LastMaintenance")
                     ));
                 }
             }
@@ -192,7 +209,10 @@ public sealed class DatabaseService
                 }
             }
 
-            // Chỉ coi là kết nối tốt khi cả 4 truy vấn đều chạy xong
+            // 5. Khu vực + cán bộ phụ trách
+            zones = await ReadZonesAsync(conn);
+
+            // Chỉ coi là kết nối tốt khi mọi truy vấn đều chạy xong
             isConnected = true;
         }
         catch (Exception ex)
@@ -211,13 +231,19 @@ public sealed class DatabaseService
             ServerHost: _serverHost
         );
 
-        return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected, error);
+        return new RealDashboardData(kpis, users, devices, alerts, logs, isConnected, error, zones);
     }
 
     private static double? GetNullableDouble(MySqlDataReader r, string column)
     {
         int i = r.GetOrdinal(column);
         return r.IsDBNull(i) ? null : Convert.ToDouble(r.GetValue(i), CultureInfo.InvariantCulture);
+    }
+
+    private static string? GetNullableString(MySqlDataReader r, string column)
+    {
+        int i = r.GetOrdinal(column);
+        return r.IsDBNull(i) ? null : r.GetString(i);
     }
 
     private string DescribeDbError(Exception ex) => ex is MySqlException { ErrorCode: MySqlErrorCode.UnableToConnectToHost }
@@ -230,7 +256,8 @@ public sealed class DatabaseService
                COALESCE(z.ZoneName, 'Khu vực') AS ZoneName,
                a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged,
                (a.SnapshotBase64 IS NOT NULL AND a.SnapshotBase64 <> '') AS HasSnapshot,
-               u.FullName AS AcknowledgedByName, a.AcknowledgedAt
+               u.FullName AS AcknowledgedByName, a.AcknowledgedAt,
+               a.Resolution, z.ManagerUserId
         FROM AlertHistory a
         LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
         LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
@@ -248,7 +275,11 @@ public sealed class DatabaseService
         Acknowledged: r.GetBoolean("Acknowledged"),
         HasSnapshot: Convert.ToBoolean(r["HasSnapshot"]),
         AcknowledgedByName: r.IsDBNull(r.GetOrdinal("AcknowledgedByName")) ? null : r.GetString("AcknowledgedByName"),
-        AcknowledgedAt: r.IsDBNull(r.GetOrdinal("AcknowledgedAt")) ? null : r.GetDateTime("AcknowledgedAt"));
+        AcknowledgedAt: r.IsDBNull(r.GetOrdinal("AcknowledgedAt")) ? null : r.GetDateTime("AcknowledgedAt"),
+        Resolution: GetNullableString(r, "Resolution"),
+        ManagerUserId: r.IsDBNull(r.GetOrdinal("ManagerUserId")) ? null : r.GetInt32("ManagerUserId"),
+        PendingSeconds: r.GetBoolean("Acknowledged") ? null : AlertPolicy.PendingSeconds(r.GetDateTime("AlertTime")),
+        Overdue: AlertPolicy.IsOverdue(r.GetString("Severity"), r.GetDateTime("AlertTime"), r.GetBoolean("Acknowledged")));
 
     /// <summary>
     /// Lọc lịch sử cảnh báo theo khoảng thời gian, loại, mức độ, trạng thái xử lý (tối đa 500 dòng mới nhất).
@@ -804,5 +835,649 @@ public sealed class DatabaseService
         {
             return (false, "Không thể xóa thiết bị: " + ex.Message);
         }
+    }
+
+    // ============================================================
+    // KHU VỰC (Zones) + CÁN BỘ PHỤ TRÁCH
+    // ============================================================
+
+    private static async Task<List<ZoneModel>> ReadZonesAsync(MySqlConnection conn)
+    {
+        const string sql = @"
+            SELECT z.ZoneId, z.ZoneName, z.Description, z.ManagerUserId,
+                   m.FullName AS ManagerName, m.PhoneNumber AS ManagerPhone,
+                   (SELECT COUNT(*) FROM Devices d WHERE d.ZoneId = z.ZoneId) AS DeviceCount,
+                   (SELECT COUNT(*) FROM AlertHistory a
+                      JOIN Devices d ON a.DeviceId = d.DeviceId
+                     WHERE d.ZoneId = z.ZoneId AND a.Acknowledged = FALSE) AS PendingAlerts,
+                   COALESCE(LENGTH(z.FloorPlan), 0) AS FloorPlanSize
+            FROM Zones z
+            LEFT JOIN Users m ON z.ManagerUserId = m.UserId
+            ORDER BY z.ZoneName ASC;";
+        var zones = new List<ZoneModel>();
+        await using var cmd = new MySqlCommand(sql, conn);
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+        {
+            zones.Add(new ZoneModel(
+                ZoneId: r.GetInt32("ZoneId"),
+                ZoneName: r.GetString("ZoneName"),
+                Description: GetNullableString(r, "Description"),
+                ManagerUserId: r.IsDBNull(r.GetOrdinal("ManagerUserId")) ? null : r.GetInt32("ManagerUserId"),
+                ManagerName: GetNullableString(r, "ManagerName"),
+                ManagerPhone: GetNullableString(r, "ManagerPhone"),
+                DeviceCount: Convert.ToInt32(r["DeviceCount"]),
+                PendingAlerts: Convert.ToInt32(r["PendingAlerts"]),
+                FloorPlanSize: Convert.ToInt32(r["FloorPlanSize"])));
+        }
+        return zones;
+    }
+
+    /// <summary>Thêm (zoneId = null) hoặc sửa khu vực. Tên khu vực không được trùng.</summary>
+    public async Task<(bool Success, string? Error)> UpsertZoneAsync(
+        int? zoneId, string zoneName, string? description, int? managerUserId)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+
+            await using (var dup = new MySqlCommand(
+                "SELECT COUNT(*) FROM Zones WHERE ZoneName = @Name AND (@Id IS NULL OR ZoneId <> @Id);", conn))
+            {
+                dup.Parameters.AddWithValue("@Name", zoneName);
+                dup.Parameters.AddWithValue("@Id", (object?)zoneId ?? DBNull.Value);
+                if (Convert.ToInt64(await dup.ExecuteScalarAsync()) > 0)
+                    return (false, $"Khu vực '{zoneName}' đã tồn tại.");
+            }
+
+            if (managerUserId is int mid)
+            {
+                await using var chk = new MySqlCommand("SELECT COUNT(*) FROM Users WHERE UserId = @Uid;", conn);
+                chk.Parameters.AddWithValue("@Uid", mid);
+                if (Convert.ToInt64(await chk.ExecuteScalarAsync()) == 0)
+                    return (false, "Cán bộ phụ trách không còn tồn tại.");
+            }
+
+            string sql = zoneId is null
+                ? "INSERT INTO Zones (ZoneName, Description, ManagerUserId) VALUES (@Name, @Desc, @Mgr);"
+                : "UPDATE Zones SET ZoneName = @Name, Description = @Desc, ManagerUserId = @Mgr WHERE ZoneId = @Id;";
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Name", zoneName);
+            cmd.Parameters.AddWithValue("@Desc", (object?)description ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Mgr", (object?)managerUserId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Id", (object?)zoneId ?? DBNull.Value);
+            if (await cmd.ExecuteNonQueryAsync() == 0)
+                return (false, "Không tìm thấy khu vực để sửa.");
+            return (true, null);
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>
+    /// Xoá khu vực. Chỉ xoá được khi không còn trạm nào thuộc khu vực
+    /// (FK Devices → Zones là ON DELETE CASCADE, xoá thẳng sẽ mất cả trạm và dữ liệu của trạm).
+    /// </summary>
+    public async Task<(bool Success, string? Error)> DeleteZoneAsync(int zoneId)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using (var chk = new MySqlCommand("SELECT COUNT(*) FROM Devices WHERE ZoneId = @Id;", conn))
+            {
+                chk.Parameters.AddWithValue("@Id", zoneId);
+                long n = Convert.ToInt64(await chk.ExecuteScalarAsync());
+                if (n > 0)
+                    return (false, $"Khu vực còn {n} trạm. Chuyển hoặc xoá các trạm trước khi xoá khu vực.");
+            }
+            await using var cmd = new MySqlCommand("DELETE FROM Zones WHERE ZoneId = @Id;", conn);
+            cmd.Parameters.AddWithValue("@Id", zoneId);
+            return await cmd.ExecuteNonQueryAsync() > 0
+                ? (true, null)
+                : (false, "Không tìm thấy khu vực để xoá.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    // ============================================================
+    // PHIẾU SỰ CỐ
+    // ============================================================
+
+    /// <summary>
+    /// Cảnh báo có tồn tại không và ai phụ trách khu vực của nó (null = khu vực chưa có người phụ trách).
+    /// Lỗi CSDL được ném ra cho nơi gọi xử lý.
+    /// </summary>
+    public async Task<(bool Exists, int? ManagerUserId, bool Overdue)> GetAlertManagerAsync(long alertId)
+    {
+        const string sql = @"
+            SELECT z.ManagerUserId, a.Severity, a.AlertTime, a.Acknowledged
+            FROM AlertHistory a
+            LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
+            LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+            WHERE a.AlertId = @AlertId
+            LIMIT 1;";
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@AlertId", alertId);
+        await using var r = await cmd.ExecuteReaderAsync();
+        if (!await r.ReadAsync()) return (false, null, false);
+        return (true, r.IsDBNull(0) ? null : r.GetInt32(0),
+            AlertPolicy.IsOverdue(r.GetString("Severity"), r.GetDateTime("AlertTime"), r.GetBoolean("Acknowledged")));
+    }
+
+    /// <summary>Phiếu sự cố của một cảnh báo (null nếu không có). Lỗi CSDL được ném ra cho nơi gọi xử lý.</summary>
+    public async Task<IncidentModel?> GetIncidentAsync(long alertId)
+    {
+        const string sql = @"
+            SELECT a.AlertId, a.DeviceId, COALESCE(d.DeviceName, a.DeviceId) AS DeviceName,
+                   z.ZoneId, COALESCE(z.ZoneName, 'Chưa phân khu') AS ZoneName, z.Description AS ZoneDescription,
+                   z.ManagerUserId, m.FullName AS ManagerName, m.PhoneNumber AS ManagerPhone,
+                   a.AlertType, a.Severity, a.AlertTime, a.SmsSent,
+                   (a.SnapshotBase64 IS NOT NULL AND a.SnapshotBase64 <> '') AS HasSnapshot,
+                   a.Acknowledged, u.FullName AS AcknowledgedByName, a.AcknowledgedAt,
+                   TIMESTAMPDIFF(SECOND, a.AlertTime, a.AcknowledgedAt) AS ResponseSeconds,
+                   a.Resolution, a.ResolutionNote,
+                   e.LogId, e.Temperature, e.Humidity, e.SmokeDetected, e.SmokeLevel,
+                   e.AlertLevel, e.AiResult, e.ConfidenceScore, e.RecordedAt
+            FROM AlertHistory a
+            LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
+            LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
+            LEFT JOIN Users m ON z.ManagerUserId = m.UserId
+            LEFT JOIN Users u ON a.AcknowledgedByUserId = u.UserId
+            LEFT JOIN EnvironmentLogs e ON a.LogId = e.LogId
+            WHERE a.AlertId = @AlertId
+            LIMIT 1;";
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@AlertId", alertId);
+        await using var r = await cmd.ExecuteReaderAsync();
+        if (!await r.ReadAsync()) return null;
+
+        bool hasLog = !r.IsDBNull(r.GetOrdinal("LogId"));
+        int? NullInt(string c) => r.IsDBNull(r.GetOrdinal(c)) ? null : Convert.ToInt32(r[c]);
+        return new IncidentModel(
+            AlertId: r.GetInt64("AlertId"),
+            DeviceId: r.GetString("DeviceId"),
+            DeviceName: r.GetString("DeviceName"),
+            ZoneId: NullInt("ZoneId"),
+            ZoneName: r.GetString("ZoneName"),
+            ZoneDescription: GetNullableString(r, "ZoneDescription"),
+            ManagerUserId: NullInt("ManagerUserId"),
+            ManagerName: GetNullableString(r, "ManagerName"),
+            ManagerPhone: GetNullableString(r, "ManagerPhone"),
+            AlertType: r.GetString("AlertType"),
+            Severity: r.GetString("Severity"),
+            AlertTime: r.GetDateTime("AlertTime"),
+            SmsSent: r.GetBoolean("SmsSent"),
+            HasSnapshot: Convert.ToBoolean(r["HasSnapshot"]),
+            Acknowledged: r.GetBoolean("Acknowledged"),
+            AcknowledgedByName: GetNullableString(r, "AcknowledgedByName"),
+            AcknowledgedAt: r.IsDBNull(r.GetOrdinal("AcknowledgedAt")) ? null : r.GetDateTime("AcknowledgedAt"),
+            ResponseSeconds: NullInt("ResponseSeconds"),
+            Resolution: GetNullableString(r, "Resolution"),
+            ResolutionNote: GetNullableString(r, "ResolutionNote"),
+            LogId: hasLog ? r.GetInt64("LogId") : null,
+            Temperature: GetNullableDouble(r, "Temperature"),
+            Humidity: GetNullableDouble(r, "Humidity"),
+            SmokeDetected: hasLog ? Convert.ToBoolean(r["SmokeDetected"]) : null,
+            SmokeLevel: GetNullableDouble(r, "SmokeLevel"),
+            AlertLevel: NullInt("AlertLevel"),
+            AiResult: hasLog ? Convert.ToBoolean(r["AiResult"]) : null,
+            ConfidenceScore: GetNullableDouble(r, "ConfidenceScore"),
+            RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt"));
+    }
+
+    /// <summary>
+    /// Ghi kết quả xử lý vào phiếu sự cố. Cảnh báo chưa xác nhận thì xác nhận luôn bằng người ghi phiếu;
+    /// đã xác nhận rồi thì giữ nguyên người và thời điểm xác nhận ban đầu.
+    /// </summary>
+    public async Task<bool> ResolveAlertAsync(long alertId, int userId, string resolution, string? note)
+    {
+        const string sql = @"
+            UPDATE AlertHistory
+            SET Resolution = @Resolution,
+                ResolutionNote = @Note,
+                AcknowledgedByUserId = IF(Acknowledged, AcknowledgedByUserId, @UserId),
+                AcknowledgedAt = IF(Acknowledged, AcknowledgedAt, NOW()),
+                Acknowledged = TRUE
+            WHERE AlertId = @AlertId;";
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@AlertId", alertId);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            cmd.Parameters.AddWithValue("@Resolution", resolution);
+            cmd.Parameters.AddWithValue("@Note", (object?)note ?? DBNull.Value);
+            return await cmd.ExecuteNonQueryAsync() > 0;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MySQL ResolveAlert Error] {ex.Message}");
+            return false;
+        }
+    }
+
+    // ============================================================
+    // THỐNG KÊ HIỆU QUẢ XỬ LÝ
+    // ============================================================
+
+    // Thời gian phản hồi (giây) của một cảnh báo đã xác nhận; NULL nếu chưa xác nhận
+    private const string RespSql = "CASE WHEN a.Acknowledged AND a.AcknowledgedAt IS NOT NULL "
+        + "THEN GREATEST(0, TIMESTAMPDIFF(SECOND, a.AlertTime, a.AcknowledgedAt)) END";
+
+    private static int ToInt(object v) => v == DBNull.Value ? 0 : Convert.ToInt32(v);
+    private static double? ToNullableDouble(object v) => v == DBNull.Value ? null : Convert.ToDouble(v, CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Báo cáo trong khoảng [from, to]: tổng hợp, theo khu vực, theo cán bộ xác nhận.
+    /// Lỗi CSDL được ném ra cho nơi gọi xử lý.
+    /// </summary>
+    public async Task<(AlertReportSummary Summary, List<ZoneReportRow> ByZone, List<UserReportRow> ByUser)> GetAlertReportAsync(
+        DateTime from, DateTime to)
+    {
+        await using var conn = await OpenConnectionAsync();
+
+        string summarySql = $@"
+            SELECT COUNT(*) AS Total,
+                   SUM(a.Severity = 'High') AS High,
+                   SUM(a.Acknowledged) AS Acked,
+                   SUM(NOT a.Acknowledged) AS Pending,
+                   AVG({RespSql}) AS AvgResp,
+                   MAX({RespSql}) AS MaxResp,
+                   SUM({RespSql} <= 300) AS Within5,
+                   SUM(a.Resolution = 'Handled') AS Handled,
+                   SUM(a.Resolution = 'FalseAlarm') AS FalseAlarm,
+                   SUM(a.Resolution = 'Test') AS TestCnt,
+                   SUM(a.Acknowledged AND a.Resolution IS NULL) AS NoRes
+            FROM AlertHistory a
+            WHERE a.AlertTime BETWEEN @From AND @To;";
+        AlertReportSummary summary;
+        await using (var cmd = new MySqlCommand(summarySql, conn))
+        {
+            cmd.Parameters.AddWithValue("@From", from);
+            cmd.Parameters.AddWithValue("@To", to);
+            await using var r = await cmd.ExecuteReaderAsync();
+            await r.ReadAsync();
+            summary = new AlertReportSummary(
+                Total: ToInt(r["Total"]),
+                HighSeverity: ToInt(r["High"]),
+                Acknowledged: ToInt(r["Acked"]),
+                Pending: ToInt(r["Pending"]),
+                AvgResponseSeconds: ToNullableDouble(r["AvgResp"]),
+                MaxResponseSeconds: r["MaxResp"] == DBNull.Value ? null : ToInt(r["MaxResp"]),
+                AckWithin5Min: ToInt(r["Within5"]),
+                Handled: ToInt(r["Handled"]),
+                FalseAlarm: ToInt(r["FalseAlarm"]),
+                Test: ToInt(r["TestCnt"]),
+                NoResolution: ToInt(r["NoRes"]));
+        }
+
+        // Liệt kê mọi khu vực, kể cả khu vực không có cảnh báo trong kỳ (Devices.ZoneId bắt buộc nên không có cảnh báo mồ côi)
+        string zoneSql = $@"
+            SELECT z.ZoneId, z.ZoneName, m.FullName AS ManagerName,
+                   COUNT(a.AlertId) AS Total,
+                   SUM(a.Severity = 'High') AS High,
+                   SUM(NOT a.Acknowledged) AS Pending,
+                   AVG({RespSql}) AS AvgResp,
+                   SUM(a.Resolution = 'FalseAlarm') AS FalseAlarm,
+                   SUM(a.Resolution IS NOT NULL) AS Resolved
+            FROM Zones z
+            LEFT JOIN Users m ON z.ManagerUserId = m.UserId
+            LEFT JOIN Devices d ON d.ZoneId = z.ZoneId
+            LEFT JOIN AlertHistory a ON a.DeviceId = d.DeviceId AND a.AlertTime BETWEEN @From AND @To
+            GROUP BY z.ZoneId, z.ZoneName, m.FullName
+            ORDER BY Total DESC, ZoneName ASC;";
+        var byZone = new List<ZoneReportRow>();
+        await using (var cmd = new MySqlCommand(zoneSql, conn))
+        {
+            cmd.Parameters.AddWithValue("@From", from);
+            cmd.Parameters.AddWithValue("@To", to);
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                byZone.Add(new ZoneReportRow(
+                    ZoneId: r["ZoneId"] == DBNull.Value ? null : ToInt(r["ZoneId"]),
+                    ZoneName: r.GetString("ZoneName"),
+                    ManagerName: GetNullableString(r, "ManagerName"),
+                    Total: ToInt(r["Total"]),
+                    HighSeverity: ToInt(r["High"]),
+                    Pending: ToInt(r["Pending"]),
+                    AvgResponseSeconds: ToNullableDouble(r["AvgResp"]),
+                    FalseAlarm: ToInt(r["FalseAlarm"]),
+                    Resolved: ToInt(r["Resolved"])));
+            }
+        }
+
+        string userSql = $@"
+            SELECT u.UserId, u.FullName,
+                   COUNT(*) AS Acked,
+                   AVG({RespSql}) AS AvgResp,
+                   SUM({RespSql} <= 300) AS Within5,
+                   SUM(a.Resolution IS NOT NULL) AS Resolved
+            FROM AlertHistory a
+            JOIN Users u ON a.AcknowledgedByUserId = u.UserId
+            WHERE a.AlertTime BETWEEN @From AND @To AND a.Acknowledged
+            GROUP BY u.UserId, u.FullName
+            ORDER BY Acked DESC, u.FullName ASC;";
+        var byUser = new List<UserReportRow>();
+        await using (var cmd = new MySqlCommand(userSql, conn))
+        {
+            cmd.Parameters.AddWithValue("@From", from);
+            cmd.Parameters.AddWithValue("@To", to);
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                byUser.Add(new UserReportRow(
+                    UserId: ToInt(r["UserId"]),
+                    FullName: r.GetString("FullName"),
+                    Acknowledged: ToInt(r["Acked"]),
+                    AvgResponseSeconds: ToNullableDouble(r["AvgResp"]),
+                    AckWithin5Min: ToInt(r["Within5"]),
+                    Resolved: ToInt(r["Resolved"])));
+            }
+        }
+
+        return (summary, byZone, byUser);
+    }
+
+    // ============================================================
+    // SỬA CÁN BỘ
+    // ============================================================
+
+    /// <summary>Sửa họ tên, SĐT, email, vai trò của một tài khoản (tên đăng nhập giữ nguyên).</summary>
+    public async Task<(bool Success, string? Error)> UpdateUserAsync(
+        int userId, string fullName, string? phoneNumber, string? email, string role)
+    {
+        const string sql = @"
+            UPDATE Users
+            SET FullName = @FullName, PhoneNumber = @Phone, Email = @Email, Role = @Role
+            WHERE UserId = @UserId;";
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            cmd.Parameters.AddWithValue("@FullName", fullName);
+            cmd.Parameters.AddWithValue("@Phone", (object?)phoneNumber ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Email", (object?)email ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Role", role);
+            // MySQL trả số dòng khớp điều kiện (UseAffectedRows mặc định false), nên lưu không đổi gì vẫn > 0
+            return await cmd.ExecuteNonQueryAsync() > 0
+                ? (true, null)
+                : (false, "Không tìm thấy tài khoản để sửa.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>Quản trị viên đặt mật khẩu mới cho tài khoản khác (không cần mật khẩu cũ).</summary>
+    public async Task<(bool Success, string? Error)> ResetPasswordAsync(int userId, string newPassword)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand("UPDATE Users SET PasswordHash = @Hash WHERE UserId = @UserId;", conn);
+            cmd.Parameters.AddWithValue("@Hash", HashPassword(newPassword));
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            return await cmd.ExecuteNonQueryAsync() > 0
+                ? (true, null)
+                : (false, "Không tìm thấy tài khoản.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    // ============================================================
+    // NHẬT KÝ HOẠT ĐỘNG
+    // ============================================================
+
+    /// <summary>Ghi một dòng nhật ký. Lỗi CSDL bị bỏ qua để không làm hỏng thao tác chính.</summary>
+    public async Task LogActivityAsync(int? userId, string userName, string action,
+        string? targetType = null, string? targetId = null, string? detail = null, string? ipAddress = null)
+    {
+        const string sql = @"
+            INSERT INTO ActivityLog (UserId, UserName, Action, TargetType, TargetId, Detail, IpAddress, CreatedAt)
+            VALUES (@UserId, @UserName, @Action, @TargetType, @TargetId, @Detail, @Ip, @CreatedAt);";
+        static string? Cut(string? v, int max) => v is null ? null : v.Length <= max ? v : v[..max];
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@UserId", (object?)userId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@UserName", Cut(string.IsNullOrWhiteSpace(userName) ? "(không rõ)" : userName, 100));
+            cmd.Parameters.AddWithValue("@Action", Cut(action, 40));
+            cmd.Parameters.AddWithValue("@TargetType", (object?)Cut(targetType, 20) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@TargetId", (object?)Cut(targetId, 40) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Detail", (object?)Cut(detail, 500) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Ip", (object?)Cut(ipAddress, 45) ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@CreatedAt", DateTime.Now);
+            await cmd.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MySQL LogActivity Error] {ex.Message}");
+        }
+    }
+
+    /// <summary>Nhật ký trong khoảng thời gian (tối đa 500 dòng mới nhất). Lỗi CSDL được ném ra.</summary>
+    public async Task<List<ActivityModel>> GetActivityAsync(DateTime from, DateTime to, int? userId, string? actionPrefix)
+    {
+        var where = new List<string> { "CreatedAt BETWEEN @From AND @To" };
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand { Connection = conn };
+        cmd.Parameters.AddWithValue("@From", from);
+        cmd.Parameters.AddWithValue("@To", to);
+        if (userId is int uid) { where.Add("UserId = @UserId"); cmd.Parameters.AddWithValue("@UserId", uid); }
+        if (!string.IsNullOrWhiteSpace(actionPrefix)) { where.Add("Action LIKE @Prefix"); cmd.Parameters.AddWithValue("@Prefix", actionPrefix.Replace("%", "") + "%"); }
+        cmd.CommandText = "SELECT ActivityId, UserId, UserName, Action, TargetType, TargetId, Detail, IpAddress, CreatedAt "
+            + "FROM ActivityLog WHERE " + string.Join(" AND ", where) + " ORDER BY CreatedAt DESC, ActivityId DESC LIMIT 500;";
+
+        var list = new List<ActivityModel>();
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+        {
+            list.Add(new ActivityModel(
+                ActivityId: r.GetInt64("ActivityId"),
+                UserId: r.IsDBNull(r.GetOrdinal("UserId")) ? null : r.GetInt32("UserId"),
+                UserName: r.GetString("UserName"),
+                Action: r.GetString("Action"),
+                TargetType: GetNullableString(r, "TargetType"),
+                TargetId: GetNullableString(r, "TargetId"),
+                Detail: GetNullableString(r, "Detail"),
+                IpAddress: GetNullableString(r, "IpAddress"),
+                CreatedAt: r.GetDateTime("CreatedAt")));
+        }
+        return list;
+    }
+
+    // ============================================================
+    // SƠ ĐỒ MẶT BẰNG
+    // ============================================================
+
+    /// <summary>Lưu (dataUrl khác null) hoặc xoá ảnh sơ đồ của khu vực.</summary>
+    public async Task<(bool Success, string? Error)> SetFloorPlanAsync(int zoneId, string? dataUrl)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand("UPDATE Zones SET FloorPlan = @Plan WHERE ZoneId = @Id;", conn);
+            cmd.Parameters.AddWithValue("@Plan", (object?)dataUrl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Id", zoneId);
+            return await cmd.ExecuteNonQueryAsync() > 0 ? (true, null) : (false, "Không tìm thấy khu vực.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>Ảnh sơ đồ (data URL) của khu vực, null nếu chưa có. Lỗi CSDL được ném ra.</summary>
+    public async Task<string?> GetFloorPlanAsync(int zoneId)
+    {
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand("SELECT FloorPlan FROM Zones WHERE ZoneId = @Id LIMIT 1;", conn);
+        cmd.Parameters.AddWithValue("@Id", zoneId);
+        return await cmd.ExecuteScalarAsync() is string s && s.Length > 0 ? s : null;
+    }
+
+    /// <summary>Đặt (x, y tính theo % ảnh) hoặc gỡ (null) vị trí trạm trên sơ đồ.</summary>
+    public async Task<(bool Success, string? Error)> SetDevicePositionAsync(string deviceId, double? x, double? y)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand("UPDATE Devices SET PosX = @X, PosY = @Y WHERE DeviceId = @Id;", conn);
+            cmd.Parameters.AddWithValue("@X", x is double vx ? Math.Round(vx, 2) : DBNull.Value);
+            cmd.Parameters.AddWithValue("@Y", y is double vy ? Math.Round(vy, 2) : DBNull.Value);
+            cmd.Parameters.AddWithValue("@Id", deviceId);
+            return await cmd.ExecuteNonQueryAsync() > 0 ? (true, null) : (false, "Không tìm thấy trạm.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    // ============================================================
+    // BẢO TRÌ THIẾT BỊ
+    // ============================================================
+
+    /// <summary>Lịch sử bảo trì của một trạm (mới nhất trước). Lỗi CSDL được ném ra.</summary>
+    public async Task<List<MaintenanceModel>> GetMaintenanceAsync(string deviceId)
+    {
+        const string sql = @"
+            SELECT ml.MaintenanceId, ml.DeviceId, u.FullName AS UserName, ml.PerformedAt, ml.Kind, ml.Note, ml.CreatedAt
+            FROM MaintenanceLogs ml
+            LEFT JOIN Users u ON ml.UserId = u.UserId
+            WHERE ml.DeviceId = @Id
+            ORDER BY ml.PerformedAt DESC, ml.MaintenanceId DESC
+            LIMIT 200;";
+        await using var conn = await OpenConnectionAsync();
+        await using var cmd = new MySqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@Id", deviceId);
+        var list = new List<MaintenanceModel>();
+        await using var r = await cmd.ExecuteReaderAsync();
+        while (await r.ReadAsync())
+        {
+            list.Add(new MaintenanceModel(
+                MaintenanceId: r.GetInt32("MaintenanceId"),
+                DeviceId: r.GetString("DeviceId"),
+                UserName: GetNullableString(r, "UserName"),
+                PerformedAt: r.GetDateTime("PerformedAt"),
+                Kind: r.GetString("Kind"),
+                Note: GetNullableString(r, "Note"),
+                CreatedAt: r.GetDateTime("CreatedAt")));
+        }
+        return list;
+    }
+
+    public async Task<(bool Success, string? Error)> AddMaintenanceAsync(
+        string deviceId, int userId, DateTime performedAt, string kind, string? note)
+    {
+        const string sql = @"
+            INSERT INTO MaintenanceLogs (DeviceId, UserId, PerformedAt, Kind, Note, CreatedAt)
+            SELECT DeviceId, @UserId, @At, @Kind, @Note, @Now FROM Devices WHERE DeviceId = @Id;";
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@Id", deviceId);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            cmd.Parameters.AddWithValue("@At", performedAt.Date);
+            cmd.Parameters.AddWithValue("@Kind", kind);
+            cmd.Parameters.AddWithValue("@Note", (object?)note ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Now", DateTime.Now);
+            return await cmd.ExecuteNonQueryAsync() > 0 ? (true, null) : (false, "Không tìm thấy trạm.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>Xoá một lần bảo trì; trả về mã trạm của dòng đã xoá (null nếu không có).</summary>
+    public async Task<string?> DeleteMaintenanceAsync(int maintenanceId)
+    {
+        await using var conn = await OpenConnectionAsync();
+        string? deviceId;
+        await using (var find = new MySqlCommand("SELECT DeviceId FROM MaintenanceLogs WHERE MaintenanceId = @Id;", conn))
+        {
+            find.Parameters.AddWithValue("@Id", maintenanceId);
+            deviceId = await find.ExecuteScalarAsync() as string;
+        }
+        if (deviceId == null) return null;
+        await using var cmd = new MySqlCommand("DELETE FROM MaintenanceLogs WHERE MaintenanceId = @Id;", conn);
+        cmd.Parameters.AddWithValue("@Id", maintenanceId);
+        await cmd.ExecuteNonQueryAsync();
+        return deviceId;
+    }
+
+    /// <summary>Ngày lắp đặt và chu kỳ kiểm tra định kỳ (ngày) của trạm.</summary>
+    public async Task<(bool Success, string? Error)> UpdateMaintenanceSettingsAsync(string deviceId, DateTime installDate, int intervalDays)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(
+                "UPDATE Devices SET InstallDate = @Install, MaintenanceIntervalDays = @Days WHERE DeviceId = @Id;", conn);
+            cmd.Parameters.AddWithValue("@Install", installDate.Date);
+            cmd.Parameters.AddWithValue("@Days", intervalDays);
+            cmd.Parameters.AddWithValue("@Id", deviceId);
+            return await cmd.ExecuteNonQueryAsync() > 0 ? (true, null) : (false, "Không tìm thấy trạm.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>
+    /// Thống kê cảnh báo theo trạm, dùng stored procedure sp_GetAlertStatistics (theo trạm, ngày, loại) rồi gộp theo trạm.
+    /// CSDL chưa cài stored_procedures.sql thì trả danh sách rỗng.
+    /// </summary>
+    public async Task<List<DeviceReportRow>> GetDeviceAlertStatsAsync(DateTime from, DateTime to)
+    {
+        var rows = new Dictionary<string, (string Name, string Zone, int Fire, int Smoke, int Temp, int Other)>();
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand("sp_GetAlertStatistics", conn) { CommandType = System.Data.CommandType.StoredProcedure };
+            cmd.Parameters.AddWithValue("p_from_date", from);
+            cmd.Parameters.AddWithValue("p_to_date", to);
+            await using var r = await cmd.ExecuteReaderAsync();
+            while (await r.ReadAsync())
+            {
+                string id = r.GetString("DeviceId");
+                int n = Convert.ToInt32(r["AlertCount"]);
+                var cur = rows.TryGetValue(id, out var v) ? v : (r.GetString("DeviceName"), r.GetString("ZoneName"), 0, 0, 0, 0);
+                switch (r.GetString("AlertType"))
+                {
+                    case "Fire": cur.Item3 += n; break;
+                    case "Smoke": cur.Item4 += n; break;
+                    case "HighTemperature": cur.Item5 += n; break;
+                    default: cur.Item6 += n; break;
+                }
+                rows[id] = cur;
+            }
+        }
+        catch (MySqlException ex) when (ex.ErrorCode == MySqlErrorCode.StoredProcedureDoesNotExist)
+        {
+            return [];
+        }
+        return rows
+            .Select(kv => new DeviceReportRow(kv.Key, kv.Value.Name, kv.Value.Zone, kv.Value.Fire, kv.Value.Smoke, kv.Value.Temp, kv.Value.Other,
+                kv.Value.Fire + kv.Value.Smoke + kv.Value.Temp + kv.Value.Other))
+            .OrderByDescending(x => x.Total).ThenBy(x => x.DeviceId)
+            .ToList();
     }
 }

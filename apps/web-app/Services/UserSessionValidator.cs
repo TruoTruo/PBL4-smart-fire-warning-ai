@@ -14,11 +14,23 @@ public static class UserSessionValidator
 {
     private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(15);
     private static readonly ConcurrentDictionary<int, (DateTime CheckedAt, string Role)> LastChecked = new();
+    // Phiên cấp trước mốc này bị huỷ (admin đặt lại mật khẩu). Lưu trong bộ nhớ: khởi động lại máy chủ thì mất,
+    // nhưng cookie cũng chỉ sống tối đa 8 giờ không dùng.
+    private static readonly ConcurrentDictionary<int, long> RevokedBefore = new();   // UTC ticks
+
+    public const string LoginTicksClaim = "smartfire:login_ticks";
 
     public static async Task ValidateAsync(CookieValidatePrincipalContext ctx)
     {
         var principal = ctx.Principal;
         if (principal == null || !int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out int userId))
+        {
+            await RejectAsync(ctx);
+            return;
+        }
+
+        if (RevokedBefore.TryGetValue(userId, out long revokedTicks)
+            && (!long.TryParse(principal.FindFirstValue(LoginTicksClaim), out long loginTicks) || loginTicks <= revokedTicks))
         {
             await RejectAsync(ctx);
             return;
@@ -50,6 +62,13 @@ public static class UserSessionValidator
 
     /// <summary>Gọi khi xoá tài khoản để phiên của người đó hết hiệu lực ngay ở lần gọi API kế tiếp.</summary>
     public static void Forget(int userId) => LastChecked.TryRemove(userId, out _);
+
+    /// <summary>Huỷ mọi phiên đang mở của tài khoản (dùng khi admin đặt lại mật khẩu).</summary>
+    public static void RevokeSessions(int userId)
+    {
+        RevokedBefore[userId] = DateTime.UtcNow.Ticks;
+        LastChecked.TryRemove(userId, out _);
+    }
 
     private static async Task RejectAsync(CookieValidatePrincipalContext ctx)
     {

@@ -21,7 +21,7 @@ VALUES
 INSERT INTO Zones (ZoneName, Description, ManagerUserId)
 VALUES
     ('Phòng Lab tầng 3', 'Phòng thực hành, nhiều thiết bị điện', 1),
-    ('Kho vật tư tầng 1', 'Kho chứa vật liệu dễ cháy',           1);
+    ('Kho vật tư tầng 1', 'Kho chứa vật liệu dễ cháy',           2);
 
 -- --- Devices ---
 INSERT INTO Devices (DeviceId, DeviceName, ZoneId, DeviceType, Status, IpAddress)
