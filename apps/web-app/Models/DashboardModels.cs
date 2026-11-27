@@ -27,7 +27,12 @@ public sealed record DeviceCardModel(
     int? ZoneId = null,
     string? ManagerName = null,   // cán bộ phụ trách khu vực của trạm
     string? ManagerPhone = null,
-    int? AgeSeconds = null);      // số giây từ số đo cuối đến giờ MySQL hiện tại (null = chưa có số đo)
+    int? AgeSeconds = null,       // số giây từ số đo cuối đến giờ máy chủ web (null = chưa có số đo)
+    double? PosX = null,          // vị trí trên sơ đồ mặt bằng (% chiều rộng ảnh)
+    double? PosY = null,          // (% chiều cao ảnh)
+    DateTime? InstallDate = null,
+    int MaintenanceIntervalDays = 90,
+    DateTime? LastMaintenance = null);  // lần bảo trì gần nhất (null = chưa có, tính từ ngày lắp đặt)
 
 public sealed record AlertModel(
     long AlertId,
@@ -43,7 +48,9 @@ public sealed record AlertModel(
     string? AcknowledgedByName = null,  // cán bộ đã xác nhận
     DateTime? AcknowledgedAt = null,
     string? Resolution = null,          // kết quả phiếu sự cố: Handled / FalseAlarm / Test
-    int? ManagerUserId = null);         // cán bộ phụ trách khu vực (để trang biết ai được xử lý)
+    int? ManagerUserId = null,          // cán bộ phụ trách khu vực (để trang biết ai được xử lý)
+    int? PendingSeconds = null,         // chưa xác nhận: số giây từ lúc báo đến giờ máy chủ
+    bool Overdue = false);              // quá hạn xác nhận (AlertPolicy) -> leo thang cho mọi cán bộ
 
 /// <summary>Khu vực giám sát và cán bộ phụ trách (bảng Zones).</summary>
 public sealed record ZoneModel(
@@ -54,7 +61,8 @@ public sealed record ZoneModel(
     string? ManagerName,
     string? ManagerPhone,
     int DeviceCount,
-    int PendingAlerts);
+    int PendingAlerts,
+    int FloorPlanSize = 0);       // độ dài dữ liệu ảnh sơ đồ (0 = chưa có), trang dùng làm số phiên bản ảnh
 
 /// <summary>Phiếu sự cố: một cảnh báo kèm số đo gốc (LogId), khu vực, người phụ trách và kết quả xử lý.</summary>
 public sealed record IncidentModel(
@@ -204,3 +212,36 @@ public sealed record UserReportRow(
     double? AvgResponseSeconds,
     int AckWithin5Min,
     int Resolved);
+
+/// <summary>Một dòng nhật ký hoạt động.</summary>
+public sealed record ActivityModel(
+    long ActivityId,
+    int? UserId,
+    string UserName,
+    string Action,
+    string? TargetType,
+    string? TargetId,
+    string? Detail,
+    string? IpAddress,
+    DateTime CreatedAt);
+
+/// <summary>Một lần bảo trì thiết bị.</summary>
+public sealed record MaintenanceModel(
+    int MaintenanceId,
+    string DeviceId,
+    string? UserName,
+    DateTime PerformedAt,
+    string Kind,
+    string? Note,
+    DateTime CreatedAt);
+
+/// <summary>Thống kê cảnh báo theo trạm (gộp từ sp_GetAlertStatistics).</summary>
+public sealed record DeviceReportRow(
+    string DeviceId,
+    string DeviceName,
+    string ZoneName,
+    int Fire,
+    int Smoke,
+    int HighTemperature,
+    int Other,
+    int Total);

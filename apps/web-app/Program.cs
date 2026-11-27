@@ -79,9 +79,14 @@ app.MapPost("/api/auth/login", async (LoginRequest req, DatabaseService db, Http
     var (user, dbError) = await db.TryLoginAsync(req.Username ?? "", req.Password ?? "");
     if (dbError != null)
         return Results.Json(new { success = false, error = dbError }, statusCode: StatusCodes.Status503ServiceUnavailable);
+    string ip = http.Connection.RemoteIpAddress?.ToString() ?? "";
     if (user == null)
+    {
+        await db.LogActivityAsync(null, (req.Username ?? "").Trim(), "login.failed", "user", null,
+            "Đăng nhập sai tên hoặc mật khẩu", ip);
         return Results.Json(new { success = false, error = "Tên đăng nhập hoặc mật khẩu không đúng." },
             statusCode: StatusCodes.Status401Unauthorized);
+    }
 
     var identity = new ClaimsIdentity(
     [
@@ -95,6 +100,7 @@ app.MapPost("/api/auth/login", async (LoginRequest req, DatabaseService db, Http
 
     await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity),
         new AuthenticationProperties { IsPersistent = false });
+    await db.LogActivityAsync(user.UserId, user.FullName, "login", "user", user.UserId.ToString(), null, ip);
 
     return Results.Ok(new { success = true, user = new { user.UserId, user.Username, user.FullName, user.Role } });
 }).RequireRateLimiting("login");
@@ -102,6 +108,8 @@ app.MapPost("/api/auth/login", async (LoginRequest req, DatabaseService db, Http
 // 2. Đăng xuất: xoá cookie
 app.MapPost("/api/auth/logout", async (HttpContext http) =>
 {
+    if (http.User.Identity?.IsAuthenticated == true)
+        await Audit(http, "logout", "user", CurrentUserId(http.User).ToString());
     await http.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
     return Results.Ok(new { success = true });
 });
@@ -112,9 +120,10 @@ app.MapGet("/api/auth/me", (ClaimsPrincipal user) =>
     .RequireAuthorization();
 
 // 3b. Đổi mật khẩu của chính mình (tài khoản demo phải đổi sau lần đăng nhập đầu)
-app.MapPost("/api/auth/change-password", async (ChangePasswordRequest req, ClaimsPrincipal user, DatabaseService db) =>
+app.MapPost("/api/auth/change-password", async (ChangePasswordRequest req, ClaimsPrincipal user, DatabaseService db, HttpContext http) =>
 {
     var (success, error) = await db.ChangePasswordAsync(CurrentUserId(user), req.CurrentPassword ?? "", req.NewPassword ?? "");
+    if (success) await Audit(http, "password.change", "user", CurrentUserId(user).ToString());
     return success
         ? Results.Ok(new { success = true })
         : Results.BadRequest(new { success = false, error });
@@ -132,12 +141,13 @@ app.MapPost("/api/alerts/acknowledge", async (
     AcknowledgeRequest req,
     ClaimsPrincipal user,
     DatabaseService db,
-    DashboardBroadcaster broadcaster) =>
+    DashboardBroadcaster broadcaster,
+    HttpContext http) =>
 {
     if (req.AlertId <= 0)
         return Results.BadRequest(new { success = false, error = "Mã cảnh báo không hợp lệ." });
 
-    var denied = await CheckAlertPermissionAsync(req.AlertId, user, db);
+    var denied = await CheckAlertPermissionAsync(req.AlertId, user, db, http);
     if (denied != null) return denied;
 
     bool ok = await db.AcknowledgeAlertAsync(req.AlertId, CurrentUserId(user));
@@ -145,6 +155,7 @@ app.MapPost("/api/alerts/acknowledge", async (
         return Results.Json(new { success = false, error = $"Không xác nhận được sự cố #{req.AlertId} (không tồn tại hoặc lỗi CSDL)." },
             statusCode: StatusCodes.Status409Conflict);
 
+    await Audit(http, "alert.ack", "alert", req.AlertId.ToString(), (string?)http.Items["escalated"]);
     broadcaster.Request();
     return Results.Ok(new { success = true });
 }).RequireAuthorization();
@@ -232,6 +243,8 @@ app.MapGet("/api/alerts/report", async (DateOnly? fromDate, DateOnly? toDate, Da
     {
         var (summary, byZone, byUser) = await db.GetAlertReportAsync(
             from.ToDateTime(TimeOnly.MinValue), to.ToDateTime(TimeOnly.MaxValue));
+        var byDevice = await db.GetDeviceAlertStatsAsync(
+            from.ToDateTime(TimeOnly.MinValue), to.ToDateTime(TimeOnly.MaxValue));
         return Results.Ok(new
         {
             success = true,
@@ -240,6 +253,7 @@ app.MapGet("/api/alerts/report", async (DateOnly? fromDate, DateOnly? toDate, Da
             summary,
             byZone,
             byUser,
+            byDevice,
         });
     }
     catch (Exception ex)
@@ -267,7 +281,7 @@ app.MapGet("/api/environment/{deviceId}", async (string deviceId, int? minutes, 
 }).RequireAuthorization();
 
 // 6d. Thêm / sửa trạm giám sát (chỉ Admin)
-app.MapPost("/api/devices", async (UpsertDeviceRequest req, DatabaseService db, DashboardBroadcaster broadcaster) =>
+app.MapPost("/api/devices", async (UpsertDeviceRequest req, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
 {
     string deviceId = (req.DeviceId ?? "").Trim();
     string deviceName = (req.DeviceName ?? "").Trim();
@@ -295,18 +309,21 @@ app.MapPost("/api/devices", async (UpsertDeviceRequest req, DatabaseService db, 
     if (!success)
         return Results.BadRequest(new { success, error = dbError });
 
+    await Audit(http, req.IsEdit ? "device.update" : "device.create", "device", deviceId,
+        $"{deviceName} · {zoneName} · {req.Status}");
     broadcaster.Request();
     return Results.Ok(new { success = true });
 }).RequireAuthorization("Admin");
 
 // 6e. Xoá trạm giám sát (chỉ Admin; xoá kèm nhật ký và cảnh báo của trạm)
-app.MapDelete("/api/devices/{deviceId}", async (string deviceId, DatabaseService db, DashboardBroadcaster broadcaster) =>
+app.MapDelete("/api/devices/{deviceId}", async (string deviceId, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
 {
     var (success, error) = await db.DeleteDeviceAsync(deviceId);
     if (!success)
         return Results.Json(new { success, error }, statusCode: error?.StartsWith("Không tìm thấy") == true
             ? StatusCodes.Status404NotFound : StatusCodes.Status503ServiceUnavailable);
 
+    await Audit(http, "device.delete", "device", deviceId);
     broadcaster.Request();
     return Results.Ok(new { success = true });
 }).RequireAuthorization("Admin");
@@ -321,8 +338,9 @@ app.MapGet("/api/alerts/{alertId:long}", async (long alertId, ClaimsPrincipal us
             return Results.NotFound(new { success = false, error = $"Không tìm thấy cảnh báo #{alertId}." });
 
         // canHandle: trang dùng để hiện hoặc ẩn nút xử lý (máy chủ vẫn kiểm tra lại khi ghi)
-        bool canHandle = CanHandleZone(user, incident.ManagerUserId);
-        return Results.Ok(new { success = true, incident, canHandle });
+        bool overdue = AlertPolicy.IsOverdue(incident.Severity, incident.AlertTime, incident.Acknowledged);
+        bool canHandle = overdue || CanHandleZone(user, incident.ManagerUserId);
+        return Results.Ok(new { success = true, incident, canHandle, overdue });
     }
     catch (Exception ex)
     {
@@ -337,7 +355,8 @@ app.MapPost("/api/alerts/{alertId:long}/resolve", async (
     ResolveAlertRequest req,
     ClaimsPrincipal user,
     DatabaseService db,
-    DashboardBroadcaster broadcaster) =>
+    DashboardBroadcaster broadcaster,
+    HttpContext http) =>
 {
     if (req.Resolution is not ("Handled" or "FalseAlarm" or "Test"))
         return Results.BadRequest(new { success = false, error = "Kết quả xử lý chỉ được là Đã xử lý, Báo nhầm hoặc Diễn tập." });
@@ -345,19 +364,21 @@ app.MapPost("/api/alerts/{alertId:long}/resolve", async (
     if (note is { Length: > 500 })
         return Results.BadRequest(new { success = false, error = "Ghi chú tối đa 500 ký tự." });
 
-    var denied = await CheckAlertPermissionAsync(alertId, user, db);
+    var denied = await CheckAlertPermissionAsync(alertId, user, db, http);
     if (denied != null) return denied;
 
     if (!await db.ResolveAlertAsync(alertId, CurrentUserId(user), req.Resolution, note))
         return Results.Json(new { success = false, error = $"Không ghi được phiếu sự cố #{alertId} (lỗi CSDL)." },
             statusCode: StatusCodes.Status503ServiceUnavailable);
 
+    await Audit(http, "alert.resolve", "alert", alertId.ToString(),
+        req.Resolution + (note != null ? " · " + note : "") + (http.Items["escalated"] is string esc ? " · " + esc : ""));
     broadcaster.Request();
     return Results.Ok(new { success = true });
 }).RequireAuthorization();
 
 // 6h. Thêm / sửa khu vực và cán bộ phụ trách (chỉ Admin)
-app.MapPost("/api/zones", async (UpsertZoneRequest req, DatabaseService db, DashboardBroadcaster broadcaster) =>
+app.MapPost("/api/zones", async (UpsertZoneRequest req, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
 {
     string name = (req.ZoneName ?? "").Trim();
     string? desc = string.IsNullOrWhiteSpace(req.Description) ? null : req.Description.Trim();
@@ -370,17 +391,20 @@ app.MapPost("/api/zones", async (UpsertZoneRequest req, DatabaseService db, Dash
     if (!success)
         return Results.BadRequest(new { success, error });
 
+    await Audit(http, req.ZoneId is null ? "zone.create" : "zone.update", "zone", req.ZoneId?.ToString(),
+        name + (req.ManagerUserId is int mgr ? $" · phụ trách #{mgr}" : " · chưa có người phụ trách"));
     broadcaster.Request();
     return Results.Ok(new { success = true });
 }).RequireAuthorization("Admin");
 
 // 6i. Xoá khu vực (chỉ Admin, chỉ khi khu vực không còn trạm)
-app.MapDelete("/api/zones/{zoneId:int}", async (int zoneId, DatabaseService db, DashboardBroadcaster broadcaster) =>
+app.MapDelete("/api/zones/{zoneId:int}", async (int zoneId, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
 {
     var (success, error) = await db.DeleteZoneAsync(zoneId);
     if (!success)
         return Results.BadRequest(new { success, error });
 
+    await Audit(http, "zone.delete", "zone", zoneId.ToString());
     broadcaster.Request();
     return Results.Ok(new { success = true });
 }).RequireAuthorization("Admin");
@@ -389,7 +413,8 @@ app.MapDelete("/api/zones/{zoneId:int}", async (int zoneId, DatabaseService db, 
 app.MapPost("/api/auth/register", async (
     RegisterRequest req,
     DatabaseService db,
-    DashboardBroadcaster broadcaster) =>
+    DashboardBroadcaster broadcaster,
+    HttpContext http) =>
 {
     if ((req.Password ?? "").Length < 6)
         return Results.BadRequest(new { success = false, user = (object?)null, error = "Mật khẩu phải có ít nhất 6 ký tự." });
@@ -400,6 +425,7 @@ app.MapPost("/api/auth/register", async (
     if (!success)
         return Results.BadRequest(new { success, user, error });
 
+    await Audit(http, "user.create", "user", null, $"{(req.Username ?? "").Trim()} · {req.Role ?? "User"}");
     broadcaster.Request();
     return Results.Ok(new { success, user, error });
 }).RequireAuthorization("Admin");
@@ -410,7 +436,8 @@ app.MapPost("/api/users/{userId:int}", async (
     UpdateUserRequest req,
     ClaimsPrincipal user,
     DatabaseService db,
-    DashboardBroadcaster broadcaster) =>
+    DashboardBroadcaster broadcaster,
+    HttpContext http) =>
 {
     string fullName = (req.FullName ?? "").Trim();
     string? phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
@@ -435,6 +462,7 @@ app.MapPost("/api/users/{userId:int}", async (
     if (!success)
         return Results.BadRequest(new { success, error = dbError });
 
+    await Audit(http, "user.update", "user", userId.ToString(), $"{fullName} · {role}");
     UserSessionValidator.Forget(userId);   // đổi vai trò thì phiên cũ của người đó bị kiểm tra lại ngay
     broadcaster.Request();
     return Results.Ok(new { success = true });
@@ -445,7 +473,8 @@ app.MapPost("/api/users/{userId:int}/reset-password", async (
     int userId,
     ResetPasswordRequest req,
     ClaimsPrincipal user,
-    DatabaseService db) =>
+    DatabaseService db,
+    HttpContext http) =>
 {
     if (userId == CurrentUserId(user))
         return Results.BadRequest(new { success = false, error = "Tự đổi mật khẩu của mình ở mục Đổi mật khẩu." });
@@ -457,6 +486,7 @@ app.MapPost("/api/users/{userId:int}/reset-password", async (
         return Results.BadRequest(new { success, error });
 
     UserSessionValidator.RevokeSessions(userId);
+    await Audit(http, "user.reset_password", "user", userId.ToString());
     return Results.Ok(new { success = true });
 }).RequireAuthorization("Admin");
 
@@ -465,7 +495,8 @@ app.MapDelete("/api/users/{userId:int}", async (
     int userId,
     ClaimsPrincipal user,
     DatabaseService db,
-    DashboardBroadcaster broadcaster) =>
+    DashboardBroadcaster broadcaster,
+    HttpContext http) =>
 {
     if (userId == CurrentUserId(user))
         return Results.BadRequest(new { success = false, error = "Không thể xóa tài khoản đang đăng nhập." });
@@ -474,7 +505,178 @@ app.MapDelete("/api/users/{userId:int}", async (
     if (!ok)
         return Results.NotFound(new { success = false, error = $"Không xóa được tài khoản #{userId} (không tồn tại hoặc lỗi CSDL)." });
 
+    await Audit(http, "user.delete", "user", userId.ToString());
     UserSessionValidator.Forget(userId);
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
+// 9. Nhật ký hoạt động (chỉ Admin), mặc định 7 ngày gần nhất, lọc theo cán bộ / nhóm thao tác
+app.MapGet("/api/activity", async (DateOnly? fromDate, DateOnly? toDate, int? userId, string? action, DatabaseService db) =>
+{
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    var from = fromDate ?? today.AddDays(-6);
+    var to = toDate ?? today;
+    if (to < from) (from, to) = (to, from);
+    if (to.DayNumber - from.DayNumber > 366)
+        return Results.BadRequest(new { success = false, error = "Khoảng thời gian tối đa 1 năm." });
+    try
+    {
+        var items = await db.GetActivityAsync(from.ToDateTime(TimeOnly.MinValue), to.ToDateTime(TimeOnly.MaxValue),
+            userId, NullIfEmpty(action));
+        return Results.Ok(new
+        {
+            success = true,
+            fromDate = from.ToString("yyyy-MM-dd"),
+            toDate = to.ToString("yyyy-MM-dd"),
+            items,
+            limited = items.Count >= 500,
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Lỗi CSDL khi đọc nhật ký: " + ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).RequireAuthorization("Admin");
+
+// 10. Sơ đồ mặt bằng: ảnh của khu vực (mọi cán bộ xem, Admin tải lên / xoá)
+app.MapGet("/api/zones/{zoneId:int}/floorplan", async (int zoneId, DatabaseService db, HttpContext http) =>
+{
+    string? dataUrl;
+    try
+    {
+        dataUrl = await db.GetFloorPlanAsync(zoneId);
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Lỗi CSDL khi đọc sơ đồ: " + ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+    var image = dataUrl == null ? null : FloorPlanImage.Parse(dataUrl);
+    if (image == null)
+        return Results.Json(new { success = false, error = "Khu vực chưa có sơ đồ." }, statusCode: StatusCodes.Status404NotFound);
+    http.Response.Headers.CacheControl = "private, no-cache";
+    return Results.File(image.Value.Bytes, image.Value.ContentType);
+}).RequireAuthorization();
+
+app.MapPost("/api/zones/{zoneId:int}/floorplan", async (
+    int zoneId, FloorPlanRequest req, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
+{
+    var image = FloorPlanImage.Parse(req.ImageBase64 ?? "");
+    if (image == null)
+        return Results.BadRequest(new { success = false, error = "Ảnh sơ đồ phải là PNG, JPEG hoặc WebP." });
+    if (image.Value.Bytes.Length > FloorPlanImage.MaxBytes)
+        return Results.BadRequest(new { success = false, error = $"Ảnh sơ đồ tối đa {FloorPlanImage.MaxBytes / 1024 / 1024} MB." });
+
+    var (success, error) = await db.SetFloorPlanAsync(zoneId, image.Value.ToDataUrl());
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    await Audit(http, "zone.floorplan", "zone", zoneId.ToString(), $"Tải sơ đồ {Math.Max(1, image.Value.Bytes.Length / 1024)} KB, {image.Value.ContentType}");
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
+app.MapDelete("/api/zones/{zoneId:int}/floorplan", async (int zoneId, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
+{
+    var (success, error) = await db.SetFloorPlanAsync(zoneId, null);
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    await Audit(http, "zone.floorplan", "zone", zoneId.ToString(), "Xoá sơ đồ");
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
+// 10b. Vị trí trạm trên sơ đồ (% chiều rộng / cao ảnh); x, y null = gỡ trạm khỏi sơ đồ (chỉ Admin)
+app.MapPost("/api/devices/{deviceId}/position", async (
+    string deviceId, DevicePositionRequest req, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
+{
+    if ((req.X is null) != (req.Y is null)
+        || req.X is < 0 or > 100 || req.Y is < 0 or > 100)
+        return Results.BadRequest(new { success = false, error = "Vị trí phải nằm trong ảnh (0–100%)." });
+
+    var (success, error) = await db.SetDevicePositionAsync(deviceId, req.X, req.Y);
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    await Audit(http, "device.position", "device", deviceId,
+        req.X is double x ? $"Đặt tại {x:0.#}% · {req.Y:0.#}%" : "Gỡ khỏi sơ đồ");
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
+// 11. Bảo trì thiết bị: mọi cán bộ xem và ghi lần kiểm tra; Admin xoá dòng và đặt chu kỳ
+app.MapGet("/api/devices/{deviceId}/maintenance", async (string deviceId, DatabaseService db) =>
+{
+    try
+    {
+        return Results.Ok(new { success = true, deviceId, items = await db.GetMaintenanceAsync(deviceId) });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Lỗi CSDL khi đọc lịch sử bảo trì: " + ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).RequireAuthorization();
+
+app.MapPost("/api/devices/{deviceId}/maintenance", async (
+    string deviceId, AddMaintenanceRequest req, ClaimsPrincipal user, DatabaseService db,
+    DashboardBroadcaster broadcaster, HttpContext http) =>
+{
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    var at = req.PerformedAt ?? today;
+    string? note = NullIfEmpty(req.Note);
+    if (req.Kind is not ("Inspection" or "Clean" or "Repair" or "Replace"))
+        return Results.BadRequest(new { success = false, error = "Loại công việc chỉ được là Kiểm tra, Vệ sinh, Sửa chữa hoặc Thay thế." });
+    if (at > today || at < today.AddYears(-5))
+        return Results.BadRequest(new { success = false, error = "Ngày thực hiện không được sau hôm nay hoặc quá 5 năm trước." });
+    if (note is { Length: > 500 })
+        return Results.BadRequest(new { success = false, error = "Ghi chú tối đa 500 ký tự." });
+
+    var (success, error) = await db.AddMaintenanceAsync(deviceId, CurrentUserId(user), at.ToDateTime(TimeOnly.MinValue), req.Kind, note);
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    await Audit(http, "maintenance.add", "device", deviceId, $"{req.Kind switch { "Inspection" => "Kiểm tra định kỳ", "Clean" => "Vệ sinh", "Repair" => "Sửa chữa", _ => "Thay thế" }} ngày {at:dd/MM/yyyy}" + (note != null ? " · " + note : ""));
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization();
+
+app.MapDelete("/api/maintenance/{maintenanceId:int}", async (
+    int maintenanceId, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
+{
+    try
+    {
+        string? deviceId = await db.DeleteMaintenanceAsync(maintenanceId);
+        if (deviceId == null)
+            return Results.NotFound(new { success = false, error = $"Không tìm thấy lần bảo trì #{maintenanceId}." });
+        await Audit(http, "maintenance.delete", "device", deviceId, $"Xoá lần bảo trì #{maintenanceId}");
+        broadcaster.Request();
+        return Results.Ok(new { success = true, deviceId });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new { success = false, error = "Lỗi CSDL khi xoá: " + ex.Message },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).RequireAuthorization("Admin");
+
+app.MapPost("/api/devices/{deviceId}/maintenance-settings", async (
+    string deviceId, MaintenanceSettingsRequest req, DatabaseService db, DashboardBroadcaster broadcaster, HttpContext http) =>
+{
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    if (req.InstallDate is not DateOnly install || install > today || install < today.AddYears(-30))
+        return Results.BadRequest(new { success = false, error = "Ngày lắp đặt không hợp lệ." });
+    if (req.IntervalDays is < 7 or > 730)
+        return Results.BadRequest(new { success = false, error = "Chu kỳ kiểm tra từ 7 đến 730 ngày." });
+
+    var (success, error) = await db.UpdateMaintenanceSettingsAsync(deviceId, install.ToDateTime(TimeOnly.MinValue), req.IntervalDays);
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    await Audit(http, "device.maintenance_settings", "device", deviceId, $"Lắp đặt {install:dd/MM/yyyy} · chu kỳ {req.IntervalDays} ngày");
     broadcaster.Request();
     return Results.Ok(new { success = true });
 }).RequireAuthorization("Admin");
@@ -489,23 +691,39 @@ static bool CanHandleZone(ClaimsPrincipal user, int? managerUserId) =>
     user.IsInRole("Admin") || managerUserId is null || managerUserId == CurrentUserId(user);
 
 // null = được phép; khác null = phản hồi lỗi trả thẳng cho trình duyệt
-static async Task<IResult?> CheckAlertPermissionAsync(long alertId, ClaimsPrincipal user, DatabaseService db)
+static async Task<IResult?> CheckAlertPermissionAsync(long alertId, ClaimsPrincipal user, DatabaseService db, HttpContext? http = null)
 {
     try
     {
-        var (exists, managerUserId) = await db.GetAlertManagerAsync(alertId);
+        var (exists, managerUserId, overdue) = await db.GetAlertManagerAsync(alertId);
         if (!exists)
             return Results.NotFound(new { success = false, error = $"Không tìm thấy cảnh báo #{alertId}." });
-        if (!CanHandleZone(user, managerUserId))
-            return Results.Json(new { success = false, error = "Chỉ cán bộ phụ trách khu vực này hoặc quản trị viên mới được xử lý cảnh báo." },
-                statusCode: StatusCodes.Status403Forbidden);
-        return null;
+        if (CanHandleZone(user, managerUserId))
+            return null;
+        // Leo thang: cảnh báo quá hạn chưa ai xác nhận thì mọi cán bộ đều được xử lý
+        if (overdue)
+        {
+            if (http is not null) http.Items["escalated"] = "Leo thang: xử lý thay khu vực khác vì quá hạn";
+            return null;
+        }
+        return Results.Json(new { success = false, error = "Chỉ cán bộ phụ trách khu vực này hoặc quản trị viên mới được xử lý cảnh báo (trừ khi cảnh báo đã quá hạn)." },
+            statusCode: StatusCodes.Status403Forbidden);
     }
     catch (Exception ex)
     {
         return Results.Json(new { success = false, error = "Lỗi CSDL khi kiểm tra quyền: " + ex.Message },
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
+}
+
+// Ghi nhật ký hoạt động cho người đang đăng nhập (tên lấy từ cookie, IP từ kết nối)
+static Task Audit(HttpContext http, string action, string? targetType = null, string? targetId = null, string? detail = null)
+{
+    var db = http.RequestServices.GetRequiredService<DatabaseService>();
+    int uid = CurrentUserId(http.User);
+    string name = http.User.FindFirstValue(ClaimTypes.GivenName) ?? http.User.FindFirstValue(ClaimTypes.Name) ?? "";
+    return db.LogActivityAsync(uid > 0 ? uid : null, name, action, targetType, targetId, detail,
+        http.Connection.RemoteIpAddress?.ToString());
 }
 
 static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -539,6 +757,10 @@ public sealed record ResolveAlertRequest(string? Resolution, string? Note);
 public sealed record UpsertZoneRequest(int? ZoneId, string? ZoneName, string? Description, int? ManagerUserId);
 public sealed record UpdateUserRequest(string? FullName, string? Phone, string? Email, string? Role);
 public sealed record ResetPasswordRequest(string? NewPassword);
+public sealed record FloorPlanRequest(string? ImageBase64);
+public sealed record DevicePositionRequest(double? X, double? Y);
+public sealed record AddMaintenanceRequest(DateOnly? PerformedAt, string? Kind, string? Note);
+public sealed record MaintenanceSettingsRequest(DateOnly? InstallDate, int IntervalDays);
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
 public sealed record RegisterRequest(
     string? Username,

@@ -121,6 +121,7 @@
       <span id="dbStatusBadge" class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#a0a6b0]"></span>CSDL</span>
       <span id="mqttStatusBadge" class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#a0a6b0]"></span>MQTT</span>
       <span id="camChip" class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-[#a0a6b0]"></span>Camera</span>
+      <button type="button" id="maintChip" data-action="tab" data-tab="manage" class="hidden flex items-center gap-1.5 text-[#9a5b00] hover:underline"></button>
       <span id="headerLiveClock" class="ml-auto text-[#7b838d]">--:--:--</span>
     </div>
   </section>
@@ -152,6 +153,42 @@
           <tr><td colspan="9" class="py-6 text-center text-[#5d6670]">Đang tải danh sách trạm...</td></tr>
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- sơ đồ mặt bằng: ảnh của khu vực, chấm trạm tô màu theo mức -->
+  <section class="bg-white border border-[#d9dde2] rounded-sm p-4 flex flex-col gap-3">
+    <div class="-mx-4 -mt-4 px-4 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3 flex-wrap">
+      <h2 class="text-[15px] font-bold text-[#1c2229]">Sơ đồ mặt bằng</h2>
+      <div class="flex items-center gap-2 flex-wrap text-[13px]">
+        <label class="flex items-center gap-1.5 text-[#5d6670]">Khu vực
+          <select id="fpZone" onchange="fpSelectZone(this.value, true)" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] py-1.5"></select>
+        </label>
+        <span class="admin-only hidden flex items-center gap-2">
+          <label class="px-3 py-1.5 rounded-sm bg-white hover:bg-[#f4f5f7] border border-[#c9ced5] text-[#1c2229] text-[13px] transition-all cursor-pointer">Tải ảnh sơ đồ
+            <input id="fpFile" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" onchange="fpUpload(this)">
+          </label>
+          <button type="button" id="fpRemove" onclick="fpDeletePlan()" class="px-3 py-1.5 rounded-sm bg-white hover:bg-[#f4f5f7] border border-[#c9ced5] text-[#1c2229] text-[13px] transition-all text-[#c62828]">Xoá sơ đồ</button>
+        </span>
+      </div>
+    </div>
+    <div id="fpPlaceBar" class="hidden flex items-center gap-2 flex-wrap text-[13px] text-[#5d6670]">
+      <span>Đặt vị trí trạm:</span>
+      <select id="fpPlaceDevice" onchange="fpSetPlacing(this.value)" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] py-1.5"></select>
+      <span id="fpPlaceHint" class="text-[12px] text-[#7b838d]">Chọn trạm rồi bấm vào chỗ đặt trạm trên ảnh.</span>
+    </div>
+    <div id="fpEmpty" class="py-8 text-center text-[13px] text-[#5d6670] border border-dashed border-[#c9ced5] rounded-sm">Khu vực này chưa có ảnh sơ đồ.</div>
+    <div id="fpWrap" class="hidden relative w-full max-w-4xl mx-auto border border-[#d9dde2] rounded-sm overflow-hidden select-none">
+      <img id="fpImg" alt="Sơ đồ mặt bằng khu vực" class="block w-full h-auto" draggable="false">
+      <div id="fpDots" class="absolute inset-0"></div>
+    </div>
+    <div id="fpLegend" class="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[#5d6670]">
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#2f8f4e]"></span>Bình thường</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#e39b1b]"></span>Cảnh báo sớm</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#d0202e]"></span>Báo cháy</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#5d6670]"></span>Mất kết nối</span>
+      <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#c9ced5]"></span>Tắt báo động</span>
+      <span id="fpUnplaced" class="ml-auto"></span>
     </div>
   </section>
 
@@ -470,6 +507,28 @@
         </div>
       </div>
     </div>
+
+    <div class="flex flex-col gap-2 min-w-0">
+      <h3 class="text-[13px] font-bold text-[#1c2229]">Theo trạm <span class="font-normal text-[#7b838d]">(trạm báo nhiều nhất trước, nên kiểm tra cảm biến nếu báo nhầm nhiều)</span></h3>
+      <div class="overflow-x-auto border border-[#d9dde2] rounded-sm">
+        <table class="w-full text-left text-[13px]">
+          <thead>
+            <tr class="text-[#5d6670] border-b border-[#d9dde2] bg-[#f6f7f8]">
+              <th class="py-2.5 px-3">Trạm</th>
+              <th class="py-2.5 px-3">Khu vực</th>
+              <th class="py-2.5 px-3 text-right">Cháy</th>
+              <th class="py-2.5 px-3 text-right">Khói</th>
+              <th class="py-2.5 px-3 text-right">Nhiệt độ cao</th>
+              <th class="py-2.5 px-3 text-right">Tổng</th>
+              <th class="py-2.5 px-3 w-1/3"></th>
+            </tr>
+          </thead>
+          <tbody id="repDeviceBody" class="divide-y divide-[#d9dde2]">
+            <tr><td colspan="7" class="py-4 text-center text-[#5d6670]">Chưa có dữ liệu.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   </div>
@@ -571,6 +630,74 @@
           <tr>
             <td colspan="8" class="py-6 text-center text-[#5d6670]">Đang tải danh sách người dùng...</td>
           </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- bảo trì định kỳ -->
+  <section class="bg-white border border-[#d9dde2] rounded-sm p-4 flex flex-col gap-4">
+    <div class="-mx-4 -mt-4 px-4 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3 flex-wrap">
+      <h2 class="text-[15px] font-bold text-[#1c2229]">Bảo trì thiết bị</h2>
+      <span id="maintNote" class="text-[12px] text-[#5d6670]">Hạn kiểm tra = lần bảo trì gần nhất (hoặc ngày lắp đặt) + chu kỳ</span>
+    </div>
+    <div class="overflow-x-auto -mx-4 -mb-4">
+      <table class="w-full text-left text-[13px]">
+        <thead>
+          <tr class="text-[#5d6670] border-b border-[#d9dde2] bg-[#f6f7f8]">
+            <th class="py-2.5 px-3">Trạm</th>
+            <th class="py-2.5 px-3">Khu vực</th>
+            <th class="py-2.5 px-3">Ngày lắp đặt</th>
+            <th class="py-2.5 px-3 text-right">Chu kỳ</th>
+            <th class="py-2.5 px-3">Bảo trì gần nhất</th>
+            <th class="py-2.5 px-3">Hạn kiểm tra</th>
+            <th class="py-2.5 px-3 text-right">Tác vụ</th>
+          </tr>
+        </thead>
+        <tbody id="maintTableBody" class="divide-y divide-[#d9dde2]">
+          <tr><td colspan="7" class="py-6 text-center text-[#5d6670]">Đang tải...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- nhật ký hoạt động (chỉ quản trị viên) -->
+  <section class="admin-only hidden bg-white border border-[#d9dde2] rounded-sm p-4 flex flex-col gap-4">
+    <div class="-mx-4 -mt-4 px-4 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3 flex-wrap">
+      <h2 class="text-[15px] font-bold text-[#1c2229]">Nhật ký hoạt động</h2>
+      <span id="actInfo" class="text-[12px] text-[#5d6670]">Ai đã làm gì trên hệ thống, kể cả đăng nhập sai</span>
+    </div>
+    <form onsubmit="event.preventDefault(); loadActivity()" class="flex flex-wrap items-end gap-3 text-[12px] text-[#5d6670]">
+      <label class="flex flex-col gap-1">Từ ngày <input id="actFrom" type="date" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] py-1.5"></label>
+      <label class="flex flex-col gap-1">Đến ngày <input id="actTo" type="date" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] py-1.5"></label>
+      <label class="flex flex-col gap-1">Cán bộ <select id="actUser" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] py-1.5"></select></label>
+      <label class="flex flex-col gap-1">Thao tác
+        <select id="actAction" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] py-1.5">
+          <option value="">Tất cả</option>
+          <option value="login">Đăng nhập (cả sai mật khẩu)</option>
+          <option value="alert.">Xử lý cảnh báo</option>
+          <option value="device.">Trạm</option>
+          <option value="zone.">Khu vực, sơ đồ</option>
+          <option value="user.">Tài khoản cán bộ</option>
+          <option value="maintenance.">Bảo trì</option>
+        </select>
+      </label>
+      <button type="submit" class="px-3 py-1.5 rounded-sm bg-[#1c2229] hover:bg-[#3a434d] text-white text-[13px] font-bold transition-all disabled:opacity-50 py-2">Lọc</button>
+    </form>
+    <div class="overflow-x-auto -mx-4 -mb-4 max-h-[28rem] overflow-y-auto border-t border-[#d9dde2]">
+      <table class="w-full text-left text-[13px]">
+        <thead class="sticky top-0">
+          <tr class="text-[#5d6670] border-b border-[#d9dde2] bg-[#f6f7f8]">
+            <th class="py-2.5 px-3">Thời gian</th>
+            <th class="py-2.5 px-3">Cán bộ</th>
+            <th class="py-2.5 px-3">Thao tác</th>
+            <th class="py-2.5 px-3">Đối tượng</th>
+            <th class="py-2.5 px-3">Chi tiết</th>
+            <th class="py-2.5 px-3">IP</th>
+          </tr>
+        </thead>
+        <tbody id="actTableBody" class="divide-y divide-[#d9dde2]">
+          <tr><td colspan="6" class="py-6 text-center text-[#5d6670]">Chưa tải.</td></tr>
         </tbody>
       </table>
     </div>
@@ -854,6 +981,53 @@
           <button id="btnIncSubmit" type="submit" class="px-3.5 py-2 rounded-sm bg-[#1c2229] hover:bg-[#3a434d] text-white font-bold text-[13px] transition-all disabled:opacity-50">Lưu kết quả</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- modal bảo trì của một trạm -->
+  <div id="maintModal" class="hidden fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 p-4 overflow-y-auto">
+    <div class="bg-[#ffffff] border border-[#c9ced5] rounded-sm w-full max-w-2xl flex flex-col">
+      <div class="px-5 py-3 border-b border-[#d9dde2] flex items-center justify-between gap-3">
+        <div>
+          <h3 id="maintTitle" class="text-[15px] font-bold text-[#1c2229]">Bảo trì</h3>
+          <p id="maintSubtitle" class="text-[12px] text-[#7b838d]"></p>
+        </div>
+        <button type="button" onclick="closeMaintModal()" class="text-[#7b838d] hover:text-[#1c2229] p-1 rounded-sm hover:bg-[#e8ebee] transition-all" title="Đóng">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+      <div class="px-5 py-4 flex flex-col gap-4 text-[12px] text-[#5d6670]">
+        <div id="maintAlert" class="hidden p-2.5 rounded-sm text-[12px]"></div>
+        <form id="maintForm" onsubmit="handleMaintSubmit(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <label class="flex flex-col gap-1">Ngày thực hiện <input id="maintDate" type="date" required class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]"></label>
+          <label class="flex flex-col gap-1">Công việc
+            <select id="maintKind" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]">
+              <option value="Inspection">Kiểm tra định kỳ</option>
+              <option value="Clean">Vệ sinh cảm biến, camera</option>
+              <option value="Repair">Sửa chữa</option>
+              <option value="Replace">Thay thế linh kiện</option>
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 md:col-span-2">Ghi chú <input id="maintNoteInput" type="text" maxlength="500" placeholder="Ví dụ: thổi bụi MQ-2, thử còi, DHT11 đọc đúng" class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]"></label>
+          <div class="md:col-span-4 flex justify-end"><button id="btnMaintSubmit" type="submit" class="px-3 py-1.5 rounded-sm bg-[#1c2229] hover:bg-[#3a434d] text-white text-[13px] font-bold transition-all disabled:opacity-50 py-2">Ghi lần bảo trì</button></div>
+        </form>
+        <form id="maintSettingsForm" onsubmit="handleMaintSettings(event)" class="admin-only hidden grid grid-cols-1 md:grid-cols-4 gap-3 items-end border-t border-[#d9dde2] pt-4">
+          <label class="flex flex-col gap-1">Ngày lắp đặt <input id="maintInstall" type="date" required class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]"></label>
+          <label class="flex flex-col gap-1">Chu kỳ kiểm tra (ngày) <input id="maintInterval" type="number" min="7" max="730" required class="bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]"></label>
+          <div class="md:col-span-2 flex justify-end"><button type="submit" class="px-3 py-1.5 rounded-sm bg-white hover:bg-[#f4f5f7] border border-[#c9ced5] text-[#1c2229] text-[13px] transition-all py-2">Lưu lịch bảo trì</button></div>
+        </form>
+        <div class="flex flex-col gap-2">
+          <h4 class="text-[13px] font-bold text-[#1c2229]">Lịch sử bảo trì</h4>
+          <div class="overflow-x-auto border border-[#d9dde2] rounded-sm max-h-72 overflow-y-auto">
+            <table class="w-full text-left text-[13px]">
+              <thead class="sticky top-0"><tr class="text-[#5d6670] border-b border-[#d9dde2] bg-[#f6f7f8]">
+                <th class="py-2 px-3">Ngày</th><th class="py-2 px-3">Công việc</th><th class="py-2 px-3">Người ghi</th><th class="py-2 px-3">Ghi chú</th><th class="admin-only hidden py-2 px-3"></th>
+              </tr></thead>
+              <tbody id="maintHistBody" class="divide-y divide-[#d9dde2] text-[#1c2229]"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1313,6 +1487,14 @@
       if (!btn) return;
       const action = btn.dataset.action;
       if (action === 'tab') { showTab(btn.dataset.tab); return; }
+      if (action === 'maint' || action === 'fp-unplace') {
+        const deviceId = btn.dataset.device || '';
+        if (!deviceId) return;
+        if (action === 'maint') openMaintModal(deviceId);
+        else fpSavePosition(deviceId, null, null);
+        return;
+      }
+      if (action === 'maint-delete') { deleteMaintenance(toInt(btn.dataset.id)); return; }
       // Mã trạm là chuỗi (PI-01): đọc từ data-device, trình duyệt đã giải mã ký tự đặc biệt
       if (action === 'edit-device' || action === 'delete-device') {
         const deviceId = btn.dataset.device || '';
@@ -1409,6 +1591,8 @@
       closeRegisterModal();
       closePasswordModal();
       closeDeviceModal();
+      closeMaintModal();
+      if (fp.placing) fpSetPlacing('');
     });
 
     // ========================================================
@@ -1778,6 +1962,11 @@
       else if (warn.length) { tone = 'amber'; word = 'CẢNH BÁO SỚM'; note = where(warn); }
       else if (lost.length) { tone = 'amber'; word = 'MẤT KẾT NỐI TRẠM'; note = lost.map(d => `${escapeHtml(d.deviceId)} (${escapeHtml(d.zoneName)}): ${escapeHtml(deviceConn(d).text)}`).join('; '); }
       else { tone = 'green'; word = 'BÌNH THƯỜNG'; note = pending > 0 ? `còn ${pending} cảnh báo cũ chưa xác nhận` : ''; }
+      const overdue = (data.alerts || []).filter(a => a.overdue && !a.acknowledged);
+      if (data.isConnected && overdue.length) {
+        const o = `<b>${overdue.length} cảnh báo quá hạn xác nhận</b> (mức 2 quá 5 phút, mức 1 quá 15 phút)`;
+        note = note ? note + '<br>' + o : o;
+      }
       if (data.isConnected && muted.length) {
         const m = 'Tắt báo động: ' + muted.map(d => `${escapeHtml(d.deviceId)} (${escapeHtml(DEVICE_STATUS_TEXT[d.status] || d.status)})`).join(', ');
         note = note ? note + '<br>' + m : m;
@@ -1933,14 +2122,14 @@
       const resText = a.resolution ? RESOLUTION_TEXT[a.resolution] || a.resolution : '';
       const ackCell = a.acknowledged
         ? `<span class="${a.resolution === 'FalseAlarm' ? 'text-[#5d6670]' : 'text-[#23703a]'}">${escapeHtml(resText || 'Đã xác nhận')}</span><div class="text-[13px] text-[#7b838d] whitespace-nowrap">${escapeHtml(a.acknowledgedByName) || '—'}${a.acknowledgedAt ? ', ' + escapeHtml(fmtDateTime(a.acknowledgedAt)) : ''}</div>`
-        : '<span class="text-[#c62828] font-bold">Chưa xử lý</span>';
+        : '<span class="text-[#c62828] font-bold">Chưa xử lý</span>' + pendingNote(a);
       const ackBtn = !a.acknowledged && canHandleAlert(a)
         ? `<button data-action="ack" data-id="${id}" class="px-2.5 py-1 rounded-sm border border-[#b8bec6] bg-white hover:bg-[#f4f5f7] text-[#1c2229] whitespace-nowrap">Xác nhận</button>`
         : '';
       const actionBtn = `<div class="flex justify-end gap-1.5">${ackBtn}<button data-action="incident" data-id="${id}" class="px-2.5 py-1 rounded-sm border border-[#d9dde2] bg-white hover:bg-[#f4f5f7] text-[#1c2229] whitespace-nowrap">Phiếu</button></div>`;
 
       return `
-          <tr class="hover:bg-[#f6f7f8] ${a.acknowledged ? 'text-[#5d6670]' : ''}">
+          <tr class="hover:bg-[#f6f7f8] ${a.acknowledged ? 'text-[#5d6670]' : a.overdue ? 'bg-[#fdf0ef]' : ''}">
             <td class="py-2 px-3"><button data-action="incident" data-id="${id}" class="text-[#7b838d] hover:text-[#1c2229] underline underline-offset-2">#${id}</button></td>
             <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(fmtDateTime(a.alertTime))}</td>
             <td class="py-2 px-3 whitespace-nowrap"><b class="text-[#1c2229]">${escapeHtml(a.deviceId)}</b> <span class="text-[#5d6670]">${escapeHtml(a.zoneName)}</span>${(() => { const d = deviceById(a.deviceId); return d && !alarmsOn(d) ? `<div class="text-[12px] text-[#7b838d]">trạm ${escapeHtml((DEVICE_STATUS_TEXT[d.status] || d.status).toLowerCase())}</div>` : ''; })()}</td>
@@ -1957,7 +2146,38 @@
         body.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-[#5d6670]">Không có cảnh báo nào.</td></tr>';
         return;
       }
-      body.innerHTML = alerts.map(alertRowHtml).join('');
+      // quá hạn chưa xác nhận lên đầu, còn lại giữ thứ tự mới nhất trước
+      const sorted = alerts.filter(a => a.overdue && !a.acknowledged).concat(alerts.filter(a => !(a.overdue && !a.acknowledged)));
+      body.innerHTML = sorted.map(alertRowHtml).join('');
+    }
+
+    // "chờ 3 phút" / "Quá hạn 12 phút" dưới chữ Chưa xử lý
+    function fmtWait(sec) {
+      sec = toInt(sec);
+      if (sec < 60) return `${sec} giây`;
+      if (sec < 3600) return `${Math.floor(sec / 60)} phút`;
+      if (sec < 86400) return `${Math.floor(sec / 3600)} giờ ${Math.floor((sec % 3600) / 60)} phút`;
+      return `${Math.floor(sec / 86400)} ngày`;
+    }
+    function pendingNote(a) {
+      if (a.pendingSeconds === null || a.pendingSeconds === undefined) return '';
+      if (a.overdue) {
+        const mine = isAdmin() || a.managerUserId == null || (currentUser && toInt(a.managerUserId) === currentUser.userId);
+        return `<div class="text-[12px] text-[#c62828] whitespace-nowrap">Quá hạn, chờ ${escapeHtml(fmtWait(a.pendingSeconds))}</div>`
+          + (mine ? '' : '<div class="text-[12px] text-[#7b838d] whitespace-nowrap">Đã leo thang, bạn xử lý thay được</div>');
+      }
+      return `<div class="text-[12px] text-[#7b838d] whitespace-nowrap">chờ ${escapeHtml(fmtWait(a.pendingSeconds))}</div>`;
+    }
+
+    // Nhắc lại bằng âm thanh mỗi 2 phút khi còn cảnh báo mức 2 quá hạn (12 giờ gần nhất, trạm đang bật báo động)
+    let lastOverdueRemind = 0;
+    function remindOverdue(alerts) {
+      const list = alerts.filter(a => a.overdue && !a.acknowledged && a.severity === 'High'
+        && toInt(a.pendingSeconds) < 12 * 3600 && (() => { const d = deviceById(a.deviceId); return !d || alarmsOn(d); })());
+      if (!list.length || Date.now() - lastOverdueRemind < 120000) return;
+      lastOverdueRemind = Date.now();
+      playAlarm(2);
+      showToast(`Còn ${list.length} cảnh báo mức 2 quá hạn chưa xác nhận (${[...new Set(list.map(a => a.deviceId))].join(', ')}). Mọi cán bộ đều xử lý được.`, 'error');
     }
 
     function renderLogs(logs) {
@@ -2006,6 +2226,7 @@
       // canvas bị ẩn thì kích thước = 0, phải vẽ lại khi hiện ra
       if (name === 'monitor') requestAnimationFrame(drawEnvChart);
       if (name === 'history' && !hist.loaded && !hist.loading) loadHistory(false);
+      if (name === 'manage' && isAdmin() && !act.loading) loadActivity();
     }
 
     // --- lịch sử cảnh báo, thống kê theo ngày, xuất CSV ---
@@ -2431,6 +2652,7 @@
     // (máy chủ kiểm tra lại, ở đây chỉ để ẩn nút không dùng được)
     function canHandleAlert(a) {
       if (isAdmin()) return true;
+      if (a.overdue) return true;   // quá hạn chưa ai xác nhận: leo thang cho mọi cán bộ
       if (a.managerUserId === null || a.managerUserId === undefined) return true;
       return !!currentUser && toInt(a.managerUserId) === currentUser.userId;
     }
@@ -2578,7 +2800,7 @@
         <div class="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">${inner}</div>
       </section>`;
 
-    function renderIncident(inc, canHandle) {
+    function renderIncident(inc, canHandle, overdue) {
       const id = toInt(inc.alertId);
       const sev = inc.severity === 'High'
         ? `<b class="text-[#b3261e]">${escapeHtml(severityText(inc.severity))}</b>`
@@ -2635,7 +2857,7 @@
         el('incNote').value = inc.resolutionNote || '';
         el('incFormNote').textContent = inc.acknowledged
           ? 'Lưu sẽ cập nhật kết quả, giữ nguyên người và thời điểm xác nhận.'
-          : 'Lưu kết quả cũng đồng thời xác nhận cảnh báo.';
+          : (overdue ? 'Cảnh báo đã quá hạn nên được leo thang: mọi cán bộ đều xử lý được. ' : '') + 'Lưu kết quả cũng đồng thời xác nhận cảnh báo.';
         el('btnIncSubmit').textContent = inc.resolution ? 'Cập nhật kết quả' : 'Lưu kết quả';
       }
     }
@@ -2660,7 +2882,7 @@
         el('incBody').innerHTML = `<p class="text-[#b3261e]">${escapeHtml(res.body.error || 'Không tải được phiếu sự cố.')}</p>`;
         return;
       }
-      renderIncident(res.body.incident, !!res.body.canHandle);
+      renderIncident(res.body.incident, !!res.body.canHandle, !!res.body.overdue);
     }
 
     function closeIncidentModal() {
@@ -2738,6 +2960,26 @@
             <td class="py-2.5 px-3 text-right ${toInt(z.pending) > 0 ? 'text-[#c62828] font-bold' : ''}">${toInt(z.pending)}</td>
             <td class="py-2.5 px-3 text-right whitespace-nowrap">${escapeHtml(fmtAvg(z.avgResponseSeconds))}</td>
             <td class="py-2.5 px-3 text-right">${toInt(z.falseAlarm)}</td>
+          </tr>`).join('');
+
+      const devs = rep.byDevice || [];
+      const maxTotal = devs.reduce((m, d) => Math.max(m, toInt(d.total)), 0) || 1;
+      el('repDeviceBody').innerHTML = devs.length === 0
+        ? '<tr><td colspan="7" class="py-4 text-center text-[#5d6670]">Không trạm nào báo trong khoảng này.</td></tr>'
+        : devs.map(d => `
+          <tr>
+            <td class="py-2.5 px-3"><b class="text-[#1c2229]">${escapeHtml(d.deviceId)}</b> <span class="text-[12px] text-[#7b838d]">${escapeHtml(d.deviceName)}</span></td>
+            <td class="py-2.5 px-3">${escapeHtml(d.zoneName)}</td>
+            <td class="py-2.5 px-3 text-right ${toInt(d.fire) > 0 ? 'text-[#c62828] font-bold' : ''}">${toInt(d.fire)}</td>
+            <td class="py-2.5 px-3 text-right">${toInt(d.smoke)}</td>
+            <td class="py-2.5 px-3 text-right">${toInt(d.highTemperature)}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-[#1c2229]">${toInt(d.total)}</td>
+            <td class="py-2.5 px-3"><div class="flex h-2 rounded-sm overflow-hidden bg-[#eef0f2]" title="Cháy / khói / nhiệt độ cao">
+              <span class="bg-[#d32f2f]" style="width:${(toInt(d.fire) / maxTotal * 100).toFixed(1)}%"></span>
+              <span class="bg-[#e67e22]" style="width:${(toInt(d.smoke) / maxTotal * 100).toFixed(1)}%"></span>
+              <span class="bg-[#9b72d6]" style="width:${(toInt(d.highTemperature) / maxTotal * 100).toFixed(1)}%"></span>
+              <span class="bg-[#a0a6b0]" style="width:${(toInt(d.other) / maxTotal * 100).toFixed(1)}%"></span>
+            </div></td>
           </tr>`).join('');
 
       const users = rep.byUser || [];
@@ -3020,6 +3262,359 @@
       chip.innerHTML = `<span class="w-2 h-2 rounded-full ${styles[1]}"></span> ${escapeHtml(text)}`;
     }
 
+    // ========================================================
+    // SƠ ĐỒ MẶT BẰNG
+    //   - Ảnh lấy từ /api/zones/{id}/floorplan, ?v= là độ dài dữ liệu ảnh: đổi ảnh thì tải lại, không đổi thì giữ nguyên.
+    //   - Chấm trạm đặt theo % ảnh nên đúng ở mọi kích thước màn hình.
+    //   - Có trạm báo cháy thì tự chuyển sang khu vực của trạm đó (trừ khi đang đặt vị trí).
+    // ========================================================
+    const fp = { zoneId: null, version: -1, placing: '', userPicked: false, lastFireZone: null };
+
+    function fpZones() { return (lastData && lastData.zones) || []; }
+
+    function fpSelectZone(value, byUser) {
+      fp.zoneId = toInt(value) || null;
+      if (byUser) fp.userPicked = true;
+      fpSetPlacing('');
+      if (lastData) renderFloorPlan(lastData);
+    }
+
+    function dotStyle(d) {
+      const c = deviceConn(d), lv = toInt(d.alertLevel);
+      if (!alarmsOn(d)) return { cls: 'bg-[#c9ced5]', text: DEVICE_STATUS_TEXT[d.status] || d.status, pulse: false };
+      if (lv >= 2) return { cls: 'bg-[#d0202e]', text: 'Báo cháy' + (c.lost ? ' (số đo cũ)' : ''), pulse: true };
+      if (c.lost) return { cls: 'bg-[#5d6670]', text: c.text, pulse: false };
+      if (lv === 1) return { cls: 'bg-[#e39b1b]', text: 'Cảnh báo sớm', pulse: true };
+      return { cls: 'bg-[#2f8f4e]', text: 'Bình thường', pulse: false };
+    }
+
+    function renderFloorPlan(data) {
+      const zones = fpZones();
+      const devs = data.devices || [];
+      // khu vực có trạm đang báo cháy: tự mở (mỗi lần có cháy mới ở khu vực khác)
+      const fireDev = devs.find(d => alarmsOn(d) && toInt(d.alertLevel) >= 2 && d.zoneId);
+      if (fireDev && !fp.placing && fp.lastFireZone !== fireDev.zoneId) { fp.zoneId = fireDev.zoneId; fp.lastFireZone = fireDev.zoneId; }
+      if (!fireDev) fp.lastFireZone = null;
+      if (!zones.some(z => z.zoneId === fp.zoneId)) {
+        const withPlan = zones.find(z => toInt(z.floorPlanSize) > 0);
+        fp.zoneId = (withPlan || zones[0] || {}).zoneId || null;
+      }
+
+      const sel = el('fpZone');
+      const opts = zones.map(z => {
+        const fire = devs.some(d => d.zoneId === z.zoneId && alarmsOn(d) && toInt(d.alertLevel) >= 2);
+        return new Option(`${z.zoneName}${toInt(z.floorPlanSize) > 0 ? '' : ' (chưa có sơ đồ)'}${fire ? ' – BÁO CHÁY' : ''}`, String(z.zoneId));
+      });
+      sel.replaceChildren(...opts);
+      if (fp.zoneId) sel.value = String(fp.zoneId);
+
+      const zone = zones.find(z => z.zoneId === fp.zoneId);
+      const has = !!zone && toInt(zone.floorPlanSize) > 0;
+      el('fpEmpty').classList.toggle('hidden', has);
+      el('fpEmpty').textContent = !zone ? 'Chưa có khu vực nào.'
+        : isAdmin() ? 'Khu vực này chưa có ảnh sơ đồ. Bấm "Tải ảnh sơ đồ" (PNG, JPEG, WebP, tối đa 3 MB).' : 'Khu vực này chưa có ảnh sơ đồ.';
+      el('fpWrap').classList.toggle('hidden', !has);
+      el('fpRemove').classList.toggle('hidden', !has);
+      el('fpPlaceBar').classList.toggle('hidden', !(has && isAdmin()));
+
+      const inZone = devs.filter(d => d.zoneId === fp.zoneId);
+      if (has) {
+        const key = `${fp.zoneId}:${zone.floorPlanSize}`;
+        if (fp.version !== key) { fp.version = key; el('fpImg').src = `/api/zones/${fp.zoneId}/floorplan?v=${encodeURIComponent(zone.floorPlanSize)}`; }
+        el('fpDots').innerHTML = inZone.filter(d => d.posX !== null && d.posX !== undefined).map(d => {
+          const st = dotStyle(d);
+          const tip = `${d.deviceId} – ${d.deviceName}\n${st.text}\nNhiệt độ: ${d.temperature ?? '—'} °C, độ ẩm: ${d.humidity ?? '—'} %`;
+          return `<div class="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-auto" style="left:${Number(d.posX)}%;top:${Number(d.posY)}%" title="${escapeHtml(tip)}">
+              <span class="relative flex w-4 h-4">
+                ${st.pulse ? `<span class="absolute inset-0 rounded-full ${st.cls} opacity-60 animate-ping"></span>` : ''}
+                <span class="relative w-4 h-4 rounded-full ${st.cls} border-2 border-white shadow"></span>
+              </span>
+              <span class="mt-0.5 px-1 rounded-sm bg-white/90 border border-[#d9dde2] text-[11px] font-bold text-[#1c2229] whitespace-nowrap">${escapeHtml(d.deviceId)}</span>
+              ${isAdmin() && fp.placing === '' ? `<button type="button" data-action="fp-unplace" data-device="${escapeHtml(d.deviceId)}" class="mt-0.5 text-[10px] text-[#7b838d] hover:text-[#c62828] bg-white/80 px-1 rounded-sm">gỡ</button>` : ''}
+            </div>`;
+        }).join('');
+      } else {
+        el('fpDots').innerHTML = '';
+      }
+      el('fpWrap').classList.toggle('cursor-crosshair', !!fp.placing);
+
+      const unplaced = inZone.filter(d => d.posX === null || d.posX === undefined);
+      el('fpUnplaced').textContent = has && unplaced.length ? `Chưa đặt lên sơ đồ: ${unplaced.map(d => d.deviceId).join(', ')}` : '';
+
+      if (isAdmin()) {
+        const ps = el('fpPlaceDevice');
+        ps.replaceChildren(new Option('— chọn trạm —', ''), ...inZone.map(d => new Option(`${d.deviceId} – ${d.deviceName}${d.posX == null ? ' (chưa đặt)' : ''}`, d.deviceId)));
+        ps.value = fp.placing;
+        el('fpPlaceHint').textContent = fp.placing ? `Bấm vào ảnh để đặt ${fp.placing}. Esc để huỷ.` : 'Chọn trạm rồi bấm vào chỗ đặt trạm trên ảnh.';
+      }
+    }
+
+    function fpSetPlacing(deviceId) {
+      fp.placing = deviceId || '';
+      if (lastData) renderFloorPlan(lastData);
+    }
+
+    el('fpWrap').addEventListener('click', (e) => {
+      if (!fp.placing || e.target.closest('button')) return;
+      const box = el('fpImg').getBoundingClientRect();
+      if (box.width <= 0 || box.height <= 0) return;
+      const x = Math.min(100, Math.max(0, (e.clientX - box.left) / box.width * 100));
+      const y = Math.min(100, Math.max(0, (e.clientY - box.top) / box.height * 100));
+      const id = fp.placing;
+      fp.placing = '';
+      fpSavePosition(id, Math.round(x * 100) / 100, Math.round(y * 100) / 100);
+    });
+
+    async function fpSavePosition(deviceId, x, y) {
+      const res = await api(`/api/devices/${encodeURIComponent(deviceId)}/position`, { method: 'POST', body: { x, y } });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        showToast(x === null ? `Đã gỡ ${deviceId} khỏi sơ đồ.` : `Đã đặt ${deviceId} lên sơ đồ.`, 'success');
+        fetchDashboardData();
+      } else showToast(res.body.error || 'Không lưu được vị trí.', 'error');
+    }
+
+    function fpUpload(input) {
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (!file || !fp.zoneId) return;
+      if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { showToast('Chỉ nhận ảnh PNG, JPEG hoặc WebP.', 'error'); return; }
+      if (file.size > 3 * 1024 * 1024) { showToast('Ảnh sơ đồ tối đa 3 MB.', 'error'); return; }
+      const zoneId = fp.zoneId;
+      const reader = new FileReader();
+      reader.onload = async () => {
+        showToast('Đang tải sơ đồ lên...', 'info');
+        const res = await api(`/api/zones/${zoneId}/floorplan`, { method: 'POST', body: { imageBase64: reader.result } });
+        if (res.status === 401) return;
+        if (res.ok && res.body.success) { showToast('Đã lưu sơ đồ mặt bằng.', 'success'); fetchDashboardData(); }
+        else showToast(res.body.error || 'Không lưu được sơ đồ.', 'error');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    let fpDeleteArmed = 0;
+    async function fpDeletePlan() {
+      if (!fp.zoneId) return;
+      // bấm hai lần trong 4 giây mới xoá (không dùng confirm())
+      if (Date.now() - fpDeleteArmed > 4000) { fpDeleteArmed = Date.now(); showToast('Bấm "Xoá sơ đồ" lần nữa để xoá ảnh (vị trí trạm vẫn giữ).', 'info'); return; }
+      fpDeleteArmed = 0;
+      const res = await api(`/api/zones/${fp.zoneId}/floorplan`, { method: 'DELETE' });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) { showToast('Đã xoá sơ đồ.', 'success'); fetchDashboardData(); }
+      else showToast(res.body.error || 'Không xoá được sơ đồ.', 'error');
+    }
+
+    // ========================================================
+    // BẢO TRÌ THIẾT BỊ
+    // ========================================================
+    const MAINT_KIND_TEXT = { Inspection: 'Kiểm tra định kỳ', Clean: 'Vệ sinh', Repair: 'Sửa chữa', Replace: 'Thay thế' };
+    const isoDay = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v)) ? v.slice(0, 10) : '';
+    function todayIso() { return localIsoDate(new Date()); }
+    function addDaysIso(iso, days) {
+      const d = parseIsoDate(iso); if (!d) return '';
+      d.setDate(d.getDate() + days); return localIsoDate(d);
+    }
+    function daysBetween(a, b) { return Math.round((parseIsoDate(b) - parseIsoDate(a)) / 86400000); }
+
+    // hạn kiểm tra tiếp theo của trạm: { due, left } (left < 0 là quá hạn)
+    function maintDue(d) {
+      const base = isoDay(d.lastMaintenance) || isoDay(d.installDate);
+      if (!base) return null;
+      const due = addDaysIso(base, toInt(d.maintenanceIntervalDays) || 90);
+      return { due, left: daysBetween(todayIso(), due) };
+    }
+
+    function renderMaintenance(devices) {
+      const list = devices || [];
+      const rows = list.map(d => ({ d, m: maintDue(d) }))
+        .sort((a, b) => (a.m ? a.m.left : 99999) - (b.m ? b.m.left : 99999));
+      const late = rows.filter(r => r.m && r.m.left < 0);
+      const soon = rows.filter(r => r.m && r.m.left >= 0 && r.m.left <= 7);
+
+      el('maintNote').innerHTML = late.length
+        ? `<b class="text-[#c62828]">${late.length} trạm quá hạn kiểm tra</b>` + (soon.length ? `, ${soon.length} trạm đến hạn trong 7 ngày` : '')
+        : soon.length ? `<b class="text-[#9a5b00]">${soon.length} trạm đến hạn kiểm tra trong 7 ngày</b>` : 'Mọi trạm còn trong hạn kiểm tra';
+      const chip = el('maintChip');
+      chip.classList.toggle('hidden', !late.length);
+      chip.innerHTML = late.length ? `<span class="w-2 h-2 rounded-full bg-[#e67e22]"></span> Bảo trì: ${late.length} trạm quá hạn` : '';
+
+      el('maintTableBody').innerHTML = rows.length === 0
+        ? '<tr><td colspan="7" class="py-6 text-center text-[#5d6670]">Chưa có trạm nào.</td></tr>'
+        : rows.map(({ d, m }) => {
+          const id = escapeHtml(d.deviceId);
+          const dueCell = !m ? '<span class="text-[#7b838d]">—</span>'
+            : m.left < 0 ? `<b class="text-[#c62828]">${viDate(m.due)}</b><div class="text-[12px] text-[#c62828]">quá hạn ${-m.left} ngày</div>`
+            : m.left <= 7 ? `<b class="text-[#9a5b00]">${viDate(m.due)}</b><div class="text-[12px] text-[#9a5b00]">còn ${m.left} ngày</div>`
+            : `${viDate(m.due)}<div class="text-[12px] text-[#7b838d]">còn ${m.left} ngày</div>`;
+          return `<tr class="${m && m.left < 0 ? 'bg-[#fdf0ef]' : ''}">
+            <td class="py-2.5 px-3"><b class="text-[#1c2229]">${id}</b> <span class="text-[12px] text-[#7b838d]">${escapeHtml(d.deviceName)}</span></td>
+            <td class="py-2.5 px-3">${escapeHtml(d.zoneName)}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${isoDay(d.installDate) ? viDate(isoDay(d.installDate)) : '—'}</td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">${toInt(d.maintenanceIntervalDays)} ngày</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${isoDay(d.lastMaintenance) ? viDate(isoDay(d.lastMaintenance)) : '<span class="text-[#7b838d]">chưa có</span>'}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${dueCell}</td>
+            <td class="py-2.5 px-3 text-right"><button type="button" data-action="maint" data-device="${id}" class="px-2.5 py-1 rounded-sm border border-[#b8bec6] bg-white hover:bg-[#f4f5f7] text-[#1c2229] whitespace-nowrap">Ghi bảo trì, lịch sử</button></td>
+          </tr>`;
+        }).join('');
+      if (maint.deviceId) {   // modal đang mở: cập nhật dòng tiêu đề
+        const d = deviceById(maint.deviceId);
+        if (d) el('maintSubtitle').textContent = maintSubtitle(d);
+      }
+    }
+
+    const maint = { deviceId: null, items: [] };
+    function maintSubtitle(d) {
+      const m = maintDue(d);
+      return `${d.deviceName} • ${d.zoneName}` + (m ? ` • hạn kiểm tra ${viDate(m.due)}${m.left < 0 ? ` (quá hạn ${-m.left} ngày)` : ''}` : '');
+    }
+
+    async function openMaintModal(deviceId) {
+      const d = deviceById(deviceId);
+      if (!d) return;
+      maint.deviceId = deviceId;
+      el('maintTitle').textContent = `Bảo trì trạm ${deviceId}`;
+      el('maintSubtitle').textContent = maintSubtitle(d);
+      el('maintForm').reset();
+      el('maintDate').value = todayIso();
+      el('maintDate').max = todayIso();
+      el('maintInstall').value = isoDay(d.installDate) || todayIso();
+      el('maintInstall').max = todayIso();
+      el('maintInterval').value = toInt(d.maintenanceIntervalDays) || 90;
+      setBoxAlert('maintAlert', null);
+      el('maintHistBody').innerHTML = '<tr><td colspan="5" class="py-3 px-3 text-[#5d6670]">Đang tải...</td></tr>';
+      el('maintModal').classList.remove('hidden');
+      await loadMaintHistory();
+    }
+
+    function closeMaintModal() {
+      el('maintModal').classList.add('hidden');
+      maint.deviceId = null;
+    }
+
+    async function loadMaintHistory() {
+      const id = maint.deviceId;
+      if (!id) return;
+      const res = await api(`/api/devices/${encodeURIComponent(id)}/maintenance`);
+      if (res.status === 401 || maint.deviceId !== id) return;
+      if (!res.ok || !res.body.success) {
+        el('maintHistBody').innerHTML = `<tr><td colspan="5" class="py-3 px-3 text-[#b3261e]">${escapeHtml(res.body.error || 'Không tải được lịch sử.')}</td></tr>`;
+        return;
+      }
+      const items = res.body.items || [];
+      el('maintHistBody').innerHTML = items.length === 0
+        ? '<tr><td colspan="5" class="py-3 px-3 text-[#5d6670]">Chưa có lần bảo trì nào.</td></tr>'
+        : items.map(m => `<tr>
+            <td class="py-2 px-3 whitespace-nowrap">${viDate(isoDay(m.performedAt))}</td>
+            <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(MAINT_KIND_TEXT[m.kind] || m.kind)}</td>
+            <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(m.userName) || '<span class="text-[#7b838d]">(đã xoá)</span>'}</td>
+            <td class="py-2 px-3">${escapeHtml(m.note) || '—'}</td>
+            ${isAdmin() ? `<td class="py-2 px-3 text-right"><button type="button" data-action="maint-delete" data-id="${toInt(m.maintenanceId)}" class="text-[12px] text-[#c62828] hover:underline">Xoá</button></td>` : ''}
+          </tr>`).join('');
+    }
+
+    async function handleMaintSubmit(e) {
+      e.preventDefault();
+      const id = maint.deviceId;
+      if (!id) return;
+      el('btnMaintSubmit').disabled = true;
+      const res = await api(`/api/devices/${encodeURIComponent(id)}/maintenance`, { method: 'POST', body: {
+        performedAt: el('maintDate').value, kind: el('maintKind').value, note: el('maintNoteInput').value } });
+      el('btnMaintSubmit').disabled = false;
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        setBoxAlert('maintAlert', 'Đã ghi lần bảo trì.', false);
+        el('maintNoteInput').value = '';
+        await loadMaintHistory();
+        fetchDashboardData();
+      } else setBoxAlert('maintAlert', res.body.error || 'Không ghi được.', true);
+    }
+
+    async function handleMaintSettings(e) {
+      e.preventDefault();
+      const id = maint.deviceId;
+      if (!id) return;
+      const res = await api(`/api/devices/${encodeURIComponent(id)}/maintenance-settings`, { method: 'POST', body: {
+        installDate: el('maintInstall').value, intervalDays: toInt(el('maintInterval').value) } });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) { setBoxAlert('maintAlert', 'Đã lưu ngày lắp đặt và chu kỳ kiểm tra.', false); fetchDashboardData(); }
+      else setBoxAlert('maintAlert', res.body.error || 'Không lưu được.', true);
+    }
+
+    let maintDeleteArmed = { id: 0, at: 0 };
+    async function deleteMaintenance(mid) {
+      if (mid <= 0) return;
+      if (maintDeleteArmed.id !== mid || Date.now() - maintDeleteArmed.at > 4000) {
+        maintDeleteArmed = { id: mid, at: Date.now() };
+        setBoxAlert('maintAlert', 'Bấm "Xoá" lần nữa để xoá dòng bảo trì này.', true);
+        return;
+      }
+      maintDeleteArmed = { id: 0, at: 0 };
+      const res = await api(`/api/maintenance/${mid}`, { method: 'DELETE' });
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) { setBoxAlert('maintAlert', 'Đã xoá.', false); await loadMaintHistory(); fetchDashboardData(); }
+      else setBoxAlert('maintAlert', res.body.error || 'Không xoá được.', true);
+    }
+
+    // ========================================================
+    // NHẬT KÝ HOẠT ĐỘNG (chỉ quản trị viên)
+    // ========================================================
+    const act = { loaded: false, loading: false };
+    const ACTION_TEXT = {
+      'login': 'Đăng nhập', 'login.failed': 'Đăng nhập sai', 'logout': 'Đăng xuất', 'password.change': 'Đổi mật khẩu',
+      'alert.ack': 'Xác nhận cảnh báo', 'alert.resolve': 'Ghi phiếu sự cố',
+      'device.create': 'Thêm trạm', 'device.update': 'Sửa trạm', 'device.delete': 'Xoá trạm', 'device.position': 'Đặt vị trí trạm',
+      'device.maintenance_settings': 'Lịch bảo trì',
+      'zone.create': 'Thêm khu vực', 'zone.update': 'Sửa khu vực', 'zone.delete': 'Xoá khu vực', 'zone.floorplan': 'Sơ đồ mặt bằng',
+      'user.create': 'Thêm cán bộ', 'user.update': 'Sửa cán bộ', 'user.reset_password': 'Đặt lại mật khẩu', 'user.delete': 'Xoá cán bộ',
+      'maintenance.add': 'Ghi bảo trì', 'maintenance.delete': 'Xoá bảo trì',
+    };
+    const TARGET_TEXT = { alert: 'Cảnh báo', device: 'Trạm', zone: 'Khu vực', user: 'Cán bộ' };
+
+    function updateActivityUsers(users) {
+      if (!isAdmin()) return;
+      const sel = el('actUser');
+      const cur = sel.value;
+      sel.replaceChildren(new Option('Tất cả', ''), ...(users || []).map(u => new Option(`${u.fullName} (${u.username})`, String(u.userId))));
+      sel.value = cur;
+    }
+
+    async function loadActivity() {
+      if (!isAdmin() || act.loading) return;
+      if (!el('actFrom').value || !el('actTo').value) {
+        const t = new Date();
+        el('actFrom').value = localIsoDate(new Date(t.getFullYear(), t.getMonth(), t.getDate() - 6));
+        el('actTo').value = localIsoDate(t);
+      }
+      act.loading = true;
+      el('actInfo').textContent = 'Đang tải...';
+      const q = { fromDate: el('actFrom').value, toDate: el('actTo').value };
+      if (el('actUser').value) q.userId = el('actUser').value;
+      if (el('actAction').value) q.action = el('actAction').value;
+      const res = await api('/api/activity?' + new URLSearchParams(q).toString());
+      act.loading = false;
+      if (res.status === 401) return;
+      if (!res.ok || !res.body.success) { el('actInfo').textContent = res.body.error || ('Không tải được nhật ký (HTTP ' + res.status + ').'); return; }
+      act.loaded = true;
+      const items = res.body.items || [];
+      const failed = items.filter(i => i.action === 'login.failed').length;
+      el('actInfo').innerHTML = `${items.length}${res.body.limited ? '+ (500 dòng mới nhất)' : ''} thao tác từ ${viDate(res.body.fromDate)} đến ${viDate(res.body.toDate)}`
+        + (failed ? ` • <b class="text-[#c62828]">${failed} lần đăng nhập sai</b>` : '');
+      el('actTableBody').innerHTML = items.length === 0
+        ? '<tr><td colspan="6" class="py-6 text-center text-[#5d6670]">Không có thao tác nào.</td></tr>'
+        : items.map(i => {
+          const bad = i.action === 'login.failed';
+          const target = i.targetType ? `${TARGET_TEXT[i.targetType] || i.targetType}${i.targetId ? ' ' + (i.targetType === 'alert' ? '#' : '') + i.targetId : ''}` : '';
+          return `<tr class="${bad ? 'bg-[#fdf0ef]' : ''}">
+            <td class="py-2 px-3 whitespace-nowrap text-[#5d6670]">${escapeHtml(fmtDateTime(i.createdAt))}</td>
+            <td class="py-2 px-3 whitespace-nowrap"><b class="text-[#1c2229]">${escapeHtml(i.userName)}</b>${i.userId == null && !bad ? ' <span class="text-[12px] text-[#7b838d]">(đã xoá)</span>' : ''}</td>
+            <td class="py-2 px-3 whitespace-nowrap ${bad ? 'text-[#c62828] font-bold' : ''}">${escapeHtml(ACTION_TEXT[i.action] || i.action)}</td>
+            <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(target) || '—'}</td>
+            <td class="py-2 px-3">${escapeHtml(i.detail) || '—'}</td>
+            <td class="py-2 px-3 whitespace-nowrap text-[12px] text-[#7b838d]">${escapeHtml(i.ipAddress) || ''}</td>
+          </tr>`;
+        }).join('');
+    }
+
     window.renderRealDatabaseData = function (data) {
       if (!data || !currentUser) return;
       lastData = data;
@@ -3047,7 +3642,11 @@
       updateEnvDeviceOptions(data.devices);
       if (currentTab === 'monitor') drawEnvChart();
 
-      if (data.isConnected) checkNewAlerts(data.alerts || []);
+      renderFloorPlan(data);
+      renderMaintenance(data.devices);
+      updateActivityUsers(data.users);
+
+      if (data.isConnected) { checkNewAlerts(data.alerts || []); remindOverdue(data.alerts || []); }
     };
   </script>
 </body>

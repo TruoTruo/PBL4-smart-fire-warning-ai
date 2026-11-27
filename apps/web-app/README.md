@@ -36,6 +36,10 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
   (riêng SĐT người phụ trách khu vực thì mọi cán bộ đều thấy, để liên hệ khi có sự cố).
 - Xác nhận cảnh báo và ghi kết quả phiếu sự cố: Admin, hoặc cán bộ phụ trách khu vực của cảnh báo;
   khu vực chưa phân công thì mọi cán bộ đều làm được. Người xác nhận lấy từ phiên đăng nhập.
+- **Leo thang**: cảnh báo Mức 2 quá 5 phút, Mức 1 quá 15 phút chưa ai xác nhận thì "quá hạn", mọi cán bộ đều được
+  xác nhận / ghi phiếu thay (nhật ký ghi rõ là xử lý do leo thang). Giờ so với giờ máy chủ web.
+- Bảo trì: mọi cán bộ xem và ghi lần bảo trì; Admin đặt ngày lắp đặt, chu kỳ kiểm tra và xoá dòng bảo trì.
+- Sơ đồ mặt bằng: mọi cán bộ xem; Admin tải ảnh, xoá ảnh, đặt vị trí trạm. Nhật ký hoạt động: chỉ Admin.
 - Admin: thêm/sửa/xoá cán bộ, đổi vai trò, đặt lại mật khẩu; thêm/sửa/xoá trạm và khu vực, phân công người phụ trách.
   Không xoá, không tự đổi vai trò, không tự đặt lại mật khẩu của chính mình (tự đổi ở mục Đổi mật khẩu).
   Đổi vai trò hoặc đặt lại mật khẩu thì các phiên đang mở của cán bộ đó bị đăng xuất.
@@ -54,7 +58,7 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
 | POST | `/api/alerts/{id}/resolve` `{ "resolution": "Handled\|FalseAlarm\|Test", "note": "..." }` | Admin hoặc người phụ trách khu vực |
 | GET | `/api/alerts/{id}/snapshot` (ảnh JPEG) | đã đăng nhập |
 | GET | `/api/alerts/history?fromDate=2026-11-20&toDate=2026-11-26&alertType=Fire` | đã đăng nhập |
-| GET | `/api/alerts/report?fromDate=2026-11-20&toDate=2026-11-26` (hiệu quả xử lý: tổng hợp, theo khu vực, theo cán bộ) | đã đăng nhập |
+| GET | `/api/alerts/report?fromDate=2026-11-20&toDate=2026-11-26` (hiệu quả xử lý: tổng hợp, theo khu vực, theo cán bộ, theo trạm) | đã đăng nhập |
 | GET | `/api/environment/{deviceId}?minutes=60` (chuỗi nhiệt độ / độ ẩm) | đã đăng nhập |
 | POST | `/api/devices` (thêm / sửa trạm, `status`: Active, Inactive, Maintenance) | Admin |
 | DELETE | `/api/devices/{deviceId}` (xoá kèm nhật ký đo và cảnh báo của trạm) | Admin |
@@ -64,6 +68,15 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
 | POST | `/api/users/{id}` `{ "fullName", "phone", "email", "role" }` (sửa cán bộ, tên đăng nhập không đổi) | Admin |
 | POST | `/api/users/{id}/reset-password` `{ "newPassword": "..." }` | Admin |
 | DELETE | `/api/users/{id}` | Admin |
+| GET | `/api/zones/{id}/floorplan` (ảnh sơ đồ mặt bằng) | đã đăng nhập |
+| POST | `/api/zones/{id}/floorplan` `{ "imageBase64": "data:image/png;base64,..." }` (PNG/JPEG/WebP, tối đa 3 MB) | Admin |
+| DELETE | `/api/zones/{id}/floorplan` | Admin |
+| POST | `/api/devices/{id}/position` `{ "x": 30.5, "y": 40 }` (% ảnh; `null` = gỡ khỏi sơ đồ) | Admin |
+| GET | `/api/devices/{id}/maintenance` (lịch sử bảo trì) | đã đăng nhập |
+| POST | `/api/devices/{id}/maintenance` `{ "performedAt": "2026-11-27", "kind": "Inspection\|Clean\|Repair\|Replace", "note": "..." }` | đã đăng nhập |
+| DELETE | `/api/maintenance/{id}` | Admin |
+| POST | `/api/devices/{id}/maintenance-settings` `{ "installDate": "2026-06-01", "intervalDays": 90 }` | Admin |
+| GET | `/api/activity?fromDate&toDate&userId&action=alert.` (nhật ký hoạt động, tối đa 500 dòng) | Admin |
 | SignalR | `/hubs/firealert` (sự kiện `DashboardUpdated`) | đã đăng nhập |
 
 ## Camera
@@ -80,7 +93,8 @@ icon Material Symbols Outlined (Apache 2.0), chữ Be Vietnam Pro (SIL Open Font
 
 ## Âm thanh
 
-Có cảnh báo mới Mức 1/Mức 2 thì trang phát tiếng bíp (Web Audio API). Trình duyệt chỉ cho phát âm thanh
+Có cảnh báo mới Mức 1/Mức 2 thì trang phát tiếng bíp (Web Audio API). Còn cảnh báo Mức 2 quá hạn chưa xác nhận
+(trong 12 giờ gần nhất, trạm đang bật báo động) thì cứ 2 phút nhắc lại một lần. Trình duyệt chỉ cho phát âm thanh
 sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên thì bấm vào trang một lần.
 
 ## Các mục trên trang
@@ -92,7 +106,16 @@ sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên th
   mỗi ngày; "Xuất CSV" (UTF-8 có BOM để Excel hiện đúng tiếng Việt, ô bắt đầu bằng `= + - @` được thêm `'` phía trước).
   Mục "Hiệu quả xử lý" (cùng khoảng ngày): tỉ lệ đã xác nhận, thời gian phản hồi trung bình / chậm nhất
   (từ lúc ghi cảnh báo đến lúc xác nhận), số xác nhận trong 5 phút, tỉ lệ báo nhầm theo phiếu sự cố;
-  bảng theo khu vực (kể cả khu vực không có cảnh báo) và theo cán bộ xác nhận.
+  bảng theo khu vực (kể cả khu vực không có cảnh báo), theo cán bộ xác nhận và theo trạm
+  (số cảnh báo cháy / khói / nhiệt độ cao, lấy từ stored procedure `sp_GetAlertStatistics`).
+- **Cảnh báo quá hạn**: dòng tô đỏ nhạt, đưa lên đầu bảng, ghi "Quá hạn, chờ X phút"; dải trạng thái đếm số cảnh báo quá hạn.
+- **Sơ đồ mặt bằng** (tab Giám sát): chọn khu vực để xem ảnh sơ đồ, mỗi trạm là một chấm màu theo mức
+  (xanh bình thường, cam cảnh báo sớm, đỏ nhấp nháy báo cháy, xám đậm mất kết nối, xám nhạt tắt báo động).
+  Có trạm báo cháy thì sơ đồ tự chuyển sang khu vực đó. Admin chọn trạm rồi bấm vào ảnh để đặt vị trí.
+- **Bảo trì thiết bị**: hạn kiểm tra = lần bảo trì gần nhất (chưa có thì ngày lắp đặt) + chu kỳ; trạm quá hạn tô đỏ
+  và hiện trên dải trạng thái. Bấm "Ghi bảo trì, lịch sử" để ghi lần kiểm tra / vệ sinh / sửa chữa / thay thế.
+- **Nhật ký hoạt động** (Admin): đăng nhập (cả đăng nhập sai), xác nhận / ghi phiếu, sửa trạm, khu vực, sơ đồ,
+  tài khoản, bảo trì; lọc theo ngày, cán bộ, nhóm thao tác.
 - **Trạm & cán bộ**: bảng khu vực (mô tả, người phụ trách, số trạm, số cảnh báo chưa xác nhận); Admin thêm / sửa / xoá
   khu vực, trạm và cán bộ. Tài khoản giám sát viên không thấy phần quản lý trạm.
 - **Phiếu sự cố**: bấm mã cảnh báo hoặc nút "Phiếu" để xem số đo cảm biến lúc báo, người phụ trách, người xác nhận,
