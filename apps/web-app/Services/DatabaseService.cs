@@ -143,7 +143,11 @@ public sealed class DatabaseService
                         RecordedAt: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null : r.GetDateTime("RecordedAt"),
                         ZoneId: r.GetInt32("ZoneId"),
                         ManagerName: GetNullableString(r, "ManagerName"),
-                        ManagerPhone: GetNullableString(r, "ManagerPhone")
+                        ManagerPhone: GetNullableString(r, "ManagerPhone"),
+                        // mqtt-subscriber ghi RecordedAt theo giờ máy ứng dụng (không dùng NOW() của MySQL chạy UTC),
+                        // nên tuổi số đo cũng tính theo giờ máy chủ web
+                        AgeSeconds: r.IsDBNull(r.GetOrdinal("RecordedAt")) ? null
+                            : (int)Math.Max(0, (DateTime.Now - r.GetDateTime("RecordedAt")).TotalSeconds)
                     ));
                 }
             }

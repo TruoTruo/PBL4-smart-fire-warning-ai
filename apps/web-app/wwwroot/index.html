@@ -845,6 +845,27 @@
     const DEVICE_STATUS_TEXT = { Active: 'Hoạt động', Inactive: 'Ngừng hoạt động', Maintenance: 'Bảo trì' };
     const ROLE_TEXT = { Admin: 'Quản trị viên', User: 'Giám sát viên' };
     const LEVEL_TEXT = ['Bình thường', 'Mức 1', 'Mức 2'];
+    const STALE_SEC = 60;   // Pi gửi số đo 2,5 giây/lần; quá 60 giây không có số đo mới thì coi là mất kết nối
+
+    // Trạng thái kết nối của một trạm:
+    //   maintenance / inactive : quản trị viên đặt, web tắt báo động của trạm (CSDL vẫn ghi số đo và cảnh báo)
+    //   offline                : Pi báo ngắt qua MQTT (tin nhắn di chúc)
+    //   stale                  : quá STALE_SEC giây không có số đo mới
+    //   nodata                 : chưa từng có số đo
+    function deviceConn(d) {
+      if (d.status === 'Maintenance') return { key: 'maintenance', lost: false, text: 'Bảo trì, đã tắt báo động' };
+      if (d.status === 'Inactive') return { key: 'inactive', lost: false, text: 'Ngừng hoạt động, đã tắt báo động' };
+      const p = ((lastData && lastData.piStatuses) || []).find(x => x.deviceId === d.deviceId);
+      const ago = d.ageSeconds === null || d.ageSeconds === undefined ? '' : fmtDuration(toInt(d.ageSeconds)) + ' trước';
+      if (p && !p.online) return { key: 'offline', lost: true, text: 'Mất kết nối (Pi báo ngắt)' + (ago ? ', số đo cuối ' + ago : '') };
+      if (!d.recordedAt) return { key: 'nodata', lost: false, text: 'Chưa có số đo' };
+      if (toInt(d.ageSeconds) > STALE_SEC) return { key: 'stale', lost: true, text: 'Mất kết nối, số đo cuối ' + ago };
+      return { key: 'online', lost: false, text: 'Trực tuyến' };
+    }
+    const alarmsOn = (d) => d.status === 'Active';
+    function deviceById(id) {
+      return ((lastData && lastData.devices) || []).find(d => d.deviceId === id) || null;
+    }
     const RESOLUTION_TEXT = { Handled: 'Đã xử lý sự cố', FalseAlarm: 'Báo nhầm', Test: 'Diễn tập' };
 
     const severityText = (s) => SEVERITY_TEXT[s] || String(s || '');
@@ -1106,9 +1127,14 @@
     function checkNewAlerts(alerts) {
       const maxId = alerts.reduce((m, a) => Math.max(m, toInt(a.alertId)), 0);
       if (lastAlertId === null) { lastAlertId = maxId; return; }
-      const fresh = alerts.filter(a => toInt(a.alertId) > lastAlertId && !a.acknowledged
+      const all = alerts.filter(a => toInt(a.alertId) > lastAlertId && !a.acknowledged
         && (a.severity === 'High' || a.severity === 'Medium'));
       if (maxId > lastAlertId) lastAlertId = maxId;
+      // trạm bảo trì / ngừng hoạt động: không phát âm thanh, chỉ báo nhẹ
+      const isMuted = (a) => { const d = deviceById(a.deviceId); return !!d && !alarmsOn(d); };
+      const fresh = all.filter(a => !isMuted(a));
+      const quiet = all.filter(isMuted);
+      if (quiet.length) showToast(`Có ${quiet.length} cảnh báo từ trạm đang tắt báo động (${[...new Set(quiet.map(a => a.deviceId))].join(', ')}), không phát âm thanh.`, 'info');
       if (fresh.length === 0) return;
 
       const top = fresh.find(a => a.severity === 'High') || fresh[0];
@@ -1680,15 +1706,26 @@
       const state = el('systemSafetyBadge');
       const pending = toInt(data.kpis && data.kpis.pendingAlerts);
       const devs = data.devices || [];
-      const fire = devs.filter(d => toInt(d.alertLevel) >= 2);
-      const warn = devs.filter(d => toInt(d.alertLevel) === 1);
+      // trạm bảo trì / ngừng hoạt động không làm dải chuyển sang báo cháy
+      const live = devs.filter(alarmsOn);
+      const fire = live.filter(d => toInt(d.alertLevel) >= 2);
+      const warn = live.filter(d => toInt(d.alertLevel) === 1);
+      const lost = live.filter(d => deviceConn(d).lost);
+      const muted = devs.filter(d => !alarmsOn(d));
+      // trạm mất kết nối vẫn giữ mức cuối cùng (có thể cháy làm hỏng Pi), nhưng ghi rõ là số đo cũ
       const where = (list) => list.map(d => `${escapeHtml(d.deviceId)} (${escapeHtml(d.zoneName)})`
+        + (deviceConn(d).lost ? ' – mất kết nối, số đo cũ' : '')
         + (d.managerName ? ` – phụ trách ${escapeHtml(d.managerName)}${d.managerPhone ? ', ' + escapeHtml(d.managerPhone) : ''}` : '')).join('; ');
       let tone, word, note = '';
       if (!data.isConnected) { tone = 'amber'; word = 'MẤT KẾT NỐI CSDL'; }
       else if (fire.length) { tone = 'red'; word = 'BÁO CHÁY'; note = where(fire); }
       else if (warn.length) { tone = 'amber'; word = 'CẢNH BÁO SỚM'; note = where(warn); }
+      else if (lost.length) { tone = 'amber'; word = 'MẤT KẾT NỐI TRẠM'; note = lost.map(d => `${escapeHtml(d.deviceId)} (${escapeHtml(d.zoneName)}): ${escapeHtml(deviceConn(d).text)}`).join('; '); }
       else { tone = 'green'; word = 'BÌNH THƯỜNG'; note = pending > 0 ? `còn ${pending} cảnh báo cũ chưa xác nhận` : ''; }
+      if (data.isConnected && muted.length) {
+        const m = 'Tắt báo động: ' + muted.map(d => `${escapeHtml(d.deviceId)} (${escapeHtml(DEVICE_STATUS_TEXT[d.status] || d.status)})`).join(', ');
+        note = note ? note + '<br>' + m : m;
+      }
       const t = {
         red:   ['bg-[#fbe9e8] border-[#e2a19c]', 'text-[#a3121f]', 'bg-[#d0202e] ring-4 ring-[#d0202e]/20'],
         amber: ['bg-[#fdf3e1] border-[#e6c48a]', 'text-[#8a5200]', 'bg-[#e39b1b] ring-4 ring-[#e39b1b]/20'],
@@ -1794,15 +1831,20 @@
       }
       box.innerHTML = devices.map(d => {
         const level = toInt(d.alertLevel);
-        const off = d.status !== 'Active';
-        const row = level >= 2 ? 'bg-[#fbe9e8]' : level === 1 ? 'bg-[#fdf3e1]' : '';
+        const off = !alarmsOn(d);
+        const conn = deviceConn(d);
+        const row = off ? 'bg-[#f6f7f8]' : level >= 2 ? 'bg-[#fbe9e8]' : level === 1 ? 'bg-[#fdf3e1]' : '';
         const led = off ? 'bg-[#a0a6b0]'
           : level >= 2 ? 'bg-[#d0202e] ring-4 ring-[#d0202e]/20'
-          : level === 1 ? 'bg-[#e39b1b] ring-4 ring-[#e39b1b]/20' : 'bg-[#2f8f4e]';
-        const levelText = off ? `<span class="text-[#7b838d]">${escapeHtml(DEVICE_STATUS_TEXT[d.status] || d.status || '')}</span>`
+          : level === 1 ? 'bg-[#e39b1b] ring-4 ring-[#e39b1b]/20'
+          : conn.lost || conn.key === 'nodata' ? 'bg-white border-2 border-[#e39b1b]' : 'bg-[#2f8f4e]';
+        const levelText = (off ? `<span class="text-[#7b838d]">${escapeHtml(conn.text)}</span>`
           : level >= 2 ? '<b class="text-[#a3121f]">Báo cháy</b>'
           : level === 1 ? '<b class="text-[#8a5200]">Cảnh báo sớm</b>'
-          : '<span class="text-[#23703a]">Bình thường</span>';
+          : conn.lost ? '<b class="text-[#8a5200]">Mất kết nối</b>'
+          : conn.key === 'nodata' ? '<span class="text-[#7b838d]">Chưa có số đo</span>'
+          : '<span class="text-[#23703a]">Bình thường</span>')
+          + (!off && conn.lost ? `<div class="text-[12px] text-[#8a5200]">${escapeHtml(conn.text.replace(/^Mất kết nối,? ?/, ''))}</div>` : '');
         const conf = fmtNumber(d.confidenceScore);
         const ai = d.aiResult
           ? `<b class="text-[#a3121f]">Có lửa${conf !== null ? ' ' + conf + '%' : ''}</b>`
@@ -1845,7 +1887,7 @@
           <tr class="hover:bg-[#f6f7f8] ${a.acknowledged ? 'text-[#5d6670]' : ''}">
             <td class="py-2 px-3"><button data-action="incident" data-id="${id}" class="text-[#7b838d] hover:text-[#1c2229] underline underline-offset-2">#${id}</button></td>
             <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(fmtDateTime(a.alertTime))}</td>
-            <td class="py-2 px-3 whitespace-nowrap"><b class="text-[#1c2229]">${escapeHtml(a.deviceId)}</b> <span class="text-[#5d6670]">${escapeHtml(a.zoneName)}</span></td>
+            <td class="py-2 px-3 whitespace-nowrap"><b class="text-[#1c2229]">${escapeHtml(a.deviceId)}</b> <span class="text-[#5d6670]">${escapeHtml(a.zoneName)}</span>${(() => { const d = deviceById(a.deviceId); return d && !alarmsOn(d) ? `<div class="text-[12px] text-[#7b838d]">trạm ${escapeHtml((DEVICE_STATUS_TEXT[d.status] || d.status).toLowerCase())}</div>` : ''; })()}</td>
             <td class="py-2 px-3 whitespace-nowrap">${escapeHtml(alertTypeText(a.alertType))} ${sevBadge}</td>
             <td class="py-2 px-3">${snapCell}</td>
             <td class="py-2 px-3">${ackCell}</td>
@@ -2132,7 +2174,7 @@
             <td class="py-2.5 px-3 text-[#5d6670]">${escapeHtml(d.deviceType)}</td>
             <td class="py-2.5 px-3 text-[#5d6670]">${escapeHtml(d.ipAddress) || 'DHCP'}</td>
             <td class="py-2.5 px-3">${deviceStatusBadge(d.status)}</td>
-            <td class="py-2.5 px-3 text-[#5d6670] text-[12px] whitespace-nowrap">${escapeHtml(fmtDateTime(d.recordedAt))}</td>
+            <td class="py-2.5 px-3 text-[#5d6670] text-[12px] whitespace-nowrap">${escapeHtml(fmtDateTime(d.recordedAt))}${(() => { const c = deviceConn(d); return c.lost ? `<div class="text-[#8a5200] font-bold">${escapeHtml(c.text)}</div>` : c.key === 'online' ? '<div class="text-[#23703a]">Trực tuyến</div>' : ''; })()}</td>
             <td class="py-2.5 px-3 text-right whitespace-nowrap">
               <button type="button" data-action="edit-device" data-device="${id}" class="px-2 py-1 rounded-sm bg-[#1c2229]/10 hover:bg-[#1c2229]/20 text-[#1c2229] text-[12px] border border-[#1c2229]/30 transition-all">Sửa</button>
               <button type="button" data-action="delete-device" data-device="${id}" class="px-2 py-1 rounded-sm bg-[#d32f2f]/10 hover:bg-[#d32f2f]/20 text-[#c62828] text-[12px] border border-[#d32f2f]/30 transition-all">Xóa</button>
@@ -2806,7 +2848,12 @@
       if (!chip) return;
       const pis = (lastData && lastData.piStatuses) || [];
       const cams = (lastData && lastData.cameras) || [];
-      const online = (id) => { const p = pis.find(x => x.deviceId === id); return !p || p.online; };
+      // trạm đã mất kết nối thì trạng thái camera Pi báo trước đó không còn đúng
+      const online = (id) => {
+        const p = pis.find(x => x.deviceId === id);
+        const d = deviceById(id);
+        return (!p || p.online) && !(d && deviceConn(d).lost);
+      };
       const broken = cams.filter(c => c.cameraOk === false && online(c.deviceId)).map(c => c.deviceId);
       const okCount = cams.filter(c => c.cameraOk === true && online(c.deviceId)).length;
 
@@ -2836,7 +2883,7 @@
       renderStatusBadges(data);
       renderCameraInfo(data);
 
-      el('kpiActiveDevices').textContent = toInt(kpis.activeDevices);
+      el('kpiActiveDevices').textContent = (data.devices || []).filter(d => alarmsOn(d) && deviceConn(d).key === 'online').length;
       el('kpiTotalDevices').textContent = `/${toInt(kpis.totalDevices)}`;
       el('kpiPendingAlerts').classList.toggle('text-[#c62828]', toInt(kpis.pendingAlerts) > 0);
       el('kpiPendingAlerts').textContent = toInt(kpis.pendingAlerts);

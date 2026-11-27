@@ -93,5 +93,11 @@ sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên th
   khu vực, trạm và cán bộ. Tài khoản giám sát viên không thấy phần quản lý trạm.
 - **Phiếu sự cố**: bấm mã cảnh báo hoặc nút "Phiếu" để xem số đo cảm biến lúc báo, người phụ trách, người xác nhận,
   thời gian phản hồi; người có quyền ghi kết quả (Đã xử lý / Báo nhầm / Diễn tập) và ghi chú.
+- **Trạng thái trạm**: trạm đang hoạt động mà quá 60 giây không có số đo mới (Pi gửi 2,5 giây/lần) hoặc Pi báo ngắt
+  qua MQTT thì hiện "Mất kết nối" kèm thời điểm số đo cuối; dải trạng thái chuyển sang "MẤT KẾT NỐI TRẠM".
+  Trạm mất kết nối khi đang báo cháy vẫn giữ báo cháy (ghi rõ là số đo cũ). Tuổi số đo tính theo giờ máy chủ web,
+  nên web-app và mqtt-subscriber phải chạy cùng múi giờ.
+- **Trạm bảo trì / ngừng hoạt động**: web tắt báo động của trạm (không phát âm thanh, dải trạng thái không chuyển đỏ,
+  cảnh báo ghi nhãn "trạm bảo trì"); CSDL vẫn ghi số đo và cảnh báo làm bằng chứng, còi tại Pi vẫn do Pi điều khiển.
 - Thanh tiêu đề có 3 trạng thái: CSDL, MQTT (máy chủ web có đang nối broker không), CAMERA (luồng đang xem
   và `camera_ok` do Pi báo qua MQTT).

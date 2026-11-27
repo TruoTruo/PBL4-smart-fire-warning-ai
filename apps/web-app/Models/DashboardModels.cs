@@ -26,7 +26,8 @@ public sealed record DeviceCardModel(
     DateTime? RecordedAt,
     int? ZoneId = null,
     string? ManagerName = null,   // cán bộ phụ trách khu vực của trạm
-    string? ManagerPhone = null);
+    string? ManagerPhone = null,
+    int? AgeSeconds = null);      // số giây từ số đo cuối đến giờ MySQL hiện tại (null = chưa có số đo)
 
 public sealed record AlertModel(
     long AlertId,
