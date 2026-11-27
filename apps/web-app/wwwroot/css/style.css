@@ -1,58 +1,28 @@
-@import url("../lib/fonts/fonts.css");   /* font đặt sẵn trong wwwroot/lib/fonts, không cần Internet */
+@import url("../lib/fonts/fonts.css");            /* icon Material Symbols */
+@import url("../lib/fonts/be-vietnam-pro.css");   /* chữ: Be Vietnam Pro, đặt sẵn trong wwwroot/lib/fonts */
 
-@layer base {
-  html, body {
-    margin: 0;
-    padding: 0;
-  }
-  body {
-    overscroll-behavior: none;
-  }
-  main > :first-child {
-    margin-top: 0 !important;
-  }
-  main > :last-child {
-    margin-bottom: 0 !important;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+}
+body {
+  font-family: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overscroll-behavior: none;
+  font-variant-numeric: tabular-nums;   /* số thẳng cột khi cập nhật liên tục */
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0f131c;
-}
-::-webkit-scrollbar-thumb {
-  background: #31353f;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #5b403e;
-}
-
-/* CAD floorplan grid */
-.cad-grid {
-  background-size: 24px 24px;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
-}
-
-/* Glowing laser / emergency effect */
-.laser-glow {
-  box-shadow: 0 0 15px rgba(255, 84, 81, 0.45);
-}
-
-/* Amber warning pulse */
-.pulse-amber {
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes pulse-ring {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 0.3; }
-  100% { transform: scale(0.95); opacity: 0.8; }
-}
-
+/* ô cảm biến: icon tròn, tên, trạng thái */
+.tile { background: #fff; border: 1px solid #e3e6ea; border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; min-height: 60px; min-width: 0; }
+.tile .tn { font-weight: 600; font-size: 14px; }
+.tile .ts { color: #6b7380; font-size: 13px; }
+.tile .ts b { color: #d0202e; font-weight: 600; }
+.ib { width: 36px; height: 36px; border-radius: 50%; background: #eef0f2; color: #6b7380; display: grid; place-items: center; flex: none; }
+.ib.red { background: #fde8e8; color: #d0202e; }
+.ib.amber { background: #fff1d6; color: #c27400; }
+.ib.green { background: #e3f4e8; color: #23803f; }
+.ib.blue { background: #e3f0fa; color: #2f7fb8; }
+/* số liệu đã đứng yên (mất CSDL / mất máy chủ web): làm xám để không bị đọc như số đang chạy */
+.data-stale #devicesContainer, .data-stale #alarmBar, .data-stale #alertsTableBody { filter: grayscale(.7); opacity: .6; }
+.stale-group { opacity: .55; }
+/* giờ phút giây: chữ đều để các dòng thẳng cột */
+.t { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }

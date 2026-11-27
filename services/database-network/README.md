@@ -2,7 +2,7 @@
 Phụ trách: 
 
 ## Nhiệm vụ
-- Khởi tạo MySQL 8 (5 bảng, xem sql/migrations/schema.sql)
+- Khởi tạo MySQL 8 (7 bảng, xem sql/migrations/schema.sql)
 - Thiết lập MQTT Broker (Eclipse Mosquitto)
 - Viết truy vấn lưu trữ và truy xuất log dữ liệu
 - `mqtt-subscriber`: nhận bản tin của Pi qua MQTT, ghi vào MySQL (đây là nơi **duy nhất** ghi `EnvironmentLogs` và `AlertHistory`)
@@ -10,7 +10,7 @@ Phụ trách:
 ## Cấu trúc
 - `sql/migrations/schema.sql` — nguồn chân lý duy nhất cho cấu trúc DB, mọi module khác (iot-edge, web-app) phải khớp với file này
 - `sql/migrations/seed.sql`, `stored_procedures.sql` — dữ liệu mẫu và stored procedure, chạy tự động khi tạo DB mới bằng Docker
-- `sql/migrations/002_…` → `005_…` — các thay đổi schema theo thời gian, chỉ dùng cho DB **đã có sẵn** (xem mục Nâng cấp DB cũ)
+- `sql/migrations/002_…` → `008_…` — các thay đổi schema theo thời gian, chỉ dùng cho DB **đã có sẵn** (xem mục Nâng cấp DB cũ)
 - `mqtt-broker/mosquitto.conf` — cấu hình broker chạy local/demo
 - `mqtt-subscriber/` — dịch vụ C# (.NET 8): `Program.cs`, `appsettings.json`, `Dockerfile`
 - `../../infra/docker-compose.yml` — chạy MySQL + Mosquitto + mqtt-subscriber bằng một lệnh
@@ -51,7 +51,7 @@ docker compose down -v                         # dừng và XOÁ dữ liệu; l�
 ```
 
 Các file `.sql` chỉ được chạy khi volume `mysql-data` còn trống (lần đầu, hoặc sau `down -v`).
-Thứ tự chạy: `1_schema.sql` → `2_seed.sql` → `3_stored_procedures.sql`. Các file `002`–`005` **không** được mount,
+Thứ tự chạy: `1_schema.sql` → `2_seed.sql` → `3_stored_procedures.sql`. Các file `002`–`008` **không** được mount,
 vì `schema.sql` đã có sẵn những thay đổi đó.
 
 Múi giờ: `mysql-db` và `mqtt-subscriber` đều đặt `TZ=Asia/Ho_Chi_Minh`, nên `NOW()` của MySQL và giờ ghi
@@ -141,11 +141,23 @@ docker exec smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' SmartFireDB \
 
 ## 6. Nâng cấp DB cũ (đã tạo trước đây, không muốn xoá dữ liệu)
 
-Chạy lần lượt các file chưa chạy, theo đúng thứ tự `002` → `003` → `004` → `005`
-(`005_time_indexes.sql` thêm chỉ mục theo thời gian, chạy lại nhiều lần cũng không lỗi):
+Chạy lần lượt các file chưa chạy, theo đúng thứ tự `002` → `003` → `004` → `005` → `006` → `007` → `008`
+(`005_time_indexes.sql` thêm chỉ mục theo thời gian, `006_alert_resolution.sql` thêm cột kết quả
+xử lý cho phiếu sự cố, `007_activity_floorplan_maintenance.sql` thêm bảng `ActivityLog`, `MaintenanceLogs`,
+cột sơ đồ mặt bằng `Zones.FloorPlan`, vị trí trạm `Devices.PosX/PosY` và chu kỳ `Devices.MaintenanceIntervalDays`,
+`008_alert_resolved_by.sql` thêm người ghi kết quả phiếu `AlertHistory.ResolvedByUserId` và lúc ghi `ResolvedAt`;
+bốn file này chạy lại nhiều lần cũng không lỗi):
 
 ```bash
 docker exec -i smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' SmartFireDB < services/database-network/sql/migrations/005_time_indexes.sql
+docker exec -i smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' --default-character-set=utf8mb4 SmartFireDB < services/database-network/sql/migrations/006_alert_resolution.sql
+docker exec -i smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' --default-character-set=utf8mb4 SmartFireDB < services/database-network/sql/migrations/007_activity_floorplan_maintenance.sql
+docker exec -i smartfire-mysql mysql -uroot -p'YourStrong@Passw0rd' --default-character-set=utf8mb4 SmartFireDB < services/database-network/sql/migrations/008_alert_resolved_by.sql
 ```
+
+Web-app bản mới đọc cột `ResolvedByUserId`/`ResolvedAt`, nên DB cũ phải chạy `008` trước khi chạy web-app.
+
+`stored_procedures.sql` có `sp_GetAlertStatistics`, web-app dùng cho bảng "Theo trạm" trong báo cáo. DB cũ chưa cài
+stored procedure thì bảng đó trống, các phần khác vẫn chạy.
 
 Muốn làm lại từ đầu thì đơn giản hơn: `docker compose down -v` rồi `docker compose up -d --build`.
