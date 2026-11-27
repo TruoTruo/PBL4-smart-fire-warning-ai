@@ -1173,4 +1173,55 @@ public sealed class DatabaseService
 
         return (summary, byZone, byUser);
     }
+
+    // ============================================================
+    // SỬA CÁN BỘ
+    // ============================================================
+
+    /// <summary>Sửa họ tên, SĐT, email, vai trò của một tài khoản (tên đăng nhập giữ nguyên).</summary>
+    public async Task<(bool Success, string? Error)> UpdateUserAsync(
+        int userId, string fullName, string? phoneNumber, string? email, string role)
+    {
+        const string sql = @"
+            UPDATE Users
+            SET FullName = @FullName, PhoneNumber = @Phone, Email = @Email, Role = @Role
+            WHERE UserId = @UserId;";
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            cmd.Parameters.AddWithValue("@FullName", fullName);
+            cmd.Parameters.AddWithValue("@Phone", (object?)phoneNumber ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Email", (object?)email ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Role", role);
+            // MySQL trả số dòng khớp điều kiện (UseAffectedRows mặc định false), nên lưu không đổi gì vẫn > 0
+            return await cmd.ExecuteNonQueryAsync() > 0
+                ? (true, null)
+                : (false, "Không tìm thấy tài khoản để sửa.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
+
+    /// <summary>Quản trị viên đặt mật khẩu mới cho tài khoản khác (không cần mật khẩu cũ).</summary>
+    public async Task<(bool Success, string? Error)> ResetPasswordAsync(int userId, string newPassword)
+    {
+        try
+        {
+            await using var conn = await OpenConnectionAsync();
+            await using var cmd = new MySqlCommand("UPDATE Users SET PasswordHash = @Hash WHERE UserId = @UserId;", conn);
+            cmd.Parameters.AddWithValue("@Hash", HashPassword(newPassword));
+            cmd.Parameters.AddWithValue("@UserId", userId);
+            return await cmd.ExecuteNonQueryAsync() > 0
+                ? (true, null)
+                : (false, "Không tìm thấy tài khoản.");
+        }
+        catch (Exception ex)
+        {
+            return (false, DescribeDbError(ex));
+        }
+    }
 }

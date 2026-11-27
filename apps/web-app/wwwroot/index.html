@@ -737,6 +737,60 @@
     </div>
   </div>
 
+  <!-- modal sửa cán bộ -->
+  <div id="userModal" class="hidden fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 p-4 overflow-y-auto">
+    <div class="bg-[#ffffff] border border-[#c9ced5] rounded-sm w-full max-w-lg flex flex-col">
+      <div class="px-5 py-3 border-b border-[#d9dde2] flex items-center justify-between">
+        <div>
+          <h3 id="userModalTitle" class="text-[15px] font-bold text-[#1c2229]">Sửa cán bộ</h3>
+          <p id="userModalSub" class="text-[12px] text-[#7b838d]"></p>
+        </div>
+        <button type="button" onclick="closeUserModal()" class="text-[#7b838d] hover:text-[#1c2229] p-1 rounded-sm hover:bg-[#e8ebee] transition-all" title="Đóng">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+      <form id="userForm" onsubmit="handleUserSubmit(event)" class="px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-[12px] text-[#5d6670]" autocomplete="off">
+        <div id="userAlert" class="hidden md:col-span-2 p-2.5 rounded-sm text-[12px]"></div>
+        <label class="flex flex-col gap-1 md:col-span-2">Họ và tên
+          <input id="userFullName" type="text" required maxlength="100" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]">
+        </label>
+        <label class="flex flex-col gap-1">Số điện thoại
+          <input id="userPhone" type="tel" maxlength="15" placeholder="09xxxxxxxx" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]">
+        </label>
+        <label class="flex flex-col gap-1">Email liên hệ
+          <input id="userEmail" type="email" maxlength="100" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]">
+        </label>
+        <label class="flex flex-col gap-1">Vai trò
+          <select id="userRole" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229]">
+            <option value="User">Giám sát viên</option>
+            <option value="Admin">Quản trị viên</option>
+          </select>
+        </label>
+        <p id="userRoleNote" class="self-end text-[12px] text-[#7b838d]"></p>
+        <div class="md:col-span-2 flex justify-end gap-2 pt-1">
+          <button type="button" onclick="closeUserModal()" class="px-3.5 py-2 rounded-sm bg-[#f4f5f7] hover:bg-[#e8ebee] border border-[#c9ced5] text-[#1c2229] text-[13px] transition-all">Huỷ</button>
+          <button id="btnUserSubmit" type="submit" class="px-3.5 py-2 rounded-sm bg-[#1c2229] hover:bg-[#3a434d] text-white font-bold text-[13px] transition-all disabled:opacity-50">Lưu thông tin</button>
+        </div>
+      </form>
+      <form id="userPwdForm" onsubmit="handleUserResetPassword(event)" class="px-5 py-4 border-t border-[#d9dde2] bg-[#f6f7f8] flex flex-col gap-3 text-[12px] text-[#5d6670]" autocomplete="off">
+        <h4 class="text-[13px] font-bold text-[#1c2229]">Đặt lại mật khẩu</h4>
+        <div id="userPwdAlert" class="hidden p-2.5 rounded-sm text-[12px]"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label class="flex flex-col gap-1">Mật khẩu mới (≥ 6 ký tự)
+            <input id="userNewPwd" type="password" minlength="6" required autocomplete="new-password" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] bg-white">
+          </label>
+          <label class="flex flex-col gap-1">Nhập lại
+            <input id="userNewPwd2" type="password" minlength="6" required autocomplete="new-password" class="w-full bg-[#f4f5f7] border border-[#c9ced5] rounded-sm px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] bg-white">
+          </label>
+        </div>
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <span class="text-[12px] text-[#7b838d]">Cán bộ bị đăng xuất khỏi mọi phiên đang mở và phải đăng nhập bằng mật khẩu mới.</span>
+          <button id="btnUserPwd" type="submit" class="px-3.5 py-2 rounded-sm bg-white hover:bg-[#e8ebee] border border-[#c9ced5] text-[#1c2229] font-bold text-[13px] transition-all disabled:opacity-50">Đặt lại mật khẩu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- modal thêm / sửa khu vực -->
   <div id="zoneModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
     <div class="bg-[#ffffff] border border-[#c9ced5] rounded-sm w-full max-w-lg p-5 flex flex-col gap-3">
@@ -1275,6 +1329,7 @@
       else if (btn.dataset.action === 'delete-zone') confirmDeleteZone(id);
       else if (btn.dataset.action === 'snapshot') openSnapshotModal(id);
       else if (btn.dataset.action === 'delete-user') confirmDeleteUser(id);
+      else if (btn.dataset.action === 'edit-user') openUserModal(id);
     });
 
     // --- đổi mật khẩu ---
@@ -1350,6 +1405,7 @@
       if (!el('snapshotModal').classList.contains('hidden')) { closeSnapshotModal(); return; }
       closeIncidentModal();
       closeZoneModal();
+      closeUserModal();
       closeRegisterModal();
       closePasswordModal();
       closeDeviceModal();
@@ -1799,9 +1855,9 @@
           : '<span>Giám sát viên</span>';
         const name = String(u.fullName || '');
         const initial = (name.trim().split(/\s+/).pop() || '?').charAt(0).toUpperCase();
-        const actionCell = !admin ? '' : `<td class="py-2.5 px-3 text-right">${isMe
-          ? '<span class="px-2 py-0.5 rounded-sm bg-[#1c2229]/20 text-[#1c2229] text-[12px] font-bold border border-[#1c2229]/30">Bạn</span>'
-          : `<button data-action="delete-user" data-id="${id}" class="px-2 py-1 rounded-sm bg-[#d32f2f]/10 hover:bg-[#d32f2f]/20 text-[#c62828] text-[12px] transition-all border border-[#d32f2f]/30">Xóa</button>`}</td>`;
+        const actionCell = !admin ? '' : `<td class="py-2.5 px-3 text-right whitespace-nowrap">
+          <button data-action="edit-user" data-id="${id}" class="px-2 py-1 rounded-sm bg-[#1c2229]/10 hover:bg-[#1c2229]/20 text-[#1c2229] text-[12px] border border-[#1c2229]/30 transition-all">Sửa</button>
+          ${isMe ? '' : `<button data-action="delete-user" data-id="${id}" class="px-2 py-1 rounded-sm bg-[#d32f2f]/10 hover:bg-[#d32f2f]/20 text-[#c62828] text-[12px] transition-all border border-[#d32f2f]/30">Xóa</button>`}</td>`;
         const contactCells = !admin ? '' : `
             <td class="py-2.5 px-3">${escapeHtml(u.phoneNumber) || 'Chưa cài đặt'}</td>
             <td class="py-2.5 px-3 text-[#5d6670]">${escapeHtml(u.email) || '—'}</td>`;
@@ -2274,6 +2330,95 @@
         await fetchDashboardData(false);
       } else {
         showToast(res.body.error || `Không xóa được trạm ${deviceId}.`, 'error');
+      }
+    }
+
+    // ========================================================
+    // SỬA CÁN BỘ (chỉ admin)
+    // ========================================================
+    let userEditId = null;
+
+    function openUserModal(userId) {
+      if (!isAdmin()) return;
+      const u = ((lastData && lastData.users) || []).find(x => toInt(x.userId) === userId);
+      if (!u) { showToast('Không tìm thấy tài khoản (có thể vừa bị xoá).', 'error'); return; }
+      const isMe = currentUser && currentUser.userId === userId;
+      userEditId = userId;
+      el('userForm').reset();
+      el('userPwdForm').reset();
+      setBoxAlert('userAlert', null);
+      setBoxAlert('userPwdAlert', null);
+      el('userModalTitle').textContent = `Sửa cán bộ "${u.fullName}"`;
+      el('userModalSub').textContent = `Tên đăng nhập: ${u.username} (không đổi được) • #${userId}`;
+      el('userFullName').value = u.fullName || '';
+      el('userPhone').value = u.phoneNumber || '';
+      el('userEmail').value = u.email || '';
+      el('userRole').value = u.role === 'Admin' ? 'Admin' : 'User';
+      // không tự bỏ quyền quản trị; tự đổi mật khẩu ở mục Đổi mật khẩu
+      el('userRole').disabled = isMe;
+      el('userRoleNote').textContent = isMe
+        ? 'Không tự đổi vai trò của chính mình.'
+        : 'Đổi vai trò thì cán bộ phải đăng nhập lại.';
+      el('userPwdForm').classList.toggle('hidden', isMe);
+      el('userModal').classList.remove('hidden');
+      setTimeout(() => el('userFullName').focus(), 0);
+    }
+
+    function closeUserModal() {
+      el('userModal').classList.add('hidden');
+      el('userNewPwd').value = '';
+      el('userNewPwd2').value = '';
+      userEditId = null;
+    }
+
+    async function handleUserSubmit(e) {
+      e.preventDefault();
+      const id = userEditId;
+      if (!isAdmin() || !id) return;
+      const body = {
+        fullName: el('userFullName').value.trim(),
+        phone: el('userPhone').value.trim(),
+        email: el('userEmail').value.trim(),
+        role: el('userRole').value
+      };
+      if (!body.fullName) { setBoxAlert('userAlert', 'Vui lòng nhập họ tên.', true); return; }
+      setBoxAlert('userAlert', 'Đang lưu vào CSDL...', false);
+      const btn = el('btnUserSubmit');
+      btn.disabled = true;
+      const res = await api(`/api/users/${id}`, { method: 'POST', body });
+      btn.disabled = false;
+      if (res.status === 401) return;
+      if (res.ok && res.body.success) {
+        closeUserModal();
+        showToast(`Đã cập nhật cán bộ "${body.fullName}".`, 'success');
+        if (currentUser && currentUser.userId === id) {   // tên hiển thị trên thanh tiêu đề
+          currentUser.fullName = body.fullName;
+          updateHeaderUserUi();
+        }
+        await fetchDashboardData(false);
+      } else {
+        setBoxAlert('userAlert', res.body.error || ('Không lưu được (HTTP ' + res.status + ').'), true);
+      }
+    }
+
+    async function handleUserResetPassword(e) {
+      e.preventDefault();
+      const id = userEditId;
+      if (!isAdmin() || !id) return;
+      const p1 = el('userNewPwd').value, p2 = el('userNewPwd2').value;
+      if (p1.length < 6) { setBoxAlert('userPwdAlert', 'Mật khẩu mới phải có ít nhất 6 ký tự.', true); return; }
+      if (p1 !== p2) { setBoxAlert('userPwdAlert', 'Hai lần nhập mật khẩu không khớp.', true); return; }
+      const btn = el('btnUserPwd');
+      btn.disabled = true;
+      const res = await api(`/api/users/${id}/reset-password`, { method: 'POST', body: { newPassword: p1 } });
+      btn.disabled = false;
+      if (res.status === 401) return;
+      el('userNewPwd').value = '';
+      el('userNewPwd2').value = '';
+      if (res.ok && res.body.success) {
+        setBoxAlert('userPwdAlert', 'Đã đặt mật khẩu mới. Các phiên đang mở của cán bộ này đã bị đăng xuất.', false);
+      } else {
+        setBoxAlert('userPwdAlert', res.body.error || ('Không đặt lại được (HTTP ' + res.status + ').'), true);
       }
     }
 

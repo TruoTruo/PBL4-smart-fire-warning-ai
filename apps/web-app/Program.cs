@@ -89,6 +89,8 @@ app.MapPost("/api/auth/login", async (LoginRequest req, DatabaseService db, Http
         new Claim(ClaimTypes.Name, user.Username),
         new Claim(ClaimTypes.GivenName, user.FullName),
         new Claim(ClaimTypes.Role, user.Role),
+        // thời điểm đăng nhập chính xác (cookie chỉ lưu IssuedUtc tới giây), dùng để huỷ phiên khi đặt lại mật khẩu
+        new Claim(UserSessionValidator.LoginTicksClaim, DateTime.UtcNow.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture)),
     ], CookieAuthenticationDefaults.AuthenticationScheme);
 
     await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity),
@@ -402,6 +404,62 @@ app.MapPost("/api/auth/register", async (
     return Results.Ok(new { success, user, error });
 }).RequireAuthorization("Admin");
 
+// 7b. Sửa thông tin cán bộ (chỉ Admin; không tự đổi vai trò của mình để không mất quyền quản trị)
+app.MapPost("/api/users/{userId:int}", async (
+    int userId,
+    UpdateUserRequest req,
+    ClaimsPrincipal user,
+    DatabaseService db,
+    DashboardBroadcaster broadcaster) =>
+{
+    string fullName = (req.FullName ?? "").Trim();
+    string? phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
+    string? email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
+    string role = req.Role is "Admin" ? "Admin" : req.Role is "User" ? "User" : "";
+
+    string? error = null;
+    if (fullName.Length is 0 or > 100)
+        error = "Họ tên bắt buộc, tối đa 100 ký tự.";
+    else if (phone != null && (phone.Length > 15 || !phone.All(c => char.IsAsciiDigit(c) || c is '+' or ' ' or '.' or '-')))
+        error = "Số điện thoại tối đa 15 ký tự, chỉ gồm số, dấu cách, '+', '.', '-'.";
+    else if (email != null && (email.Length > 100 || !System.Net.Mail.MailAddress.TryCreate(email, out _)))
+        error = "Email không hợp lệ.";
+    else if (role.Length == 0)
+        error = "Vai trò chỉ được là Admin hoặc User.";
+    else if (userId == CurrentUserId(user) && role != "Admin")
+        error = "Không thể tự bỏ quyền quản trị của chính mình.";
+    if (error != null)
+        return Results.BadRequest(new { success = false, error });
+
+    var (success, dbError) = await db.UpdateUserAsync(userId, fullName, phone, email, role);
+    if (!success)
+        return Results.BadRequest(new { success, error = dbError });
+
+    UserSessionValidator.Forget(userId);   // đổi vai trò thì phiên cũ của người đó bị kiểm tra lại ngay
+    broadcaster.Request();
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
+// 7c. Đặt lại mật khẩu cho cán bộ khác (chỉ Admin); mọi phiên đang mở của người đó bị huỷ
+app.MapPost("/api/users/{userId:int}/reset-password", async (
+    int userId,
+    ResetPasswordRequest req,
+    ClaimsPrincipal user,
+    DatabaseService db) =>
+{
+    if (userId == CurrentUserId(user))
+        return Results.BadRequest(new { success = false, error = "Tự đổi mật khẩu của mình ở mục Đổi mật khẩu." });
+    if ((req.NewPassword ?? "").Length < 6)
+        return Results.BadRequest(new { success = false, error = "Mật khẩu mới phải có ít nhất 6 ký tự." });
+
+    var (success, error) = await db.ResetPasswordAsync(userId, req.NewPassword!);
+    if (!success)
+        return Results.BadRequest(new { success, error });
+
+    UserSessionValidator.RevokeSessions(userId);
+    return Results.Ok(new { success = true });
+}).RequireAuthorization("Admin");
+
 // 8. Xóa tài khoản khỏi bảng Users (chỉ Admin, không tự xoá chính mình)
 app.MapDelete("/api/users/{userId:int}", async (
     int userId,
@@ -479,6 +537,8 @@ public sealed record UpsertDeviceRequest(
     bool IsEdit = false);
 public sealed record ResolveAlertRequest(string? Resolution, string? Note);
 public sealed record UpsertZoneRequest(int? ZoneId, string? ZoneName, string? Description, int? ManagerUserId);
+public sealed record UpdateUserRequest(string? FullName, string? Phone, string? Email, string? Role);
+public sealed record ResetPasswordRequest(string? NewPassword);
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
 public sealed record RegisterRequest(
     string? Username,

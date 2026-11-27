@@ -36,7 +36,9 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
   (riêng SĐT người phụ trách khu vực thì mọi cán bộ đều thấy, để liên hệ khi có sự cố).
 - Xác nhận cảnh báo và ghi kết quả phiếu sự cố: Admin, hoặc cán bộ phụ trách khu vực của cảnh báo;
   khu vực chưa phân công thì mọi cán bộ đều làm được. Người xác nhận lấy từ phiên đăng nhập.
-- Admin: thêm/xoá cán bộ và chọn vai trò, thêm/sửa/xoá trạm và khu vực, phân công người phụ trách. Không xoá được chính mình.
+- Admin: thêm/sửa/xoá cán bộ, đổi vai trò, đặt lại mật khẩu; thêm/sửa/xoá trạm và khu vực, phân công người phụ trách.
+  Không xoá, không tự đổi vai trò, không tự đặt lại mật khẩu của chính mình (tự đổi ở mục Đổi mật khẩu).
+  Đổi vai trò hoặc đặt lại mật khẩu thì các phiên đang mở của cán bộ đó bị đăng xuất.
 - Cookie `HttpOnly`, `SameSite=Strict`, hết hạn sau 8 giờ không dùng. Không bật CORS (trang và API cùng origin).
 - Đăng nhập tối đa 20 lần/phút/IP.
 
@@ -59,6 +61,8 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
 | POST | `/api/zones` `{ "zoneId": null, "zoneName": "...", "description": "...", "managerUserId": 2 }` (thêm / sửa khu vực) | Admin |
 | DELETE | `/api/zones/{id}` (chỉ khi khu vực không còn trạm) | Admin |
 | POST | `/api/auth/register` | Admin |
+| POST | `/api/users/{id}` `{ "fullName", "phone", "email", "role" }` (sửa cán bộ, tên đăng nhập không đổi) | Admin |
+| POST | `/api/users/{id}/reset-password` `{ "newPassword": "..." }` | Admin |
 | DELETE | `/api/users/{id}` | Admin |
 | SignalR | `/hubs/firealert` (sự kiện `DashboardUpdated`) | đã đăng nhập |
 
