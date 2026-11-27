@@ -11,6 +11,18 @@ body {
   font-variant-numeric: tabular-nums;   /* số thẳng cột khi cập nhật liên tục */
 }
 
-/* bảng sát mép khối: ô đầu và ô cuối thẳng với tiêu đề khối */
-table th:first-child, table td:first-child { padding-left: 16px; }
-table th:last-child, table td:last-child { padding-right: 16px; }
+/* ô cảm biến: icon tròn, tên, trạng thái */
+.tile { background: #fff; border: 1px solid #e3e6ea; border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; min-height: 60px; min-width: 0; }
+.tile .tn { font-weight: 600; font-size: 14px; }
+.tile .ts { color: #6b7380; font-size: 13px; }
+.tile .ts b { color: #d0202e; font-weight: 600; }
+.ib { width: 36px; height: 36px; border-radius: 50%; background: #eef0f2; color: #6b7380; display: grid; place-items: center; flex: none; }
+.ib.red { background: #fde8e8; color: #d0202e; }
+.ib.amber { background: #fff1d6; color: #c27400; }
+.ib.green { background: #e3f4e8; color: #23803f; }
+.ib.blue { background: #e3f0fa; color: #2f7fb8; }
+/* số liệu đã đứng yên (mất CSDL / mất máy chủ web): làm xám để không bị đọc như số đang chạy */
+.data-stale #devicesContainer, .data-stale #alarmBar, .data-stale #alertsTableBody { filter: grayscale(.7); opacity: .6; }
+.stale-group { opacity: .55; }
+/* giờ phút giây: chữ đều để các dòng thẳng cột */
+.t { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }

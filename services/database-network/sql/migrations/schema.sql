@@ -33,6 +33,7 @@ CREATE TABLE Zones (
     ZoneName        VARCHAR(100)    NOT NULL,
     Description     VARCHAR(255)    NULL,
     ManagerUserId   INT             NULL,
+    FloorPlan       MEDIUMTEXT      NULL,              -- ảnh sơ đồ mặt bằng (data URL PNG/JPEG/WebP Base64)
     CONSTRAINT FK_Zones_Users FOREIGN KEY (ManagerUserId)
         REFERENCES Users(UserId) ON DELETE SET NULL
 ) ENGINE=InnoDB;
@@ -48,6 +49,9 @@ CREATE TABLE Devices (
     Status          VARCHAR(20)     NOT NULL DEFAULT 'Active',
     IpAddress       VARCHAR(15)     NULL,
     InstallDate     DATE            NOT NULL DEFAULT (CURRENT_DATE),
+    PosX            DECIMAL(5,2)    NULL,              -- vị trí trên sơ đồ mặt bằng (% chiều rộng ảnh)
+    PosY            DECIMAL(5,2)    NULL,              -- (% chiều cao ảnh)
+    MaintenanceIntervalDays INT     NOT NULL DEFAULT 90, -- chu kỳ kiểm tra định kỳ (ngày)
     CONSTRAINT FK_Devices_Zones FOREIGN KEY (ZoneId)
         REFERENCES Zones(ZoneId) ON DELETE CASCADE,
     CONSTRAINT CK_Devices_Status CHECK (Status IN ('Active', 'Inactive', 'Maintenance'))
@@ -90,13 +94,57 @@ CREATE TABLE AlertHistory (
     Acknowledged            BOOLEAN         NOT NULL DEFAULT FALSE,  -- đã xem/xác nhận trên web-app
     AcknowledgedByUserId    INT             NULL,
     AcknowledgedAt          DATETIME        NULL,
+    Resolution              VARCHAR(20)     NULL,       -- kết quả xử lý: 'Handled', 'FalseAlarm', 'Test' (NULL = chưa ghi)
+    ResolutionNote          VARCHAR(500)    NULL,       -- ghi chú phiếu sự cố của cán bộ
+    ResolvedByUserId        INT             NULL,       -- cán bộ ghi kết quả phiếu (lần ghi gần nhất)
+    ResolvedAt              DATETIME        NULL,       -- thời điểm ghi kết quả phiếu
     CONSTRAINT FK_AlertHistory_Devices FOREIGN KEY (DeviceId)
         REFERENCES Devices(DeviceId) ON DELETE CASCADE,
     CONSTRAINT FK_AlertHistory_EnvironmentLogs FOREIGN KEY (LogId)
         REFERENCES EnvironmentLogs(LogId) ON DELETE SET NULL,
+    CONSTRAINT FK_AlertHistory_ResolvedBy FOREIGN KEY (ResolvedByUserId)
+        REFERENCES Users(UserId) ON DELETE SET NULL,
     CONSTRAINT FK_AlertHistory_Users FOREIGN KEY (AcknowledgedByUserId)
         REFERENCES Users(UserId) ON DELETE SET NULL,
     CONSTRAINT CK_AlertHistory_Severity CHECK (Severity IN ('Low', 'Medium', 'High')),
+    CONSTRAINT CK_AlertHistory_Resolution CHECK (Resolution IN ('Handled', 'FalseAlarm', 'Test')),
     INDEX IX_AlertHistory_Device_Time (DeviceId, AlertTime DESC),
     INDEX IX_AlertHistory_Time (AlertTime DESC)              -- lịch sử/thống kê theo ngày cho mọi thiết bị
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- 6. ActivityLog: nhật ký thao tác của cán bộ trên web-app
+-- ------------------------------------------------------------
+CREATE TABLE ActivityLog (
+    ActivityId      BIGINT AUTO_INCREMENT PRIMARY KEY,
+    UserId          INT             NULL,
+    UserName        VARCHAR(100)    NOT NULL,          -- họ tên / tên đăng nhập lúc thao tác (giữ lại khi tài khoản bị xoá)
+    Action          VARCHAR(40)     NOT NULL,          -- ví dụ 'login', 'login.failed', 'alert.ack', 'zone.update'
+    TargetType      VARCHAR(20)     NULL,              -- 'alert', 'device', 'zone', 'user'
+    TargetId        VARCHAR(40)     NULL,
+    Detail          VARCHAR(500)    NULL,
+    IpAddress       VARCHAR(45)     NULL,
+    CreatedAt       DATETIME        NOT NULL,
+    CONSTRAINT FK_ActivityLog_Users FOREIGN KEY (UserId)
+        REFERENCES Users(UserId) ON DELETE SET NULL,
+    INDEX IX_ActivityLog_Time (CreatedAt DESC)
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- 7. MaintenanceLogs: lịch sử bảo trì thiết bị
+-- ------------------------------------------------------------
+CREATE TABLE MaintenanceLogs (
+    MaintenanceId   INT AUTO_INCREMENT PRIMARY KEY,
+    DeviceId        VARCHAR(20)     NOT NULL,
+    UserId          INT             NULL,              -- cán bộ ghi nhận
+    PerformedAt     DATE            NOT NULL,
+    Kind            VARCHAR(20)     NOT NULL,          -- 'Inspection', 'Clean', 'Repair', 'Replace'
+    Note            VARCHAR(500)    NULL,
+    CreatedAt       DATETIME        NOT NULL,
+    CONSTRAINT FK_MaintenanceLogs_Devices FOREIGN KEY (DeviceId)
+        REFERENCES Devices(DeviceId) ON DELETE CASCADE,
+    CONSTRAINT FK_MaintenanceLogs_Users FOREIGN KEY (UserId)
+        REFERENCES Users(UserId) ON DELETE SET NULL,
+    CONSTRAINT CK_MaintenanceLogs_Kind CHECK (Kind IN ('Inspection', 'Clean', 'Repair', 'Replace')),
+    INDEX IX_MaintenanceLogs_Device (DeviceId, PerformedAt DESC)
 ) ENGINE=InnoDB;
