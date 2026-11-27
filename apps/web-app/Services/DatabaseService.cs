@@ -257,11 +257,12 @@ public sealed class DatabaseService
                a.AlertType, a.Severity, a.AlertTime, a.SmsSent, a.Acknowledged,
                (a.SnapshotBase64 IS NOT NULL AND a.SnapshotBase64 <> '') AS HasSnapshot,
                u.FullName AS AcknowledgedByName, a.AcknowledgedAt,
-               a.Resolution, z.ManagerUserId
+               a.Resolution, a.ResolutionNote, rv.FullName AS ResolvedByName, a.ResolvedAt, z.ManagerUserId
         FROM AlertHistory a
         LEFT JOIN Devices d ON a.DeviceId = d.DeviceId
         LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
-        LEFT JOIN Users u ON a.AcknowledgedByUserId = u.UserId";
+        LEFT JOIN Users u ON a.AcknowledgedByUserId = u.UserId
+        LEFT JOIN Users rv ON a.ResolvedByUserId = rv.UserId";
 
     private static AlertModel ReadAlert(MySqlDataReader r) => new(
         AlertId: r.GetInt64("AlertId"),
@@ -279,7 +280,10 @@ public sealed class DatabaseService
         Resolution: GetNullableString(r, "Resolution"),
         ManagerUserId: r.IsDBNull(r.GetOrdinal("ManagerUserId")) ? null : r.GetInt32("ManagerUserId"),
         PendingSeconds: r.GetBoolean("Acknowledged") ? null : AlertPolicy.PendingSeconds(r.GetDateTime("AlertTime")),
-        Overdue: AlertPolicy.IsOverdue(r.GetString("Severity"), r.GetDateTime("AlertTime"), r.GetBoolean("Acknowledged")));
+        Overdue: AlertPolicy.IsOverdue(r.GetString("Severity"), r.GetDateTime("AlertTime"), r.GetBoolean("Acknowledged")),
+        ResolutionNote: GetNullableString(r, "ResolutionNote"),
+        ResolvedByName: GetNullableString(r, "ResolvedByName"),
+        ResolvedAt: r.IsDBNull(r.GetOrdinal("ResolvedAt")) ? null : r.GetDateTime("ResolvedAt"));
 
     /// <summary>
     /// Lọc lịch sử cảnh báo theo khoảng thời gian, loại, mức độ, trạng thái xử lý (tối đa 500 dòng mới nhất).
@@ -678,28 +682,44 @@ public sealed class DatabaseService
     }
 
     /// <summary>
-    /// Cập nhật trạng thái sự cố đã được xử lý (Acknowledged = TRUE).
+    /// Xác nhận đã nhận cảnh báo. Chỉ cảnh báo CHƯA xác nhận mới được ghi: người xác nhận sau không ghi đè
+    /// người xác nhận trước (hai cán bộ cùng bấm thì người đầu tiên được giữ).
     /// </summary>
-    public async Task<bool> AcknowledgeAlertAsync(long alertId, int userId = 1)
+    public async Task<AckResult> AcknowledgeAlertAsync(long alertId, int userId)
     {
         const string sql = @"
-            UPDATE AlertHistory 
+            UPDATE AlertHistory
             SET Acknowledged = TRUE, AcknowledgedByUserId = @UserId, AcknowledgedAt = NOW()
-            WHERE AlertId = @AlertId;";
+            WHERE AlertId = @AlertId AND Acknowledged = FALSE;";
+        const string whoSql = @"
+            SELECT a.Acknowledged, u.FullName, a.AcknowledgedAt
+            FROM AlertHistory a LEFT JOIN Users u ON a.AcknowledgedByUserId = u.UserId
+            WHERE a.AlertId = @AlertId;";
 
         try
         {
             await using var conn = await OpenConnectionAsync();
-            await using var cmd = new MySqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@AlertId", alertId);
-            cmd.Parameters.AddWithValue("@UserId", userId);
-            int rows = await cmd.ExecuteNonQueryAsync();
-            return rows > 0;
+            await using (var cmd = new MySqlCommand(sql, conn))
+            {
+                cmd.Parameters.AddWithValue("@AlertId", alertId);
+                cmd.Parameters.AddWithValue("@UserId", userId);
+                if (await cmd.ExecuteNonQueryAsync() > 0)
+                    return new AckResult(AckStatus.Ok);
+            }
+
+            await using var who = new MySqlCommand(whoSql, conn);
+            who.Parameters.AddWithValue("@AlertId", alertId);
+            await using var r = await who.ExecuteReaderAsync();
+            if (!await r.ReadAsync())
+                return new AckResult(AckStatus.NotFound);
+            return new AckResult(AckStatus.AlreadyAcknowledged,
+                r.IsDBNull(1) ? null : r.GetString(1),
+                r.IsDBNull(2) ? null : r.GetDateTime(2));
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MySQL AcknowledgeAlert Error] {ex.Message}");
-            return false;
+            return new AckResult(AckStatus.Error);
         }
     }
 
@@ -981,7 +1001,7 @@ public sealed class DatabaseService
                    (a.SnapshotBase64 IS NOT NULL AND a.SnapshotBase64 <> '') AS HasSnapshot,
                    a.Acknowledged, u.FullName AS AcknowledgedByName, a.AcknowledgedAt,
                    TIMESTAMPDIFF(SECOND, a.AlertTime, a.AcknowledgedAt) AS ResponseSeconds,
-                   a.Resolution, a.ResolutionNote,
+                   a.Resolution, a.ResolutionNote, rv.FullName AS ResolvedByName, a.ResolvedAt,
                    e.LogId, e.Temperature, e.Humidity, e.SmokeDetected, e.SmokeLevel,
                    e.AlertLevel, e.AiResult, e.ConfidenceScore, e.RecordedAt
             FROM AlertHistory a
@@ -989,6 +1009,7 @@ public sealed class DatabaseService
             LEFT JOIN Zones z ON d.ZoneId = z.ZoneId
             LEFT JOIN Users m ON z.ManagerUserId = m.UserId
             LEFT JOIN Users u ON a.AcknowledgedByUserId = u.UserId
+            LEFT JOIN Users rv ON a.ResolvedByUserId = rv.UserId
             LEFT JOIN EnvironmentLogs e ON a.LogId = e.LogId
             WHERE a.AlertId = @AlertId
             LIMIT 1;";
@@ -1021,6 +1042,8 @@ public sealed class DatabaseService
             ResponseSeconds: NullInt("ResponseSeconds"),
             Resolution: GetNullableString(r, "Resolution"),
             ResolutionNote: GetNullableString(r, "ResolutionNote"),
+            ResolvedByName: GetNullableString(r, "ResolvedByName"),
+            ResolvedAt: r.IsDBNull(r.GetOrdinal("ResolvedAt")) ? null : r.GetDateTime("ResolvedAt"),
             LogId: hasLog ? r.GetInt64("LogId") : null,
             Temperature: GetNullableDouble(r, "Temperature"),
             Humidity: GetNullableDouble(r, "Humidity"),
@@ -1033,7 +1056,8 @@ public sealed class DatabaseService
     }
 
     /// <summary>
-    /// Ghi kết quả xử lý vào phiếu sự cố. Cảnh báo chưa xác nhận thì xác nhận luôn bằng người ghi phiếu;
+    /// Ghi kết quả xử lý vào phiếu sự cố, kèm người ghi và thời điểm ghi (ResolvedByUserId / ResolvedAt).
+    /// Cảnh báo chưa xác nhận thì xác nhận luôn bằng người ghi phiếu;
     /// đã xác nhận rồi thì giữ nguyên người và thời điểm xác nhận ban đầu.
     /// </summary>
     public async Task<bool> ResolveAlertAsync(long alertId, int userId, string resolution, string? note)
@@ -1042,6 +1066,8 @@ public sealed class DatabaseService
             UPDATE AlertHistory
             SET Resolution = @Resolution,
                 ResolutionNote = @Note,
+                ResolvedByUserId = @UserId,
+                ResolvedAt = NOW(),
                 AcknowledgedByUserId = IF(Acknowledged, AcknowledgedByUserId, @UserId),
                 AcknowledgedAt = IF(Acknowledged, AcknowledgedAt, NOW()),
                 Acknowledged = TRUE

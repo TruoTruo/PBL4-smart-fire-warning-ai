@@ -32,10 +32,14 @@ CSDL tạo từ seed cũ (hash `$2a$..._placeholder`) thì không đăng nhập 
 ## Phân quyền
 
 - Chưa đăng nhập: chỉ thấy màn hình đăng nhập. Mọi API (trừ đăng nhập) và SignalR trả `401` dạng JSON.
-- User: xem dashboard, xem ảnh bằng chứng và phiếu sự cố. Không thấy SĐT/email cán bộ trong bảng cán bộ
-  (riêng SĐT người phụ trách khu vực thì mọi cán bộ đều thấy, để liên hệ khi có sự cố).
-- Xác nhận cảnh báo và ghi kết quả phiếu sự cố: Admin, hoặc cán bộ phụ trách khu vực của cảnh báo;
-  khu vực chưa phân công thì mọi cán bộ đều làm được. Người xác nhận lấy từ phiên đăng nhập.
+- User: xem dashboard, xem ảnh bằng chứng và phiếu sự cố. Dữ liệu gửi về trình duyệt (REST và SignalR) không có
+  SĐT, email, tên đăng nhập của cán bộ, IP trạm, tên máy chủ / tên CSDL (lọc ở máy chủ, không chỉ ẩn trên giao diện).
+  Riêng SĐT người phụ trách khu vực thì mọi cán bộ đều thấy, để liên hệ khi có sự cố.
+  Báo cáo "theo cán bộ" (thời gian phản hồi của từng người) chỉ Admin xem.
+- Nhận xử lý cảnh báo (xác nhận) và ghi kết quả phiếu sự cố: Admin, hoặc cán bộ phụ trách khu vực của cảnh báo;
+  khu vực chưa phân công thì mọi cán bộ đều làm được. Người nhận lấy từ phiên đăng nhập.
+  Mỗi cảnh báo chỉ được nhận một lần: người bấm sau nhận `409` kèm tên và giờ của người đã nhận, không ghi đè.
+  Phiếu sự cố ghi thêm người ghi kết quả và lúc ghi (`ResolvedByUserId`, `ResolvedAt`).
 - **Leo thang**: cảnh báo Mức 2 quá 5 phút, Mức 1 quá 15 phút chưa ai xác nhận thì "quá hạn", mọi cán bộ đều được
   xác nhận / ghi phiếu thay (nhật ký ghi rõ là xử lý do leo thang). Giờ so với giờ máy chủ web.
 - Bảo trì: mọi cán bộ xem và ghi lần bảo trì; Admin đặt ngày lắp đặt, chu kỳ kiểm tra và xoá dòng bảo trì.
@@ -93,9 +97,23 @@ icon Material Symbols Outlined (Apache 2.0), chữ Be Vietnam Pro (SIL Open Font
 
 ## Âm thanh
 
-Có cảnh báo mới Mức 1/Mức 2 thì trang phát tiếng bíp (Web Audio API). Còn cảnh báo Mức 2 quá hạn chưa xác nhận
-(trong 12 giờ gần nhất, trạm đang bật báo động) thì cứ 2 phút nhắc lại một lần. Trình duyệt chỉ cho phát âm thanh
-sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên thì bấm vào trang một lần.
+Có cảnh báo mới Mức 1/Mức 2 thì trang phát tiếng bíp (Web Audio API) và hiện toast (toast lỗi giữ 12 giây, bấm để đóng).
+Còn cảnh báo Mức 2 **đang diễn ra** (chưa ai nhận, báo trong 12 giờ gần nhất, trạm đang bật báo động) mà mình xử lý được
+thì còi kêu lặp 4 giây/lần tới khi có người bấm "Nhận xử lý", hoặc bấm "Tạm tắt còi 2 phút". Mức 1 quá hạn: nhắc 2 phút/lần.
+Khi có báo cháy, tiêu đề tab trình duyệt đổi thành "(!) BÁO CHÁY · tên khu vực". Trên localhost / HTTPS, nếu cho phép
+thông báo thì trang gửi thêm thông báo của hệ điều hành.
+
+Trình duyệt chỉ cho phát âm thanh sau một lần bấm vào trang: mở lại trang khi còn phiên thì trên cùng hiện thanh vàng
+"Trình duyệt đang chặn âm thanh", bấm vào đó để bật còi.
+
+## Mất kết nối
+
+- Quá 10 giây không nhận được dữ liệu từ máy chủ web: thanh đỏ "Mất kết nối tới máy chủ web từ HH:MM:SS", trang làm xám,
+  chip CSDL/MQTT chuyển "không rõ". Máy chủ lên lại thì tự hết.
+- Máy chủ web chạy nhưng mất CSDL: giữ số liệu lần đọc được cuối (thẻ báo cháy không biến mất), làm xám, ghi
+  "Số liệu bên dưới dừng lúc …", ẩn nút "Nhận xử lý".
+- Trạm mất kết nối: các ô cảm biến của trạm làm xám, ghi "Số đo cũ lúc …", ô còi ghi "Không rõ (mất kết nối)",
+  ô Raspberry Pi ghi thời gian mất kết nối. Chip "Cao nhất" không tính trạm mất kết nối.
 
 ## Các mục trên trang
 
@@ -103,12 +121,18 @@ sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên th
   khi chọn trạm thì lấy số đo trong khoảng đã chọn từ CSDL, sau đó cộng dồn số đo mới (tối đa 240 điểm / trạm).
   Đường nét đứt đỏ là ngưỡng 45 °C của Pi; đường bị ngắt khi mất cảm biến (giá trị null) hoặc quá 60 giây không có số đo.
 - **Lịch sử & thống kê**: lọc theo khoảng ngày (mặc định 7 ngày), loại, mức độ, trạng thái; biểu đồ số cảnh báo
-  mỗi ngày; "Xuất CSV" (UTF-8 có BOM để Excel hiện đúng tiếng Việt, ô bắt đầu bằng `= + - @` được thêm `'` phía trước).
+  mỗi ngày; "Xuất CSV" (UTF-8 có BOM để Excel hiện đúng tiếng Việt, ô bắt đầu bằng `= + - @` được thêm `'` phía trước;
+  có cột người nhận, phản hồi (giây), kết quả, ghi chú, người ghi kết quả và lúc ghi).
   Mục "Hiệu quả xử lý" (cùng khoảng ngày): tỉ lệ đã xác nhận, thời gian phản hồi trung bình / chậm nhất
   (từ lúc ghi cảnh báo đến lúc xác nhận), số xác nhận trong 5 phút, tỉ lệ báo nhầm theo phiếu sự cố;
   bảng theo khu vực (kể cả khu vực không có cảnh báo), theo cán bộ xác nhận và theo trạm
   (số cảnh báo cháy / khói / nhiệt độ cao, lấy từ stored procedure `sp_GetAlertStatistics`).
-- **Cảnh báo quá hạn**: dòng tô đỏ nhạt, đưa lên đầu bảng, ghi "Quá hạn, chờ X phút"; dải trạng thái đếm số cảnh báo quá hạn.
+- **Cảnh báo gần đây** (tab Giám sát): trên cùng là cảnh báo đang diễn ra (chưa nhận, trong 12 giờ), mới nhất trước;
+  cảnh báo chưa nhận cũ hơn 12 giờ gom thành một dòng "N cảnh báo cũ chưa có người nhận · Xem và đóng" (mở Lịch sử lọc
+  sẵn); dưới cùng là các cảnh báo đã nhận gần nhất. Cảnh báo quá hạn ghi "Quá hạn, chờ X phút".
+- **Thẻ báo cháy**: nút "Nhận xử lý" chỉ nhận các cảnh báo đang diễn ra của những trạm đang báo trên thẻ, không nhận
+  cảnh báo cũ hay cảnh báo của khu khác. Trạng thái cảnh báo: "Chưa có người nhận" → "Đã nhận, chưa ghi kết quả" →
+  kết quả phiếu (Đã xử lý sự cố / Báo nhầm / Diễn tập). Phiếu bắt chọn kết quả, không có kết quả mặc định.
 - **Sơ đồ mặt bằng** (tab Giám sát): chọn khu vực để xem ảnh sơ đồ, mỗi trạm là một chấm màu theo mức
   (xanh bình thường, cam cảnh báo sớm, đỏ nhấp nháy báo cháy, xám đậm mất kết nối, xám nhạt tắt báo động).
   Có trạm báo cháy thì sơ đồ tự chuyển sang khu vực đó. Admin chọn trạm rồi bấm vào ảnh để đặt vị trí.
@@ -122,8 +146,9 @@ sau một lần bấm vào trang, nên nếu mở lại trang khi còn phiên th
   thời gian phản hồi; người có quyền ghi kết quả (Đã xử lý / Báo nhầm / Diễn tập) và ghi chú.
 - **Trạng thái trạm**: trạm đang hoạt động mà quá 60 giây không có số đo mới (Pi gửi 2,5 giây/lần) hoặc Pi báo ngắt
   qua MQTT thì hiện "Mất kết nối" kèm thời điểm số đo cuối; dải trạng thái chuyển sang "MẤT KẾT NỐI TRẠM".
-  Trạm mất kết nối khi đang báo cháy vẫn giữ báo cháy (ghi rõ là số đo cũ). Tuổi số đo tính theo giờ máy chủ web,
-  nên web-app và mqtt-subscriber phải chạy cùng múi giờ.
+  Trạm mất kết nối khi đang báo cháy vẫn giữ báo cháy (ghi rõ là số đo cũ). Tuổi số đo và hạn xác nhận tính theo
+  giờ máy chủ web, nên máy chạy web-app phải để giờ Việt Nam giống MySQL và mqtt-subscriber (chạy trong Docker thì
+  đặt `TZ=Asia/Ho_Chi_Minh`), nếu không giờ cảnh báo sẽ lệch 7 tiếng so với đồng hồ trên trang.
 - **Trạm bảo trì / ngừng hoạt động**: web tắt báo động của trạm (không phát âm thanh, dải trạng thái không chuyển đỏ,
   cảnh báo ghi nhãn "trạm bảo trì"); CSDL vẫn ghi số đo và cảnh báo làm bằng chứng, còi tại Pi vẫn do Pi điều khiển.
 - Thanh tiêu đề có 3 trạng thái: CSDL, MQTT (máy chủ web có đang nối broker không), CAMERA (luồng đang xem

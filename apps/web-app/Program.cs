@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using SmartFireWeb.Models;
 using SmartFireWeb.Services;
 using SmartFireWeb.Hubs;
 
@@ -150,10 +151,26 @@ app.MapPost("/api/alerts/acknowledge", async (
     var denied = await CheckAlertPermissionAsync(req.AlertId, user, db, http);
     if (denied != null) return denied;
 
-    bool ok = await db.AcknowledgeAlertAsync(req.AlertId, CurrentUserId(user));
-    if (!ok)
-        return Results.Json(new { success = false, error = $"Không xác nhận được sự cố #{req.AlertId} (không tồn tại hoặc lỗi CSDL)." },
-            statusCode: StatusCodes.Status409Conflict);
+    var ack = await db.AcknowledgeAlertAsync(req.AlertId, CurrentUserId(user));
+    switch (ack.Status)
+    {
+        case AckStatus.AlreadyAcknowledged:
+            return Results.Json(new
+            {
+                success = false,
+                alreadyAcknowledged = true,
+                acknowledgedBy = ack.ByName,
+                acknowledgedAt = ack.At,
+                error = $"Cảnh báo #{req.AlertId} đã được {ack.ByName ?? "cán bộ khác"} nhận"
+                    + (ack.At is DateTime at ? $" lúc {at:HH:mm:ss dd/MM}" : "") + ".",
+            }, statusCode: StatusCodes.Status409Conflict);
+        case AckStatus.NotFound:
+            return Results.Json(new { success = false, error = $"Không tìm thấy cảnh báo #{req.AlertId}." },
+                statusCode: StatusCodes.Status404NotFound);
+        case AckStatus.Error:
+            return Results.Json(new { success = false, error = $"Không xác nhận được cảnh báo #{req.AlertId} (lỗi CSDL)." },
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
 
     await Audit(http, "alert.ack", "alert", req.AlertId.ToString(), (string?)http.Items["escalated"]);
     broadcaster.Request();
@@ -231,7 +248,7 @@ app.MapGet("/api/alerts/history", async (
 }).RequireAuthorization();
 
 // 6b2. Báo cáo hiệu quả xử lý trong khoảng ngày (mặc định 7 ngày gần nhất)
-app.MapGet("/api/alerts/report", async (DateOnly? fromDate, DateOnly? toDate, DatabaseService db) =>
+app.MapGet("/api/alerts/report", async (DateOnly? fromDate, DateOnly? toDate, ClaimsPrincipal user, DatabaseService db) =>
 {
     var today = DateOnly.FromDateTime(DateTime.Now);
     var from = fromDate ?? today.AddDays(-6);
@@ -252,7 +269,7 @@ app.MapGet("/api/alerts/report", async (DateOnly? fromDate, DateOnly? toDate, Da
             toDate = to.ToString("yyyy-MM-dd"),
             summary,
             byZone,
-            byUser,
+            byUser = user.IsInRole("Admin") ? byUser : [],   // thời gian phản hồi của từng cán bộ: chỉ Admin xem
             byDevice,
         });
     }
@@ -416,11 +433,21 @@ app.MapPost("/api/auth/register", async (
     DashboardBroadcaster broadcaster,
     HttpContext http) =>
 {
-    if ((req.Password ?? "").Length < 6)
-        return Results.BadRequest(new { success = false, user = (object?)null, error = "Mật khẩu phải có ít nhất 6 ký tự." });
+    string username = (req.Username ?? "").Trim();
+    string fullName = (req.FullName ?? "").Trim();
+    string? phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
+    string? email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
+    string role = req.Role is null or "User" ? "User" : req.Role is "Admin" ? "Admin" : "";
 
-    var (success, user, error) = await db.RegisterUserAsync(
-        req.Username ?? "", req.Password!, req.FullName ?? "", req.Phone, req.Email, req.Role ?? "User");
+    string? invalid = username.Length is < 3 or > 50 || !username.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '-')
+        ? "Tên đăng nhập 3–50 ký tự, chỉ gồm chữ không dấu, số, '_', '.', '-'."
+        : (req.Password ?? "").Length is < 6 or > 100
+            ? "Mật khẩu từ 6 đến 100 ký tự."
+            : ValidateUserFields(fullName, phone, email, role);
+    if (invalid != null)
+        return Results.BadRequest(new { success = false, user = (object?)null, error = invalid });
+
+    var (success, user, error) = await db.RegisterUserAsync(username, req.Password!, fullName, phone, email, role);
 
     if (!success)
         return Results.BadRequest(new { success, user, error });
@@ -444,16 +471,8 @@ app.MapPost("/api/users/{userId:int}", async (
     string? email = string.IsNullOrWhiteSpace(req.Email) ? null : req.Email.Trim();
     string role = req.Role is "Admin" ? "Admin" : req.Role is "User" ? "User" : "";
 
-    string? error = null;
-    if (fullName.Length is 0 or > 100)
-        error = "Họ tên bắt buộc, tối đa 100 ký tự.";
-    else if (phone != null && (phone.Length > 15 || !phone.All(c => char.IsAsciiDigit(c) || c is '+' or ' ' or '.' or '-')))
-        error = "Số điện thoại tối đa 15 ký tự, chỉ gồm số, dấu cách, '+', '.', '-'.";
-    else if (email != null && (email.Length > 100 || !System.Net.Mail.MailAddress.TryCreate(email, out _)))
-        error = "Email không hợp lệ.";
-    else if (role.Length == 0)
-        error = "Vai trò chỉ được là Admin hoặc User.";
-    else if (userId == CurrentUserId(user) && role != "Admin")
+    string? error = ValidateUserFields(fullName, phone, email, role);
+    if (error == null && userId == CurrentUserId(user) && role != "Admin")
         error = "Không thể tự bỏ quyền quản trị của chính mình.";
     if (error != null)
         return Results.BadRequest(new { success = false, error });
@@ -725,6 +744,15 @@ static Task Audit(HttpContext http, string action, string? targetType = null, st
     return db.LogActivityAsync(uid > 0 ? uid : null, name, action, targetType, targetId, detail,
         http.Connection.RemoteIpAddress?.ToString());
 }
+
+// Kiểm tra dữ liệu cán bộ dùng chung cho thêm mới (register) và sửa (users/{id})
+static string? ValidateUserFields(string fullName, string? phone, string? email, string role) =>
+    fullName.Length is 0 or > 100 ? "Họ tên bắt buộc, tối đa 100 ký tự."
+    : phone != null && (phone.Length > 15 || !phone.All(c => char.IsAsciiDigit(c) || c is '+' or ' ' or '.' or '-'))
+        ? "Số điện thoại tối đa 15 ký tự, chỉ gồm số, dấu cách, '+', '.', '-'."
+    : email != null && (email.Length > 100 || !System.Net.Mail.MailAddress.TryCreate(email, out _)) ? "Email không hợp lệ."
+    : role.Length == 0 ? "Vai trò chỉ được là Admin hoặc User."
+    : null;
 
 static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 

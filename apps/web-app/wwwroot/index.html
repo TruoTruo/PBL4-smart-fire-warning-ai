@@ -89,6 +89,15 @@
     <button type="button" onclick="refreshData()" title="Làm mới dữ liệu" class="w-10 h-10 rounded-full grid place-items-center text-[#1c2229] hover:bg-[#eef0f2]"><span class="material-symbols-outlined">refresh</span></button>
   </header>
 
+  <!-- mất kết nối máy chủ web: số liệu trên trang đứng yên -->
+  <div id="serverLostBar" role="alert" class="hidden sticky top-14 z-20 bg-[#d0202e] text-white px-6 py-2.5 text-[14px] font-semibold flex items-center gap-2">
+    <span class="material-symbols-outlined" aria-hidden="true">cloud_off</span><span id="serverLostText">Mất kết nối tới máy chủ web.</span>
+  </div>
+  <!-- trình duyệt chặn âm thanh cho tới lần bấm đầu tiên -->
+  <button type="button" id="audioBlockedBar" onclick="unlockAudio(true)" class="hidden w-full bg-[#fff1d6] border-b border-[#f0d9a8] text-[#7a4a00] px-6 py-2.5 text-[14px] font-semibold flex items-center justify-center gap-2">
+    <span class="material-symbols-outlined" aria-hidden="true">volume_off</span>Trình duyệt đang chặn âm thanh. Bấm vào đây để bật còi báo động trên máy này.
+  </button>
+
   <!-- chip tóm tắt -->
   <div class="flex flex-wrap justify-center gap-2 px-6 pt-4">
     <span id="chipAlarm" class="hidden flex items-center gap-1.5 bg-white border border-[#e3e6ea] rounded-full pl-2.5 pr-3 py-1.5 text-[13px] font-semibold bg-[#fde8e8] border-[#f3b6b6] text-[#d0202e]"><span class="material-symbols-outlined text-[18px]">local_fire_department</span><span id="chipAlarmText"></span></span>
@@ -122,7 +131,11 @@
       <span id="alarmIcon" class="w-11 h-11 rounded-full bg-[#d0202e] text-white grid place-items-center shrink-0"><span class="material-symbols-outlined">local_fire_department</span></span>
       <div class="min-w-0"><b id="alarmWord" class="text-[16px] block">Báo cháy</b><span id="alarmText" class="text-[#6b7380]"></span></div>
     </div>
-    <div class="flex gap-2"><button type="button" id="btnAckAll" onclick="ackAllPending()" class="rounded-full bg-[#d0202e] text-white font-semibold px-4 py-2">Xác nhận các cảnh báo</button></div>
+    <div id="alarmStale" class="hidden text-[13px] font-semibold text-[#7a4a00] bg-[#fff1d6] rounded-lg px-3 py-1.5"></div>
+    <div class="flex flex-wrap gap-2">
+      <button type="button" id="btnTakeAlarm" onclick="takeAlarm()" class="hidden rounded-full bg-[#d0202e] text-white font-semibold px-4 py-2">Nhận xử lý</button>
+      <button type="button" id="btnSnooze" onclick="snoozeSiren()" class="hidden rounded-full border border-[#d5d9de] bg-white hover:bg-[#eef0f2] font-semibold px-4 py-2">Tạm tắt còi 2 phút</button>
+    </div>
   </div>
 
   <!-- các khu vực: mỗi trạm một nhóm ô cảm biến -->
@@ -327,7 +340,6 @@
           <option value="Fire">Lửa</option>
           <option value="Smoke">Khói</option>
           <option value="HighTemperature">Nhiệt độ cao</option>
-          <option value="HighGas">Khí gas cao</option>
         </select>
       </label>
       <label class="flex flex-col gap-1 text-[#6b7380]">Mức độ
@@ -567,7 +579,7 @@
           <tr class="text-[#6b7380] border-b border-[#e3e6ea]">
             <th class="py-2.5 px-3">Mã</th>
             <th class="py-2.5 px-3">Họ và tên</th>
-            <th class="py-2.5 px-3">Tên đăng nhập</th>
+            <th class="py-2.5 px-3 admin-only">Tên đăng nhập</th>
             <th class="py-2.5 px-3">Vai trò</th>
             <th class="admin-only hidden py-2.5 px-3">Số điện thoại</th>
             <th class="admin-only hidden py-2.5 px-3">Email liên hệ</th>
@@ -917,6 +929,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <label class="flex flex-col gap-1">Kết quả xử lý
             <select id="incResolution" class="w-full bg-[#eef0f2] border border-[#d5d9de] rounded-lg px-3 py-2 text-[13px] text-[#1c2229] focus:outline-none focus:border-[#1c2229] bg-white">
+              <option value="">— Chọn kết quả —</option>
               <option value="Handled">Đã xử lý sự cố</option>
               <option value="FalseAlarm">Báo nhầm</option>
               <option value="Test">Diễn tập / thử hệ thống</option>
@@ -1041,6 +1054,7 @@
       return { key: 'online', lost: false, text: 'Trực tuyến' };
     }
     const alarmsOn = (d) => d.status === 'Active';
+    const BASE_TITLE = document.title;
     function deviceById(id) {
       return ((lastData && lastData.devices) || []).find(d => d.deviceId === id) || null;
     }
@@ -1083,7 +1097,9 @@
       text.textContent = message;
       toast.append(icon, text);
       container.appendChild(toast);
-      setTimeout(() => { toast.remove(); }, 4000);
+      toast.title = 'Bấm để đóng';
+      toast.addEventListener('click', () => toast.remove());
+      setTimeout(() => { toast.remove(); }, type === 'error' ? 12000 : 4000);
     }
 
     // --- gọi API (cookie gửi kèm, 401 thì về màn hình đăng nhập) ---
@@ -1148,7 +1164,7 @@
 
     async function handleLoginSubmit(e) {
       e.preventDefault();
-      unlockAudio();   // lần bấm này cho phép trình duyệt phát âm thanh báo động về sau
+      unlockAudio(true);   // lần bấm này cho phép trình duyệt phát âm thanh báo động về sau
 
       const u = el('loginUsername').value.trim();
       const p = el('loginPassword').value;
@@ -1234,7 +1250,8 @@
     // --- âm thanh báo động (Web Audio, không cần file âm thanh) ---
     const sound = { ctx: null, enabled: storageGet('smartfire_sound') !== 'off' };
 
-    function unlockAudio() {
+    function unlockAudio(askNotify) {
+      if (askNotify === true) askNotifyPermission();
       try {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (!Ctx) return;
@@ -1246,6 +1263,19 @@
     // Mở lại trang khi còn phiên: trình duyệt chỉ cho phát âm thanh sau lần bấm / gõ phím đầu tiên
     ['pointerdown', 'keydown'].forEach(evt => document.addEventListener(evt, unlockAudio, { once: true, capture: true }));
 
+    // Thông báo của trình duyệt (chỉ chạy trên localhost hoặc HTTPS); xin quyền trong lần bấm của người dùng
+    function askNotifyPermission() {
+      try {
+        if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+      } catch (e) { /* trình duyệt không hỗ trợ */ }
+    }
+    function notifyOs(title, body) {
+      try {
+        if ('Notification' in window && Notification.permission === 'granted')
+          new Notification(title, { body, tag: 'smartfire-alarm', renotify: true, requireInteraction: true });
+      } catch (e) { /* bỏ qua */ }
+    }
+
     function audioReady() {
       return !!sound.ctx && sound.ctx.state === 'running';
     }
@@ -1254,6 +1284,7 @@
       const icon = el('iconSound');
       const text = el('textSound');
       const btn = el('btnSound');
+      el('audioBlockedBar').classList.toggle('hidden', !(currentUser && sound.enabled && !audioReady()));
       if (!sound.enabled) {
         icon.textContent = 'volume_off';
         text.textContent = 'Âm thanh: Tắt';
@@ -1270,7 +1301,7 @@
     }
 
     function toggleSound() {
-      unlockAudio();
+      unlockAudio(true);
       sound.enabled = !sound.enabled;
       storageSet('smartfire_sound', sound.enabled ? 'on' : 'off');
       updateSoundButton();
@@ -1317,8 +1348,29 @@
 
       const top = fresh.find(a => a.severity === 'High') || fresh[0];
       playAlarm(top.severity === 'High' ? 2 : 1);
-      showToast(`Cảnh báo mới: ${severityText(top.severity)} – ${alertTypeText(top.alertType)} tại ${top.deviceName || top.deviceId}`, 'error');
+      const msg = `${severityText(top.severity)} – ${alertTypeText(top.alertType)} tại ${top.zoneName} (${top.deviceId})`;
+      showToast('Cảnh báo mới: ' + msg, 'error');
+      notifyOs(top.severity === 'High' ? 'BÁO CHÁY' : 'Cảnh báo sớm', msg);
     }
+
+    // --- máy chủ web không trả lời: quá 10 giây không nhận được dữ liệu (REST hay SignalR) thì báo ---
+    let lastOkAt = Date.now();
+    let serverLost = false;
+    let visibleSince = Date.now();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') { visibleSince = Date.now(); fetchDashboardData(false); }
+    });
+    setInterval(() => {
+      if (!currentUser || document.visibilityState !== 'visible' || Date.now() - visibleSince < 6000) return;
+      const lost = Date.now() - lastOkAt > 10000;
+      if (lost !== serverLost) {
+        serverLost = lost;
+        if (lost) playAlarm(1);
+        applyStale();
+      }
+      if (lost) el('serverLostText').textContent = `Mất kết nối tới máy chủ web từ ${new Date(lastOkAt).toLocaleTimeString('vi-VN')}`
+        + ` (${fmtWait(Math.floor((Date.now() - lastOkAt) / 1000))}). Số liệu trên trang đang đứng yên, trang không nhận được báo cháy mới.`;
+    }, 2000);
 
     // --- dữ liệu dashboard ---
     async function fetchDashboardData(showNotify = false) {
@@ -1346,17 +1398,19 @@
       fetchDashboardData(true);
     }
 
-    async function acknowledgeAlert(alertId) {
-      // Người xác nhận do máy chủ lấy từ phiên đăng nhập, không gửi userId
+    // "Nhận xử lý" = tôi đã thấy và chịu trách nhiệm cảnh báo này; kết quả xử lý ghi sau ở Phiếu.
+    // Người nhận do máy chủ lấy từ phiên đăng nhập, không gửi userId. quiet = không hiện toast thành công (nhận nhiều cái).
+    async function acknowledgeAlert(alertId, quiet = false) {
       const res = await api('/api/alerts/acknowledge', { method: 'POST', body: { alertId } });
-      if (res.status === 401) return;
-      if (res.ok && res.body.success) {
-        showToast(`Đã xác nhận xử lý sự cố #${alertId}`, 'success');
+      if (res.status === 401) return false;
+      const ok = res.ok && res.body.success;
+      if (ok && !quiet) showToast(`Đã nhận cảnh báo #${alertId}. Xử lý xong thì ghi kết quả ở Phiếu.`, 'success');
+      if (!ok) showToast(res.body.error || `Không nhận được cảnh báo #${alertId}`, res.body.alreadyAcknowledged ? 'info' : 'error');
+      if (!quiet) {
         await fetchDashboardData(false);
         if (hist.loaded) loadHistory(false);
-      } else {
-        showToast(res.body.error || `Không thể xác nhận sự cố #${alertId}`, 'error');
       }
+      return ok;
     }
 
     // --- quản lý cán bộ (chỉ admin) ---
@@ -1437,6 +1491,7 @@
       if (!btn) return;
       const action = btn.dataset.action;
       if (action === 'tab') { showTab(btn.dataset.tab); return; }
+      if (action === 'backlog') { openBacklog(); return; }
       if (action === 'maint' || action === 'fp-unplace') {
         const deviceId = btn.dataset.device || '';
         if (!deviceId) return;
@@ -1889,7 +1944,8 @@
       }
 
       el('dbErrorBanner').classList.toggle('hidden', !!data.isConnected);
-      el('dbErrorText').textContent = data.isConnected ? '' : (data.error || 'Không rõ lỗi.');
+      el('dbErrorText').textContent = data.isConnected ? '' : (data.error || 'Không rõ lỗi.')
+        + (lastGoodAt ? ` Số liệu bên dưới dừng lúc ${lastGoodAt.toLocaleTimeString('vi-VN')}.` : '');
 
       // thẻ báo cháy và chip đỏ: chỉ hiện khi có trạm ở mức 1 hoặc 2 (theo số đo mới nhất)
       const devs = data.devices || [];
@@ -1914,6 +1970,23 @@
         + (deviceConn(d).lost ? ' · mất kết nối, số đo cũ' : '')
         + (d.managerName ? ` · phụ trách ${d.managerName}${d.managerPhone ? ', ' + d.managerPhone : ''}` : '')).join(' | ');
       el('chipAlarmText').textContent = (fire.length ? 'Báo cháy: ' : 'Cảnh báo sớm: ') + list.map(d => d.deviceId).join(', ');
+
+      alarmDeviceIds = shown.map(d => d.deviceId);
+      const take = alarmTakeList();
+      el('btnTakeAlarm').classList.toggle('hidden', take.length === 0 || !data.isConnected);
+      el('btnTakeAlarm').textContent = take.length > 1 ? `Nhận xử lý (${take.length} cảnh báo)` : 'Nhận xử lý';
+      const staleOnes = shown.filter(d => deviceConn(d).lost);
+      el('alarmStale').classList.toggle('hidden', staleOnes.length === 0 && data.isConnected);
+      el('alarmStale').textContent = !data.isConnected
+        ? 'Mất kết nối CSDL: đây là số liệu cũ, chưa biết tình trạng hiện tại.'
+        : 'Mất tín hiệu từ ' + staleOnes.map(d => `${d.deviceId} (số đo cuối ${fmtDateTime(d.recordedAt)})`).join(', ') + '. Cần kiểm tra tại chỗ.';
+      updateSirenUi();
+
+      const pendingHigh = sirenAlerts();
+      document.title = fire.length ? `(!) BÁO CHÁY · ${[...new Set(fire.map(d => d.zoneName))].join(', ')}`
+        : pendingHigh.length ? `(!) Báo cháy chưa có người nhận · ${pendingHigh[0].zoneName}`
+        : warn.length ? `(!) Cảnh báo sớm · ${[...new Set(warn.map(d => d.zoneName))].join(', ')}`
+        : BASE_TITLE;
 
       // cảnh báo quá hạn xác nhận (leo thang cho mọi cán bộ) và trạm tắt báo động
       const overdue = (data.alerts || []).filter(a => a.overdue && !a.acknowledged);
@@ -2001,7 +2074,7 @@
                 ${isMe ? '<span class="text-[12px] text-[#1c2229] ml-1">(Đang đăng nhập)</span>' : ''}
               </div>
             </td>
-            <td class="py-2.5 px-3 text-[#6b7380]">${escapeHtml(u.username)}</td>
+            ${admin ? `<td class="py-2.5 px-3 text-[#6b7380]">${escapeHtml(u.username)}</td>` : ''}
             <td class="py-2.5 px-3">${roleBadge}</td>${contactCells}
             <td class="py-2.5 px-3 text-[#6b7380]">${escapeHtml(fmtDateTime(u.createdAt).split(' ').pop())}</td>
             ${actionCell}
@@ -2017,7 +2090,7 @@
 
     function renderDevices(devices) {
       const box = el('devicesContainer');
-      const withTemp = (devices || []).filter(d => fmtNumber(d.temperature) !== null);
+      const withTemp = (devices || []).filter(d => fmtNumber(d.temperature) !== null && !deviceConn(d).lost);
       if (withTemp.length) {
         const hot = withTemp.reduce((a, b) => (Number(b.temperature) > Number(a.temperature) ? b : a));
         el('kpiMaxTemp').textContent = `${fmtNumber(hot.temperature)} °C`;
@@ -2043,14 +2116,22 @@
           : level === 1 ? '<b class="text-[#c27400]">Mức 1 · cảnh báo sớm</b>' + (conn.lost ? ' · số đo cũ' : '')
           : conn.lost ? '<b class="text-[#c27400]">Mất kết nối</b>'
           : conn.key === 'nodata' ? 'Chưa có số đo' : 'Mức 0 · bình thường';
+        // mất kết nối: các ô là số đo CŨ, bỏ màu đỏ/xanh để không bị đọc như số đang chạy
+        const old = conn.lost;
+        const tone = (t) => old ? '' : t;
+        const piState = (old ? `<b>${escapeHtml(conn.key === 'offline' ? 'Mất kết nối (Pi báo ngắt)' : 'Mất kết nối ' + fmtWait(toInt(d.ageSeconds)))}</b>`
+            : conn.key === 'nodata' ? 'Chưa có số đo' : 'Trực tuyến')
+          + ` · ${escapeHtml(DEVICE_STATUS_TEXT[d.status] || d.status || '')}${d.ipAddress ? ' · ' + escapeHtml(d.ipAddress) : ''}`;
         const tiles = [
-          tileHtml('thermostat', 'Nhiệt độ', t === null ? lost : (hot ? `<b>${t} °C</b> · vượt ${TEMP_DANGER} °C` : `${t} °C`), hot ? 'red' : ''),
-          tileHtml('water_drop', 'Độ ẩm', h === null ? lost : `${h} %`, 'blue'),
-          tileHtml('heat', 'Khói (MQ-2)', d.smokeDetected ? '<b>Có khói</b>' : 'Không', d.smokeDetected ? 'red' : ''),
-          tileHtml('local_fire_department', 'Camera AI', d.aiResult ? `<b>Có lửa</b>${conf !== null ? ' · ' + conf + ' %' : ''}` : 'Không phát hiện lửa', d.aiResult ? 'red' : ''),
-          tileHtml('campaign', 'Còi tại Pi', level >= 2 ? '<b>Đang kêu</b>' : 'Tắt', level >= 2 ? 'red' : ''),
-          tileHtml('memory', 'Raspberry Pi', `${escapeHtml(DEVICE_STATUS_TEXT[d.status] || d.status || '')} · ${escapeHtml(d.ipAddress) || 'DHCP'}`, active ? 'green' : '')
-        ].join('');
+          tileHtml('thermostat', 'Nhiệt độ', t === null ? lost : (hot ? `<b>${t} °C</b> · vượt ${TEMP_DANGER} °C` : `${t} °C`), tone(hot ? 'red' : '')),
+          tileHtml('water_drop', 'Độ ẩm', h === null ? lost : `${h} %`, tone('blue')),
+          tileHtml('heat', 'Khói (MQ-2)', d.smokeDetected ? '<b>Có khói</b>' : 'Không', tone(d.smokeDetected ? 'red' : '')),
+          tileHtml('local_fire_department', 'Camera AI', d.aiResult ? `<b>Có lửa</b>${conf !== null ? ' · ' + conf + ' %' : ''}` : 'Không phát hiện lửa', tone(d.aiResult ? 'red' : '')),
+          tileHtml('campaign', 'Còi tại Pi', old ? 'Không rõ (mất kết nối)' : level >= 2 ? '<b>Đang kêu</b>' : 'Tắt', tone(level >= 2 ? 'red' : '')),
+          tileHtml('memory', 'Raspberry Pi', piState, old ? 'red' : active && conn.key === 'online' ? 'green' : '')
+        ];
+        const staleHead = old ? `<div class="col-span-2 text-[13px] font-semibold text-[#7a4a00] bg-[#fff1d6] rounded-lg px-3 py-1.5">Số đo cũ lúc ${escapeHtml(fmtDateTime(d.recordedAt))}, không phải số hiện tại</div>` : '';
+        const tileGrid = staleHead + (old ? `<div class="col-span-2 grid grid-cols-2 gap-2 stale-group">${tiles.slice(0, 5).join('')}</div>` + tiles[5] : tiles.join(''));
         return `
           <section class="flex flex-col gap-2.5 ${off ? 'opacity-60' : ''}">
             <h2 class="flex items-center gap-2 text-[16px] font-semibold">
@@ -2058,7 +2139,7 @@
               <span class="font-normal text-[#6b7380]">${escapeHtml(d.deviceId)}</span>
               <span class="ml-auto text-[13px] font-normal text-[#6b7380]">${levelText}</span>
             </h2>
-            <div class="grid grid-cols-2 gap-2">${tiles}</div>
+            <div class="grid grid-cols-2 gap-2">${tileGrid}</div>
             <div class="text-[12px] text-[#6b7380]">${escapeHtml(d.deviceName)} · cập nhật ${escapeHtml(fmtDateTime(d.recordedAt))}${conn.lost ? ` · <b class="text-[#c27400]">${escapeHtml(conn.text)}</b>` : ''} · ${d.managerName ? 'phụ trách ' + escapeHtml(d.managerName) + (d.managerPhone ? ', ' + escapeHtml(d.managerPhone) : '') : 'chưa có người phụ trách'}</div>
           </section>`;
       }).join('');
@@ -2076,10 +2157,10 @@
         : '<span class="text-[#a0a6b0]">—</span>';
       const resText = a.resolution ? RESOLUTION_TEXT[a.resolution] || a.resolution : '';
       const ackCell = a.acknowledged
-        ? `<span class="${a.resolution === 'FalseAlarm' ? 'text-[#6b7380]' : 'text-[#23803f]'}">${escapeHtml(resText || 'Đã xác nhận')}</span><div class="text-[13px] text-[#8a919b] whitespace-nowrap">${escapeHtml(a.acknowledgedByName) || '—'}${a.acknowledgedAt ? ', ' + escapeHtml(fmtDateTime(a.acknowledgedAt)) : ''}</div>`
-        : '<span class="text-[#d0202e] font-bold">Chưa xử lý</span>' + pendingNote(a);
+        ? `<span class="${!a.resolution ? 'text-[#9a5800]' : a.resolution === 'FalseAlarm' ? 'text-[#6b7380]' : 'text-[#23803f]'}">${escapeHtml(resText || 'Đã nhận, chưa ghi kết quả')}</span><div class="text-[13px] text-[#8a919b] whitespace-nowrap">${escapeHtml(a.acknowledgedByName) || '—'}${a.acknowledgedAt ? ', ' + escapeHtml(fmtDateTime(a.acknowledgedAt)) : ''}</div>`
+        : '<span class="text-[#d0202e] font-bold">Chưa có người nhận</span>' + pendingNote(a);
       const ackBtn = !a.acknowledged && canHandleAlert(a)
-        ? `<button data-action="ack" data-id="${id}" class="px-2.5 py-1 rounded-lg border border-[#b8bec6] bg-white hover:bg-[#eef0f2] text-[#1c2229] whitespace-nowrap">Xác nhận</button>`
+        ? `<button data-action="ack" data-id="${id}" class="px-2.5 py-1 rounded-lg border border-[#b8bec6] bg-white hover:bg-[#eef0f2] text-[#1c2229] whitespace-nowrap">Nhận xử lý</button>`
         : '';
       const actionBtn = `<div class="flex justify-end gap-1.5">${ackBtn}<button data-action="incident" data-id="${id}" class="px-2.5 py-1 rounded-lg border border-[#e3e6ea] bg-white hover:bg-[#eef0f2] text-[#1c2229] whitespace-nowrap">Phiếu</button></div>`;
 
@@ -2095,30 +2176,43 @@
           </tr>`;
     }
 
+    // Danh sách trên trang Giám sát, theo thứ tự:
+    //   1) đang diễn ra (chưa nhận, trong 12 giờ): luôn hiện hết, mới nhất trước, cảnh báo cũ không chen lên trên;
+    //   2) một dòng gom các cảnh báo tồn đọng (chưa nhận, cũ hơn 12 giờ) dẫn sang Lịch sử;
+    //   3) cảnh báo đã nhận gần nhất cho đủ 8 dòng.
     function renderAlerts(alerts) {
       const body = el('alertsTableBody');
-      const pending = (alerts || []).filter(a => !a.acknowledged).length;
-      el('alertsCount').textContent = pending ? `${pending} chưa xác nhận` : 'đã xác nhận hết';
-      el('btnAckAll').classList.toggle('hidden', pending === 0);
-      el('railBadge').textContent = pending;
-      el('railBadge').classList.toggle('hidden', pending === 0);
-      if (!alerts || alerts.length === 0) {
+      alerts = alerts || [];
+      const totalPending = Math.max(toInt(lastData && lastData.kpis && lastData.kpis.pendingAlerts), alerts.filter(a => !a.acknowledged).length);
+      const ongoing = alerts.filter(isOngoing);
+      const backlog = Math.max(0, totalPending - ongoing.length);
+      el('alertsCount').textContent = ongoing.length ? `${ongoing.length} đang chờ nhận` + (backlog ? ` · ${backlog} tồn đọng` : '')
+        : backlog ? `${backlog} tồn đọng chưa nhận` : 'không có cảnh báo chờ';
+      el('railBadge').textContent = totalPending;
+      el('railBadge').classList.toggle('hidden', totalPending === 0);
+      if (alerts.length === 0 && backlog === 0) {
         body.innerHTML = '<p class="text-[#6b7380]">Chưa có cảnh báo nào.</p>';
         return;
       }
-      // quá hạn chưa xác nhận lên đầu, còn lại giữ thứ tự mới nhất trước
-      const sorted = alerts.filter(a => a.overdue && !a.acknowledged).concat(alerts.filter(a => !(a.overdue && !a.acknowledged)));
-      body.innerHTML = sorted.slice(0, 8).map(a => {
+      const done = alerts.filter(a => a.acknowledged).slice(0, Math.max(0, 8 - ongoing.length - (backlog ? 1 : 0)));
+      const backlogRow = !backlog ? '' : `
+          <div class="tile bg-[#f7f8fa]">
+            <span class="ib"><span class="material-symbols-outlined">inventory_2</span></span>
+            <div class="min-w-0"><div class="tn">${backlog} cảnh báo cũ chưa có người nhận</div>
+              <div class="ts">Báo từ hơn 12 giờ trước. Cần xem lại và đóng phiếu.</div></div>
+            <button data-action="backlog" class="ml-auto shrink-0 rounded-full border border-[#e3e6ea] bg-white hover:bg-[#eef0f2] px-3 py-1.5 text-[13px]">Xem và đóng</button>
+          </div>`;
+      const card = (a) => {
         const id = toInt(a.alertId);
         const high = a.severity === 'High';
         const tone = a.acknowledged ? '' : (high ? 'red' : 'amber');
         const icon = a.alertType === 'Smoke' ? 'heat' : (a.alertType === 'HighTemperature' ? 'thermostat' : 'local_fire_department');
-        const resText = a.resolution ? RESOLUTION_TEXT[a.resolution] || a.resolution : 'Đã xác nhận';
+        const resText = a.resolution ? RESOLUTION_TEXT[a.resolution] || a.resolution : 'Đã nhận, chưa ghi kết quả';
         const ticket = `<button data-action="incident" data-id="${id}" class="shrink-0 rounded-full border border-[#e3e6ea] bg-white hover:bg-[#eef0f2] px-3 py-1.5 text-[13px]">Phiếu</button>`;
         const right = a.acknowledged
-          ? `<span class="ml-auto text-right text-[13px] font-semibold ${a.resolution === 'FalseAlarm' ? 'text-[#6b7380]' : 'text-[#23803f]'} shrink-0">${escapeHtml(resText)}<br><span class="font-normal text-[12px] text-[#6b7380]">${escapeHtml(a.acknowledgedByName) || '—'}</span></span>${ticket}`
+          ? `<span class="ml-auto text-right text-[13px] font-semibold ${!a.resolution ? 'text-[#9a5800]' : a.resolution === 'FalseAlarm' ? 'text-[#6b7380]' : 'text-[#23803f]'} shrink-0">${escapeHtml(resText)}<br><span class="font-normal text-[12px] text-[#6b7380]">${escapeHtml(a.acknowledgedByName) || '—'}</span></span>${ticket}`
           : `<span class="ml-auto flex items-center gap-1.5 shrink-0">${canHandleAlert(a)
-              ? `<button data-action="ack" data-id="${id}" class="rounded-full border border-[#e3e6ea] bg-white hover:bg-[#eef0f2] px-3.5 py-1.5 text-[13px] font-semibold">Xác nhận</button>`
+              ? `<button data-action="ack" data-id="${id}" class="rounded-full border border-[#e3e6ea] bg-white hover:bg-[#eef0f2] px-3.5 py-1.5 text-[13px] font-semibold">Nhận xử lý</button>`
               : '<span class="text-[12px] text-[#8a919b]">chờ người phụ trách</span>'}${ticket}</span>`;
         const img = a.hasSnapshot ? ` · <button data-action="snapshot" data-id="${id}" class="text-[#2f7fb8] font-semibold">xem ảnh</button>` : '';
         return `
@@ -2128,7 +2222,18 @@
               <div class="ts">${escapeHtml(severityText(a.severity))} · ${escapeHtml(fmtDateTime(a.alertTime))}${img}</div>${a.acknowledged ? '' : pendingNote(a)}</div>
             ${right}
           </div>`;
-      }).join('');
+      };
+      body.innerHTML = ongoing.map(card).join('') + backlogRow + done.map(card).join('');
+    }
+
+    // Mở Lịch sử, lọc sẵn cảnh báo chưa nhận trong 30 ngày
+    function openBacklog() {
+      const today = new Date();
+      el('histFrom').value = localIsoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30));
+      el('histTo').value = localIsoDate(today);
+      el('histStatus').value = 'pending';
+      showTab('history');
+      loadHistory(false);
     }
 
     // "chờ 3 phút" / "Quá hạn 12 phút" dưới chữ Chưa xử lý
@@ -2149,22 +2254,52 @@
       return `<div class="text-[12px] text-[#8a919b] whitespace-nowrap">chờ ${escapeHtml(fmtWait(a.pendingSeconds))}</div>`;
     }
 
-    // Nhắc lại bằng âm thanh mỗi 2 phút khi còn cảnh báo mức 2 quá hạn (12 giờ gần nhất, trạm đang bật báo động)
-    let lastOverdueRemind = 0;
-    function remindOverdue(alerts) {
-      const list = alerts.filter(a => a.overdue && !a.acknowledged && a.severity === 'High'
-        && toInt(a.pendingSeconds) < 12 * 3600 && (() => { const d = deviceById(a.deviceId); return !d || alarmsOn(d); })());
-      if (!list.length || Date.now() - lastOverdueRemind < 120000) return;
-      lastOverdueRemind = Date.now();
-      playAlarm(2);
-      showToast(`Còn ${list.length} cảnh báo mức 2 quá hạn chưa xác nhận (${[...new Set(list.map(a => a.deviceId))].join(', ')}). Mọi cán bộ đều xử lý được.`, 'error');
-    }
+    // Cảnh báo "đang diễn ra": chưa nhận và báo trong ONGOING_SEC gần nhất; cũ hơn là tồn đọng (không làm còi kêu)
+    const ONGOING_SEC = 12 * 3600;
+    const isOngoing = (a) => !a.acknowledged && toInt(a.pendingSeconds) < ONGOING_SEC;
+    const alarmsOnFor = (a) => { const d = deviceById(a.deviceId); return !d || alarmsOn(d); };
 
-    // xác nhận lần lượt mọi cảnh báo chưa xử lý mà mình được xử lý (nút trên thẻ báo động)
-    async function ackAllPending() {
-      const ids = ((lastData && lastData.alerts) || []).filter(a => !a.acknowledged && canHandleAlert(a)).map(a => toInt(a.alertId));
-      if (ids.length === 0) { showToast('Không có cảnh báo nào bạn được xác nhận (chờ người phụ trách khu vực).', 'info'); return; }
-      for (const id of ids) await acknowledgeAlert(id);
+    // Còi trên web: mức 2 đang diễn ra mà mình xử lý được thì kêu lặp mỗi 4 giây tới khi có người nhận,
+    // hoặc khi bấm "Tạm tắt còi 2 phút". Mức 1 quá hạn: nhắc 2 phút/lần.
+    let snoozeUntil = 0;
+    let lastMediumRemind = 0;
+    function sirenAlerts() {
+      return ((lastData && lastData.alerts) || []).filter(a => a.severity === 'High' && isOngoing(a) && alarmsOnFor(a) && canHandleAlert(a));
+    }
+    function snoozeSiren() {
+      snoozeUntil = Date.now() + 120000;
+      updateSirenUi();
+    }
+    function updateSirenUi() {
+      const n = sirenAlerts().length;
+      const btn = el('btnSnooze');
+      btn.classList.toggle('hidden', n === 0);
+      const left = Math.ceil((snoozeUntil - Date.now()) / 1000);
+      btn.textContent = left > 0 ? `Còi tạm tắt, kêu lại sau ${Math.floor(left / 60)}:${pad2(left % 60)}` : 'Tạm tắt còi 2 phút';
+    }
+    setInterval(() => {
+      if (!currentUser) return;
+      updateSirenUi();
+      if (Date.now() < snoozeUntil) return;
+      if (sirenAlerts().length) { playAlarm(2); return; }
+      const medium = ((lastData && lastData.alerts) || []).filter(a => a.severity === 'Medium' && a.overdue && isOngoing(a) && alarmsOnFor(a) && canHandleAlert(a));
+      if (medium.length && Date.now() - lastMediumRemind > 120000) { lastMediumRemind = Date.now(); playAlarm(1); }
+    }, 4000);
+
+    // Nút "Nhận xử lý" trên thẻ báo cháy: chỉ nhận cảnh báo ĐANG DIỄN RA của các trạm đang báo trên thẻ,
+    // không đụng tới cảnh báo cũ hay của trạm khác (những cái đó nhận từng cái ở danh sách / lịch sử)
+    let alarmDeviceIds = [];
+    function alarmTakeList() {
+      return ((lastData && lastData.alerts) || []).filter(a => isOngoing(a) && alarmDeviceIds.includes(a.deviceId) && canHandleAlert(a));
+    }
+    async function takeAlarm() {
+      const list = alarmTakeList();
+      if (list.length === 0) { showToast('Không có cảnh báo nào của trạm này đang chờ bạn nhận.', 'info'); return; }
+      let ok = 0;
+      for (const a of list) if (await acknowledgeAlert(toInt(a.alertId), true)) ok++;
+      if (ok) showToast(`Đã nhận ${ok} cảnh báo của ${[...new Set(list.map(a => a.deviceId))].join(', ')}. Xử lý xong thì ghi kết quả ở Phiếu.`, 'success');
+      await fetchDashboardData(false);
+      if (hist.loaded) loadHistory(false);
     }
 
     function renderLogs(logs) {
@@ -2378,7 +2513,7 @@
         return;
       }
       const header = ['Mã cảnh báo', 'Thời gian', 'Mã thiết bị', 'Tên thiết bị', 'Khu vực', 'Loại cảnh báo', 'Mức độ',
-        'Trạng thái', 'Người xác nhận', 'Thời điểm xác nhận', 'Có ảnh'];
+        'Trạng thái', 'Người nhận xử lý', 'Thời điểm nhận', 'Phản hồi (giây)', 'Kết quả', 'Ghi chú', 'Người ghi kết quả', 'Thời điểm ghi kết quả', 'Có ảnh'];
       const lines = hist.rows.map(a => [
         toInt(a.alertId),
         fmtSortable(a.alertTime),
@@ -2387,9 +2522,14 @@
         a.zoneName,
         alertTypeText(a.alertType),
         severityText(a.severity),
-        a.acknowledged ? 'Đã xác nhận' : 'Chưa xử lý',
+        a.resolution ? 'Đã đóng phiếu' : a.acknowledged ? 'Đã nhận' : 'Chưa có người nhận',
         a.acknowledgedByName || '',
         fmtSortable(a.acknowledgedAt),
+        a.acknowledgedAt ? Math.max(0, Math.round((new Date(a.acknowledgedAt) - new Date(a.alertTime)) / 1000)) : '',
+        a.resolution ? (RESOLUTION_TEXT[a.resolution] || a.resolution) : '',
+        a.resolutionNote || '',
+        a.resolvedByName || '',
+        fmtSortable(a.resolvedAt),
         a.hasSnapshot ? 'Có' : 'Không'
       ].map(csvCell).join(','));
 
@@ -2808,8 +2948,7 @@
 
       const who = incSection('Người phụ trách',
         incField('Cán bộ phụ trách', inc.managerName ? `<b>${escapeHtml(inc.managerName)}</b>` : '<span class="text-[#c27400]">Khu vực chưa phân công</span>')
-        + incField('Số điện thoại', escapeHtml(inc.managerPhone) || '—')
-        + incField('Thông báo SMS', inc.smsSent ? 'Đã gửi' : '<span class="text-[#8a919b]">Chưa gửi</span>'));
+        + incField('Số điện thoại', escapeHtml(inc.managerPhone) || '—'));
 
       let reading;
       if (inc.logId === null || inc.logId === undefined) {
@@ -2829,11 +2968,13 @@
       }
 
       const handled = incSection('Xử lý',
-        incField('Trạng thái', inc.acknowledged ? '<span class="text-[#23803f]">Đã xác nhận</span>' : '<b class="text-[#d0202e]">Chưa xử lý</b>')
-        + incField('Người xác nhận', escapeHtml(inc.acknowledgedByName) || '—')
-        + incField('Lúc xác nhận', escapeHtml(fmtDateTime(inc.acknowledgedAt)) || '—')
+        incField('Trạng thái', inc.resolution ? '<span class="text-[#23803f]">Đã đóng phiếu</span>'
+            : inc.acknowledged ? '<span class="text-[#9a5800]">Đã nhận, chưa ghi kết quả</span>' : '<b class="text-[#d0202e]">Chưa có người nhận</b>')
+        + incField('Người nhận xử lý', escapeHtml(inc.acknowledgedByName) || '—')
+        + incField('Lúc nhận', escapeHtml(fmtDateTime(inc.acknowledgedAt)) || '—')
         + incField('Thời gian phản hồi', inc.acknowledged ? escapeHtml(fmtDuration(inc.responseSeconds)) : '—')
         + incField('Kết quả', inc.resolution ? `<b>${escapeHtml(RESOLUTION_TEXT[inc.resolution] || inc.resolution)}</b>` : '<span class="text-[#8a919b]">Chưa ghi</span>')
+        + incField('Ghi kết quả', inc.resolvedByName ? `${escapeHtml(inc.resolvedByName)}, ${escapeHtml(fmtDateTime(inc.resolvedAt))}` : '—')
         + incField('Ghi chú', escapeHtml(inc.resolutionNote) || '—'));
 
       el('incBody').innerHTML = where + who + reading + handled;
@@ -2841,11 +2982,13 @@
       // Form ghi kết quả: chỉ người có quyền mới thấy
       el('incForm').classList.toggle('hidden', !canHandle);
       if (canHandle) {
-        el('incResolution').value = inc.resolution || 'Handled';
+        el('incResolution').value = inc.resolution || '';
         el('incNote').value = inc.resolutionNote || '';
-        el('incFormNote').textContent = inc.acknowledged
-          ? 'Lưu sẽ cập nhật kết quả, giữ nguyên người và thời điểm xác nhận.'
-          : (overdue ? 'Cảnh báo đã quá hạn nên được leo thang: mọi cán bộ đều xử lý được. ' : '') + 'Lưu kết quả cũng đồng thời xác nhận cảnh báo.';
+        el('incFormNote').textContent = inc.resolution
+          ? 'Lưu sẽ sửa kết quả và ghi bạn là người ghi kết quả; người nhận xử lý ban đầu giữ nguyên.'
+          : inc.acknowledged
+          ? 'Lưu kết quả sẽ đóng phiếu và ghi bạn là người ghi kết quả; người nhận xử lý ban đầu giữ nguyên.'
+          : (overdue ? 'Cảnh báo đã quá hạn nên được leo thang: mọi cán bộ đều xử lý được. ' : '') + 'Chưa ai nhận cảnh báo này: lưu kết quả sẽ ghi bạn là người nhận xử lý.';
         el('btnIncSubmit').textContent = inc.resolution ? 'Cập nhật kết quả' : 'Lưu kết quả';
       }
     }
@@ -2883,6 +3026,7 @@
       const id = incidentId;
       if (!id) return;
       const body = { resolution: el('incResolution').value, note: el('incNote').value.trim() };
+      if (!body.resolution) { setBoxAlert('incAlert', 'Chọn kết quả xử lý: Đã xử lý sự cố, Báo nhầm hoặc Diễn tập.', true); return; }
       setBoxAlert('incAlert', 'Đang lưu vào CSDL...', false);
       const btn = el('btnIncSubmit');
       btn.disabled = true;
@@ -3603,9 +3747,29 @@
         }).join('');
     }
 
+    // Mất CSDL: máy chủ trả danh sách rỗng. Giữ số liệu lần đọc được cuối để thẻ báo cháy không biến mất,
+    // nhưng làm xám và ghi rõ là số liệu cũ.
+    let lastGood = null;
+    let lastGoodAt = null;
+    function applyStale() {
+      const frozen = serverLost || (lastData && !lastData.isConnected);
+      document.querySelector('main').classList.toggle('data-stale', !!frozen);
+      el('serverLostBar').classList.toggle('hidden', !serverLost);
+      // không liên lạc được máy chủ web thì cũng không biết CSDL / MQTT ra sao: không để chip xanh cũ
+      if (serverLost) ['dbStatusBadge', 'mqttStatusBadge'].forEach(id => {
+        el(id).className = 'flex items-center gap-1.5 text-[#6b7380]';
+        el(id).innerHTML = `<span class="w-2 h-2 rounded-full bg-[#a0a6b0]"></span> ${id === 'dbStatusBadge' ? 'CSDL' : 'MQTT'}: không rõ`;
+      });
+    }
+
     window.renderRealDatabaseData = function (data) {
       if (!data || !currentUser) return;
+      lastOkAt = Date.now();
+      if (serverLost) { serverLost = false; }
+      if (data.isConnected) { lastGood = data; lastGoodAt = new Date(); }
+      else if (lastGood && !(data.devices || []).length) data = { ...data, devices: lastGood.devices, alerts: lastGood.alerts, kpis: lastGood.kpis };
       lastData = data;
+      applyStale();
       const kpis = data.kpis || {};
 
       renderStatusBadges(data);
@@ -3634,7 +3798,7 @@
       renderMaintenance(data.devices);
       updateActivityUsers(data.users);
 
-      if (data.isConnected) { checkNewAlerts(data.alerts || []); remindOverdue(data.alerts || []); }
+      if (data.isConnected) checkNewAlerts(data.alerts || []);
     };
   </script>
 </body>

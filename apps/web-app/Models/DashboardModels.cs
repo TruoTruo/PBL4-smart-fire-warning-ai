@@ -34,6 +34,11 @@ public sealed record DeviceCardModel(
     int MaintenanceIntervalDays = 90,
     DateTime? LastMaintenance = null);  // lần bảo trì gần nhất (null = chưa có, tính từ ngày lắp đặt)
 
+public enum AckStatus { Ok, AlreadyAcknowledged, NotFound, Error }
+
+/// <summary>Kết quả xác nhận cảnh báo; đã có người xác nhận trước thì kèm tên và thời điểm của người đó.</summary>
+public sealed record AckResult(AckStatus Status, string? ByName = null, DateTime? At = null);
+
 public sealed record AlertModel(
     long AlertId,
     string DeviceId,
@@ -50,7 +55,10 @@ public sealed record AlertModel(
     string? Resolution = null,          // kết quả phiếu sự cố: Handled / FalseAlarm / Test
     int? ManagerUserId = null,          // cán bộ phụ trách khu vực (để trang biết ai được xử lý)
     int? PendingSeconds = null,         // chưa xác nhận: số giây từ lúc báo đến giờ máy chủ
-    bool Overdue = false);              // quá hạn xác nhận (AlertPolicy) -> leo thang cho mọi cán bộ
+    bool Overdue = false,               // quá hạn xác nhận (AlertPolicy) -> leo thang cho mọi cán bộ
+    string? ResolutionNote = null,
+    string? ResolvedByName = null,      // cán bộ ghi kết quả phiếu
+    DateTime? ResolvedAt = null);
 
 /// <summary>Khu vực giám sát và cán bộ phụ trách (bảng Zones).</summary>
 public sealed record ZoneModel(
@@ -86,6 +94,8 @@ public sealed record IncidentModel(
     int? ResponseSeconds,         // từ lúc báo đến lúc xác nhận
     string? Resolution,
     string? ResolutionNote,
+    string? ResolvedByName,       // cán bộ ghi kết quả phiếu (lần ghi gần nhất)
+    DateTime? ResolvedAt,
     long? LogId,                  // số đo cảm biến đã kích hoạt cảnh báo
     double? Temperature,
     double? Humidity,

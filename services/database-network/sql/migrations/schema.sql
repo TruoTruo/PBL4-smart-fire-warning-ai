@@ -96,10 +96,14 @@ CREATE TABLE AlertHistory (
     AcknowledgedAt          DATETIME        NULL,
     Resolution              VARCHAR(20)     NULL,       -- kết quả xử lý: 'Handled', 'FalseAlarm', 'Test' (NULL = chưa ghi)
     ResolutionNote          VARCHAR(500)    NULL,       -- ghi chú phiếu sự cố của cán bộ
+    ResolvedByUserId        INT             NULL,       -- cán bộ ghi kết quả phiếu (lần ghi gần nhất)
+    ResolvedAt              DATETIME        NULL,       -- thời điểm ghi kết quả phiếu
     CONSTRAINT FK_AlertHistory_Devices FOREIGN KEY (DeviceId)
         REFERENCES Devices(DeviceId) ON DELETE CASCADE,
     CONSTRAINT FK_AlertHistory_EnvironmentLogs FOREIGN KEY (LogId)
         REFERENCES EnvironmentLogs(LogId) ON DELETE SET NULL,
+    CONSTRAINT FK_AlertHistory_ResolvedBy FOREIGN KEY (ResolvedByUserId)
+        REFERENCES Users(UserId) ON DELETE SET NULL,
     CONSTRAINT FK_AlertHistory_Users FOREIGN KEY (AcknowledgedByUserId)
         REFERENCES Users(UserId) ON DELETE SET NULL,
     CONSTRAINT CK_AlertHistory_Severity CHECK (Severity IN ('Low', 'Medium', 'High')),
